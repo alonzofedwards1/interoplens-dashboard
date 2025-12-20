@@ -1,8 +1,11 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { committeeCasesData } from './data/committeeCases.data';
-import { committeeStatusStyles } from './data/committeeStatus';
+import {
+    CommitteeStatus,
+    committeeStatusStyles,
+} from './data/committeeStatus';
 
 import CaseSummaryCard from './components/CaseSummaryCard';
 import EvidenceSnapshot from './components/EvidenceSnapshot';
@@ -17,9 +20,14 @@ const CommitteeCaseDetail: React.FC = () => {
 
     const caseData = committeeCasesData.find((c) => c.id === id);
 
+    const [status, setStatus] = useState<CommitteeStatus>(
+        caseData?.status ?? 'Pending Review'
+    );
     const [selectedDecision, setSelectedDecision] = useState<string | undefined>(
         caseData?.selectedDecision
     );
+    const [kbGenerated, setKbGenerated] = useState(false);
+    const [alert, setAlert] = useState<string | null>(null);
 
     if (!caseData) {
         return (
@@ -51,10 +59,10 @@ const CommitteeCaseDetail: React.FC = () => {
             </span>
                         <span
                             className={`px-2 py-0.5 rounded text-xs ${
-                                committeeStatusStyles[caseData.status]
+                                status ? committeeStatusStyles[status] : ''
                             }`}
                         >
-              {caseData.status}
+              {status}
             </span>
                     </div>
                 </div>
@@ -92,30 +100,51 @@ const CommitteeCaseDetail: React.FC = () => {
                 {/* Right Column */}
                 <div className="space-y-6">
                     <DecisionTimeline
-                        events={[
-                            { label: 'Entered Committee' },
-                            { label: 'Under Review' },
-                            {
-                                label:
-                                    caseData.status === 'Decision Required'
-                                        ? 'Decision Required'
-                                        : 'Decision Complete',
-                                active: caseData.status === 'Decision Required',
-                            },
-                        ]}
+                        events={useMemo(
+                            () => [
+                                { label: 'Entered Committee', active: true },
+                                {
+                                    label: 'Under Review',
+                                    active:
+                                        status === 'In Committee' ||
+                                        status === 'Decision Required',
+                                },
+                                {
+                                    label: 'Decision Required',
+                                    active: status === 'Decision Required',
+                                },
+                                {
+                                    label: 'Decision Made',
+                                    active: status === 'Decision Made' || status === 'Resolved',
+                                },
+                                {
+                                    label: 'Resolution Complete',
+                                    active: status === 'Resolved',
+                                },
+                            ],
+                            [status]
+                        )}
                     />
 
                     <DecisionPanel
                         options={caseData.decisionOptions}
                         selectedOption={selectedDecision}
-                        onSelect={setSelectedDecision}
+                        onSelect={(value) => {
+                            setSelectedDecision(value);
+                            setAlert(null);
+                        }}
                     />
 
                     {/* Action Buttons */}
                     <div className="bg-white rounded-lg shadow p-5 space-y-3">
-                        {caseData.status === 'Decision Required' && (
+                        {status === 'Decision Required' && (
                             <button
                                 disabled={!selectedDecision}
+                                onClick={() => {
+                                    if (!selectedDecision) return;
+                                    setStatus('Decision Made');
+                                    setAlert('Decision recorded. Ready for resolution.');
+                                }}
                                 className={`w-full px-4 py-2 rounded font-medium ${
                                     selectedDecision
                                         ? 'bg-blue-600 text-white hover:bg-blue-700'
@@ -126,30 +155,52 @@ const CommitteeCaseDetail: React.FC = () => {
                             </button>
                         )}
 
-                        {caseData.status === 'Decision Made' && (
-                            <button className="w-full px-4 py-2 rounded font-medium bg-green-600 text-white hover:bg-green-700">
+                        {status === 'Decision Made' && (
+                            <button
+                                disabled={!selectedDecision}
+                                onClick={() => {
+                                    if (!selectedDecision) return;
+                                    setStatus('Resolved');
+                                    setAlert(
+                                        'Case resolved. You can now publish a knowledge base article.'
+                                    );
+                                }}
+                                className={`w-full px-4 py-2 rounded font-medium ${
+                                    selectedDecision
+                                        ? 'bg-green-600 text-white hover:bg-green-700'
+                                        : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                }`}
+                            >
                                 Resolve Case
                             </button>
                         )}
 
-                        {caseData.status === 'Resolved' && (
-                            <button className="w-full px-4 py-2 rounded font-medium bg-blue-600 text-white hover:bg-blue-700">
-                                Generate Knowledge Base Article
-                            </button>
+                        {status === 'Resolved' && (
+                            <p className="text-sm text-gray-600">
+                                Decision documented and case resolved. Publish to the knowledge
+                                base to share learnings.
+                            </p>
                         )}
                     </div>
 
-                    {/* Resolution Panel (Resolved only) */}
-                    {caseData.status === 'Resolved' && (
-                        <ResolutionPanel
-                            canResolve
-                            onGenerateKB={() => {
-                                console.log('Generate KB Article for', caseData.id);
-                            }}
-                        />
-                    )}
+                    {/* Resolution Panel */}
+                    <ResolutionPanel
+                        canResolve={status === 'Resolved'}
+                        isGenerated={kbGenerated}
+                        onGenerateKB={() => {
+                            if (kbGenerated || status !== 'Resolved') return;
+                            setKbGenerated(true);
+                            setAlert('Knowledge base article queued for publication.');
+                        }}
+                    />
                 </div>
             </div>
+
+            {alert && (
+                <div className="fixed bottom-6 right-6 max-w-md rounded-lg bg-gray-900 text-white px-4 py-3 shadow-lg" role="status">
+                    {alert}
+                </div>
+            )}
         </div>
     );
 };
