@@ -109,12 +109,29 @@ const alertCards = [
 ];
 
 /* ============================
-   Operational Insights
    Component
 ============================ */
 
 const Dashboard: React.FC<DashboardProps> = ({ role, onLogout }) => {
     const navigate = useNavigate();
+
+    const { complianceRate, compliantFindings, prodFindings } = React.useMemo(() => {
+        const compliant = findingsData.filter(
+            finding => finding.status === 'compliant'
+        ).length;
+        const compliancePct = Math.round(
+            (compliant / Math.max(totalFindings, 1)) * 100
+        );
+        const prod = findingsData.filter(
+            finding => finding.environment === 'prod'
+        ).length;
+
+        return {
+            complianceRate: compliancePct,
+            compliantFindings: compliant,
+            prodFindings: prod,
+        };
+    }, []);
 
     const insightCards = React.useMemo(
         () => [
