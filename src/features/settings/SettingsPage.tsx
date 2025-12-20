@@ -78,11 +78,11 @@ const SettingsSection = ({
    Page
 ----------------------------------- */
 
-type SettingsProps = {
+export type SettingsProps = {
     role?: UserRole | null;
 };
 
-const Settings: React.FC<SettingsProps> = ({ role }) => {
+const SettingsPage: React.FC<SettingsProps> = ({ role }) => {
     return (
         <div className="p-8 bg-base-200 min-h-screen">
             {/* Header */}
@@ -196,4 +196,4 @@ const Settings: React.FC<SettingsProps> = ({ role }) => {
     );
 };
 
-export default Settings;
+export default SettingsPage;

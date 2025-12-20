@@ -151,7 +151,17 @@ const Dashboard: React.FC<DashboardProps> = ({ role, onLogout }) => {
                 detail: `${pdErrorCount} errors observed; average latency ${averagePdLatencyMs} ms. Track retries tied to critical findings.`,
             },
         ],
-        []
+        [
+            averagePdLatencyMs,
+            complianceRate,
+            compliantFindings,
+            criticalCount,
+            pdErrorCount,
+            pdSuccessCount,
+            prodFindings,
+            totalFindings,
+            totalPDExecutions,
+        ]
     );
 
     return (
