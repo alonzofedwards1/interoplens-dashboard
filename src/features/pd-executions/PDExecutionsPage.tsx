@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaArrowLeft } from 'react-icons/fa';
 
-import { pdExecutionsData, PDExecution } from '../data/pdExecutions.data';
+import { pdExecutionsData, PDExecution } from './data/pdExecutions.data';
 
 /* ============================
    Derived Metrics
