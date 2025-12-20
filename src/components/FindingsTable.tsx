@@ -79,14 +79,14 @@ const FindingsTable: React.FC = () => {
 
     const sortedFindings = useMemo(() => {
         return [...filteredFindings].sort((a, b) => {
-            const aValue = a[sortKey as keyof typeof a];
-            const bValue = b[sortKey as keyof typeof b];
-
             if (sortKey === 'detectedAt') {
                 const aDate = new Date(a.detectedAt).getTime();
                 const bDate = new Date(b.detectedAt).getTime();
                 return sortDirection === 'asc' ? aDate - bDate : bDate - aDate;
             }
+
+            const aValue = a[sortKey] ?? '';
+            const bValue = b[sortKey] ?? '';
 
             if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
             if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
