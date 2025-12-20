@@ -7,6 +7,8 @@ interface ReportCardProps {
     title: string;
     description: string;
     audience: string;
+    status: "healthy" | "degraded" | "failing";
+    environment: "prod" | "test" | "sandbox";
     lastGenerated: string;
     onView: () => void;
 }
@@ -16,6 +18,8 @@ const ReportCard: React.FC<ReportCardProps> = ({
                                                    title,
                                                    description,
                                                    audience,
+                                                   status,
+                                                   environment,
                                                    lastGenerated,
                                                    onView
                                                }) => {
@@ -38,6 +42,20 @@ const ReportCard: React.FC<ReportCardProps> = ({
                 <div className="text-xs text-gray-500 space-y-1">
                     <div>
                         <strong>Audience:</strong> {audience}
+                    </div>
+                    <div className="flex items-center gap-2 text-[11px]">
+                        <span
+                            className={`px-2 py-0.5 rounded-full uppercase tracking-wide font-semibold ${
+                                status === "healthy"
+                                    ? "bg-green-100 text-green-700"
+                                    : status === "degraded"
+                                        ? "bg-amber-100 text-amber-700"
+                                        : "bg-red-100 text-red-700"
+                            }`}
+                        >
+                            {status}
+                        </span>
+                        <span className="text-gray-600">{environment.toUpperCase()}</span>
                     </div>
                     <div className="flex items-center gap-1">
                         <Calendar size={12} />

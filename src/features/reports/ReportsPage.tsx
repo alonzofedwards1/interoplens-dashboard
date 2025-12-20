@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 
@@ -7,15 +7,57 @@ import ReportsFilters from "../../components/reports/ReportsFilters";
 import ReportsGrid from "../../components/reports/ReportsGrid";
 import ReportDetailPanel from "../../components/reports/ReportDetailPanel";
 import { ReportId } from "../../components/reports/reportResolver";
+import { reportCatalog } from "../../components/reports/reportCatalog";
+
+const isWithinRange = (generatedAt: string, dateRange: string) => {
+    if (dateRange === "custom") return true;
+
+    const now = Date.now();
+    const generatedMs = new Date(generatedAt).getTime();
+    const diffInDays = (now - generatedMs) / (1000 * 60 * 60 * 24);
+
+    switch (dateRange) {
+        case "24h":
+            return diffInDays <= 1;
+        case "7d":
+            return diffInDays <= 7;
+        case "30d":
+        default:
+            return diffInDays <= 30;
+    }
+};
 
 const Reports: React.FC = () => {
     const navigate = useNavigate();
 
     const [dateRange, setDateRange] = useState("30d");
-    const [environment, setEnvironment] = useState("prod");
+    const [environment, setEnvironment] = useState("all");
     const [status, setStatus] = useState("all");
     const [selectedReport, setSelectedReport] =
         useState<ReportId | null>(null);
+
+    const filteredReports = useMemo(
+        () =>
+            reportCatalog.filter(
+                (report) =>
+                    (environment === "all" || report.environment === environment) &&
+                    (status === "all" || report.status === status) &&
+                    isWithinRange(report.generatedAt, dateRange)
+            ),
+        [dateRange, environment, status]
+    );
+
+    const statusBreakdown = useMemo(
+        () =>
+            reportCatalog.reduce(
+                (acc, report) => {
+                    acc[report.status] += 1;
+                    return acc;
+                },
+                { healthy: 0, degraded: 0, failing: 0 }
+            ),
+        []
+    );
 
     return (
         <div className="p-6 space-y-6">
@@ -30,7 +72,11 @@ const Reports: React.FC = () => {
                 </button>
             </div>
 
-            <ReportsHeader />
+            <ReportsHeader
+                total={reportCatalog.length}
+                filtered={filteredReports.length}
+                statusBreakdown={statusBreakdown}
+            />
 
             <ReportsFilters
                 dateRange={dateRange}
@@ -41,7 +87,10 @@ const Reports: React.FC = () => {
                 onStatusChange={setStatus}
             />
 
-            <ReportsGrid onSelectReport={setSelectedReport} />
+            <ReportsGrid
+                reports={filteredReports}
+                onSelectReport={setSelectedReport}
+            />
 
             <ReportDetailPanel
                 reportId={selectedReport}
