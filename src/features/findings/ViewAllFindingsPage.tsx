@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Filters from '../components/Filters';
+import Filters from '../../components/Filters';
 import {
     FaChevronDown,
     FaChevronUp,
@@ -11,7 +11,7 @@ import {
     FaSortDown,
 } from 'react-icons/fa';
 
-import { findingsData, Finding } from '../data/findings.data';
+import { findingsData, Finding } from './data/findings.data';
 
 /* ============================
    Severity Badge

@@ -2,8 +2,22 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import App from './App';
 
-test('renders learn react link', () => {
-  render(<App />);
-  const linkElement = screen.getByText(/learn react/i);
-  expect(linkElement).toBeInTheDocument();
+jest.mock(
+    'react-router-dom',
+    () => ({
+        Navigate: ({ to }: { to: string }) => <div>Navigate to {to}</div>,
+        Route: ({ element }: { element: React.ReactElement }) => element,
+        Routes: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+        useNavigate: () => jest.fn(),
+    }),
+    { virtual: true }
+);
+
+test('renders the login screen when no session exists', () => {
+    sessionStorage.clear();
+    render(<App />);
+
+    expect(
+        screen.getByRole('heading', { name: /interoplens/i })
+    ).toBeInTheDocument();
 });
