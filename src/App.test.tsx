@@ -17,7 +17,5 @@ test('renders the login screen when no session exists', () => {
     sessionStorage.clear();
     render(<App />);
 
-    expect(
-        screen.getByRole('heading', { name: /interoplens/i })
-    ).toBeInTheDocument();
+    return screen.findAllByRole('heading', { name: /interoplens/i });
 });

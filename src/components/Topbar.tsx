@@ -15,6 +15,7 @@ import {
     notificationsData,
     NotificationItem
 } from "../features/settings/data/notifications.data";
+import Breadcrumbs from "./Breadcrumbs";
 
 interface TopbarProps {
     role: UserRole | null;
@@ -131,9 +132,7 @@ const Topbar: React.FC<TopbarProps> = ({ role, onLogout }) => {
 
             {/* CENTER */}
             <div className="absolute left-1/2 transform -translate-x-1/2">
-                <h1 className="text-base font-semibold text-gray-800 whitespace-nowrap">
-                    Interoperability Behavior Analysis Dashboard
-                </h1>
+                <Breadcrumbs />
             </div>
 
             {/* RIGHT */}

@@ -53,23 +53,22 @@ const App: React.FC = () => {
     const requireAuth = (el: React.ReactElement) =>
         session ? el : <Navigate to="/" replace />;
 
+    const loginElement = (
+        <Login
+            onLogin={(userRole: UserRole) => {
+                const newSession = persistSession(userRole);
+                setSession(newSession);
+            }}
+        />
+    );
+
     return (
         <Routes>
             <Route
                 path="/"
-                element={
-                    session ? (
-                        <Navigate to="/dashboard" replace />
-                    ) : (
-                        <Login
-                            onLogin={(userRole: UserRole) => {
-                                const newSession = persistSession(userRole);
-                                setSession(newSession);
-                            }}
-                        />
-                    )
-                }
+                element={session ? <Navigate to="/dashboard" replace /> : loginElement}
             />
+            <Route path="/login" element={loginElement} />
 
             <Route
                 path="/dashboard"
@@ -107,10 +106,14 @@ const App: React.FC = () => {
             />
 
             <Route
-                path="/IntegrationIssues"
+                path="/integration-issues"
                 element={requireAuth(
                     <IntegrationIssuesPage role={session?.role ?? null} />
                 )}
+            />
+            <Route
+                path="/IntegrationIssues"
+                element={<Navigate to="/integration-issues" replace />}
             />
 
             <Route path="/reports" element={requireAuth(<Reports />)} />

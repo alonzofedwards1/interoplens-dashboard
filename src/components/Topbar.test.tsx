@@ -4,12 +4,15 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import Topbar from './Topbar';
 
 const mockNavigate = jest.fn();
+let mockPathname = '/dashboard';
 
 jest.mock(
     'react-router-dom',
     () => ({
         __esModule: true,
         useNavigate: () => mockNavigate,
+        useLocation: () => ({ pathname: mockPathname }),
+        Link: ({ to, children }: any) => <a href={to}>{children}</a>,
     }),
     { virtual: true }
 );
@@ -17,6 +20,7 @@ jest.mock(
 describe('Topbar', () => {
     beforeEach(() => {
         mockNavigate.mockReset();
+        mockPathname = '/dashboard';
     });
 
     it('switches environments and shows status', () => {
@@ -39,5 +43,18 @@ describe('Topbar', () => {
         );
 
         expect(mockNavigate).toHaveBeenCalledWith('/knowledge-base');
+    });
+
+    it('renders breadcrumbs for the current path', () => {
+        mockPathname = '/committee/FND-1029';
+        render(<Topbar role="committee" onLogout={() => undefined} />);
+
+        expect(
+            screen.getByRole('link', { name: /committee/i })
+        ).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: /fnd-1029/i })).toHaveAttribute(
+            'href',
+            '/committee/FND-1029'
+        );
     });
 });

@@ -30,7 +30,7 @@ const Sidebar = () => {
 
             {/* Integration Health */}
             <NavLink
-                to="/IntegrationIssues"
+                to="/integration-issues"
                 className={({ isActive }) =>
                     `${iconClass} ${isActive ? activeClass : inactiveClass}`
                 }
