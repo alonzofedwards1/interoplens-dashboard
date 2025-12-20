@@ -19,6 +19,7 @@ import {
 
 import { findingsData } from '../findings/data/findings.data';
 import { pdExecutionsData } from '../pd-executions/data/pdExecutions.data';
+import { committeeQueueData } from '../committee/data/committeeQueue.data';
 
 /* ============================
    Types
@@ -44,9 +45,7 @@ const criticalCount = findingsData.filter(
     f => f.severity === 'critical'
 ).length;
 
-const committeeCount = findingsData.filter(
-    f => f.type === 'Committee' && f.status === 'non-compliant'
-).length;
+const committeeCount = committeeQueueData.length;
 
 // PD Executions
 const totalPDExecutions = pdExecutionsData.length;
