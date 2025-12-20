@@ -1,6 +1,7 @@
 import { tefcaReadinessMock } from "./mocks/tefcaReadiness.mock";
 import { tefcaSnapshotMock } from "./mocks/tefcaSnapshot.mock";
 import type { ReportId } from "./reportTypes";
+export type { ReportId } from "./reportTypes";
 
 /**
  * Discriminated union of all report shapes
