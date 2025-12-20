@@ -13,14 +13,16 @@ import {
 import { Link } from "react-router-dom";
 
 /* ---- Section Components ---- */
-import AccountSettings from "../components/settings/AccountSettings";
-import SecuritySettings from "../components/settings/SecuritySettings";
-import DashboardPreferencesSettings from "../components/settings/DashboardPreferencesSettings";
-import InteroperabilitySettings from "../components/settings/InteroperabilitySettings";
-import NotificationsSettings from "../components/settings/NotificationsSettings";
-import AppearanceSettings from "../components/settings/AppearanceSettings";
-import AuditComplianceSettings from "../components/settings/AuditComplianceSettings";
-import AboutSettings from "../components/settings/AboutSettings";
+import AccountSettings from "../../components/settings/AccountSettings";
+import SecuritySettings from "../../components/settings/SecuritySettings";
+import DashboardPreferencesSettings from "../../components/settings/DashboardPreferencesSettings";
+import InteroperabilitySettings from "../../components/settings/InteroperabilitySettings";
+import NotificationsSettings from "../../components/settings/NotificationsSettings";
+import AppearanceSettings from "../../components/settings/AppearanceSettings";
+import AuditComplianceSettings from "../../components/settings/AuditComplianceSettings";
+import AboutSettings from "../../components/settings/AboutSettings";
+import UserManagementSettings from "../../components/settings/UserManagementSettings";
+import { UserRole } from "../../types/auth";
 
 /* ----------------------------------
    Section Config
@@ -29,6 +31,7 @@ import AboutSettings from "../components/settings/AboutSettings";
 const sections = [
     { id: "account", label: "Account", icon: <FaUser /> },
     { id: "security", label: "Security", icon: <FaShieldAlt /> },
+    { id: "users", label: "User Management", icon: <FaUser /> },
     { id: "dashboard", label: "Dashboard Preferences", icon: <FaChartBar /> },
     { id: "interop", label: "Interoperability Configuration", icon: <FaPlug /> },
     { id: "notifications", label: "Notifications", icon: <FaBell /> },
@@ -75,7 +78,11 @@ const SettingsSection = ({
    Page
 ----------------------------------- */
 
-const Settings: React.FC = () => {
+type SettingsProps = {
+    role?: UserRole | null;
+};
+
+const Settings: React.FC<SettingsProps> = ({ role }) => {
     return (
         <div className="p-8 bg-base-200 min-h-screen">
             {/* Header */}
@@ -126,6 +133,14 @@ const Settings: React.FC = () => {
                         description="Authentication, sessions, and access controls"
                     >
                         <SecuritySettings />
+                    </SettingsSection>
+
+                    <SettingsSection
+                        id="users"
+                        title="User Management"
+                        description="Invite administrators, analysts, and committee members"
+                    >
+                        <UserManagementSettings role={role} />
                     </SettingsSection>
 
                     <SettingsSection
