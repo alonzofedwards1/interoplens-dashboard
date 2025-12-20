@@ -1,8 +1,11 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
     FaBell,
+    FaBolt,
+    FaBook,
     FaChevronDown,
+    FaRegLightbulb,
     FaSignOutAlt,
     FaCircle
 } from "react-icons/fa";
@@ -25,6 +28,7 @@ const Topbar: React.FC<TopbarProps> = ({ role, onLogout }) => {
     const [showNotifications, setShowNotifications] = useState(false);
     const [showEnvMenu, setShowEnvMenu] = useState(false);
     const [environment, setEnvironment] = useState<"Test" | "Prod">("Test");
+    const [showQuickActions, setShowQuickActions] = useState(false);
 
     const today = new Date().toISOString().split("T")[0];
     const [dateFrom, setDateFrom] = useState("2025-12-01");
@@ -37,11 +41,46 @@ const Topbar: React.FC<TopbarProps> = ({ role, onLogout }) => {
         navigate("/login", { replace: true });
     };
 
+    const quickActions = useMemo(
+        () => [
+            {
+                label: "Committee queue",
+                description: "Review and decide on queued interoperability cases",
+                icon: <FaBolt className="text-amber-500" aria-hidden />, 
+                path: "/committee",
+            },
+            {
+                label: "Knowledge base",
+                description: "Browse generated runbooks for resolved cases",
+                icon: <FaBook className="text-blue-600" aria-hidden />, 
+                path: "/knowledge-base",
+            },
+            {
+                label: "PD executions",
+                description: "Check the latest execution outcomes and reruns",
+                icon: <FaRegLightbulb className="text-emerald-600" aria-hidden />, 
+                path: "/pd-executions",
+            },
+        ],
+        []
+    );
+
+    const environmentStatus = environment === "Prod"
+        ? { label: "Healthy", color: "text-green-600" }
+        : { label: "Sandbox", color: "text-amber-600" };
+
+    const userInitials = role ? role.slice(0, 2).toUpperCase() : "AE";
+
     const handleNotificationClick = (notification: NotificationItem) => {
         setShowNotifications(false);
         if (notification.link) {
             navigate(notification.link);
         }
+    };
+
+    const handleQuickAction = (path: string) => {
+        setShowQuickActions(false);
+        navigate(path);
     };
 
     return (
@@ -54,6 +93,8 @@ const Topbar: React.FC<TopbarProps> = ({ role, onLogout }) => {
 
                 <button
                     onClick={() => setShowEnvMenu(!showEnvMenu)}
+                    aria-haspopup="menu"
+                    aria-expanded={showEnvMenu}
                     className="bg-gray-100 px-3 py-1 text-sm rounded flex items-center space-x-1 hover:bg-gray-200"
                 >
                     <span>{environment}</span>
@@ -61,7 +102,7 @@ const Topbar: React.FC<TopbarProps> = ({ role, onLogout }) => {
                 </button>
 
                 {showEnvMenu && (
-                    <div className="absolute top-9 left-0 w-28 bg-white border rounded shadow z-50">
+                    <div className="absolute top-9 left-0 w-28 bg-white border rounded shadow z-50" role="menu">
                         {["Test", "Prod"].map((env) => (
                             <div
                                 key={env}
@@ -69,6 +110,7 @@ const Topbar: React.FC<TopbarProps> = ({ role, onLogout }) => {
                                     setEnvironment(env as "Test" | "Prod");
                                     setShowEnvMenu(false);
                                 }}
+                                role="menuitem"
                                 className={`px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 ${
                                     environment === env
                                         ? "font-semibold text-blue-600"
@@ -80,6 +122,11 @@ const Topbar: React.FC<TopbarProps> = ({ role, onLogout }) => {
                         ))}
                     </div>
                 )}
+
+                <div className="flex items-center space-x-2 bg-gray-50 rounded px-2 py-1">
+                    <FaCircle className={`text-[10px] ${environmentStatus.color}`} aria-hidden />
+                    <span className="text-xs text-gray-700">{environmentStatus.label}</span>
+                </div>
             </div>
 
             {/* CENTER */}
@@ -91,6 +138,37 @@ const Topbar: React.FC<TopbarProps> = ({ role, onLogout }) => {
 
             {/* RIGHT */}
             <div className="flex items-center space-x-4 relative">
+                <div className="relative">
+                    <button
+                        onClick={() => setShowQuickActions(!showQuickActions)}
+                        aria-haspopup="menu"
+                        aria-expanded={showQuickActions}
+                        className="bg-blue-50 border border-blue-100 text-blue-700 text-sm px-3 py-2 rounded hover:bg-blue-100"
+                    >
+                        Quick actions
+                    </button>
+
+                    {showQuickActions && (
+                        <div className="absolute right-0 mt-2 w-72 bg-white border rounded-md shadow-lg z-50" role="menu">
+                            <div className="px-4 py-2 text-xs uppercase text-gray-500 tracking-wide">Navigate</div>
+                            {quickActions.map((action) => (
+                                <button
+                                    key={action.label}
+                                    onClick={() => handleQuickAction(action.path)}
+                                    role="menuitem"
+                                    className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-start space-x-3"
+                                >
+                                    {action.icon}
+                                    <div>
+                                        <div className="text-sm font-semibold text-gray-800">{action.label}</div>
+                                        <div className="text-xs text-gray-600">{action.description}</div>
+                                    </div>
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
                 <div className="flex items-center space-x-2 text-sm">
                     <input
                         type="date"
@@ -180,7 +258,7 @@ const Topbar: React.FC<TopbarProps> = ({ role, onLogout }) => {
                     onClick={() => setOpen(!open)}
                     className="bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold cursor-pointer select-none"
                 >
-                    AE
+                    {userInitials}
                 </div>
 
                 {open && (
