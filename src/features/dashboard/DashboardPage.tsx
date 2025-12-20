@@ -116,6 +116,27 @@ const alertCards = [
 const Dashboard: React.FC<DashboardProps> = ({ role, onLogout }) => {
     const navigate = useNavigate();
 
+    const insightCards = React.useMemo(
+        () => [
+            {
+                title: 'Compliance coverage',
+                summary: `${complianceRate}% compliant (${compliantFindings}/${totalFindings})`,
+                detail: 'Most findings are compliant; review non-compliant items to close remaining gaps.',
+            },
+            {
+                title: 'Production focus',
+                summary: `${prodFindings}/${totalFindings} findings in production`,
+                detail: `${criticalCount} critical issues remain open, including committee-queued cases that need decisions.`,
+            },
+            {
+                title: 'PD execution health',
+                summary: `${Math.round((pdSuccessCount / Math.max(totalPDExecutions, 1)) * 100)}% success rate`,
+                detail: `${pdErrorCount} errors observed; average latency ${averagePdLatencyMs} ms. Track retries tied to critical findings.`,
+            },
+        ],
+        []
+    );
+
     return (
         <div className="flex min-h-screen bg-gray-100">
             <Sidebar />
