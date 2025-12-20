@@ -15,42 +15,55 @@ import CommitteeCaseDetail from './committee/CommitteeCaseDetail';
 import OidQueue from './oidDirectory/OidQueue';
 import OidDetail from './oidDirectory/OidDetail';
 
-export type UserRole = 'admin' | 'analyst' | 'committee';
+import { UserRole } from './types/auth';
+import {
+    AuthSession,
+    clearSession,
+    persistSession,
+    readSession,
+    subscribeToSession,
+} from './lib/authClient';
 
 const App: React.FC = () => {
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
-    const [role, setRole] = useState<UserRole | null>(null);
+    const [session, setSession] = useState<AuthSession | null>(null);
     const [authChecked, setAuthChecked] = useState(false);
 
     useEffect(() => {
-        const auth = sessionStorage.getItem('auth');
-        const storedRole = sessionStorage.getItem('role') as UserRole | null;
-        if (auth === 'true' && storedRole) {
-            setIsAuthenticated(true);
-            setRole(storedRole);
-        }
-        setAuthChecked(true);
+        const syncSession = () => {
+            setSession(readSession());
+            setAuthChecked(true);
+        };
+
+        syncSession();
+        const unsubscribe = subscribeToSession(syncSession);
+
+        return () => {
+            unsubscribe();
+        };
     }, []);
 
-    if (!authChecked) return null;
+    if (!authChecked)
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                Checking session...
+            </div>
+        );
 
     const requireAuth = (el: React.ReactElement) =>
-        isAuthenticated ? el : <Navigate to="/" replace />;
+        session ? el : <Navigate to="/" replace />;
 
     return (
         <Routes>
             <Route
                 path="/"
                 element={
-                    isAuthenticated ? (
+                    session ? (
                         <Navigate to="/dashboard" replace />
                     ) : (
                         <Login
                             onLogin={(userRole: UserRole) => {
-                                sessionStorage.setItem('auth', 'true');
-                                sessionStorage.setItem('role', userRole);
-                                setIsAuthenticated(true);
-                                setRole(userRole);
+                                const newSession = persistSession(userRole);
+                                setSession(newSession);
                             }}
                         />
                     )
@@ -61,11 +74,10 @@ const App: React.FC = () => {
                 path="/dashboard"
                 element={requireAuth(
                     <Dashboard
-                        role={role}
+                        role={session?.role ?? null}
                         onLogout={() => {
-                            sessionStorage.clear();
-                            setIsAuthenticated(false);
-                            setRole(null);
+                            clearSession();
+                            setSession(null);
                         }}
                     />
                 )}
@@ -90,7 +102,9 @@ const App: React.FC = () => {
 
             <Route
                 path="/IntegrationIssues"
-                element={requireAuth(<IntegrationIssuesPage role={role} />)}
+                element={requireAuth(
+                    <IntegrationIssuesPage role={session?.role ?? null} />
+                )}
             />
 
             <Route path="/reports" element={requireAuth(<Reports />)} />
