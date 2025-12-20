@@ -110,19 +110,6 @@ const alertCards = [
 
 /* ============================
    Operational Insights
-============================ */
-
-const compliantFindings = findingsData.filter(
-    finding => finding.status === 'compliant'
-).length;
-const complianceRate = Math.round(
-    (compliantFindings / Math.max(totalFindings, 1)) * 100
-);
-const prodFindings = findingsData.filter(
-    finding => finding.environment === 'prod'
-).length;
-
-/* ============================
    Component
 ============================ */
 
