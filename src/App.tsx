@@ -117,7 +117,10 @@ const App: React.FC = () => {
             />
 
             <Route path="/reports" element={requireAuth(<Reports />)} />
-            <Route path="/settings" element={requireAuth(<Settings />)} />
+            <Route
+                path="/settings"
+                element={requireAuth(<Settings role={session?.role ?? null} />)}
+            />
 
             <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

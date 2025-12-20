@@ -8,6 +8,7 @@ import {
     subscribeToSession,
 } from './authClient';
 import { UserRole } from '../types/auth';
+import { addUser, resetUsers } from '../features/settings/data/usersStore';
 
 describe('authClient', () => {
     const originalVisibility = Object.getOwnPropertyDescriptor(
@@ -22,6 +23,8 @@ describe('authClient', () => {
 
     beforeEach(() => {
         sessionStorage.clear();
+        localStorage.clear();
+        resetUsers();
         jest.restoreAllMocks();
         if (originalVisibility) {
             Object.defineProperty(document, 'visibilityState', originalVisibility);
@@ -38,6 +41,19 @@ describe('authClient', () => {
         await expect(authenticate('admin@interoplens.io', 'wrong')).rejects.toThrow(
             'Invalid email or password'
         );
+    });
+
+    test('authenticates a newly added user', async () => {
+        await addUser({
+            name: 'Ops Owner',
+            email: 'ops@example.com',
+            role: 'analyst',
+            password: 'ops12345',
+        });
+
+        const role = await authenticate('ops@example.com', 'ops12345');
+
+        expect(role).toBe('analyst');
     });
 
     test('persists and reads a valid session', () => {
