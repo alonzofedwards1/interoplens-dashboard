@@ -38,6 +38,29 @@ const CommitteeCaseDetail: React.FC = () => {
     const canResolveCase = (isDecisionMade || isResolved) && hasDecision;
     const canGenerateKb = isResolved && !kbGenerated;
 
+    const timelineEvents = useMemo(
+        () => [
+            { label: 'Entered Committee', active: true },
+            {
+                label: 'Under Review',
+                active: status === 'In Committee' || status === 'Decision Required',
+            },
+            {
+                label: 'Decision Required',
+                active: status === 'Decision Required',
+            },
+            {
+                label: 'Decision Made',
+                active: status === 'Decision Made' || status === 'Resolved',
+            },
+            {
+                label: 'Resolution Complete',
+                active: status === 'Resolved',
+            },
+        ],
+        [status]
+    );
+
     if (!caseData) {
         return (
             <div className="p-6">
@@ -109,30 +132,7 @@ const CommitteeCaseDetail: React.FC = () => {
                 {/* Right Column */}
                 <div className="space-y-6">
                     <DecisionTimeline
-                        events={useMemo(
-                            () => [
-                                { label: 'Entered Committee', active: true },
-                                {
-                                    label: 'Under Review',
-                                    active:
-                                        status === 'In Committee' ||
-                                        status === 'Decision Required',
-                                },
-                                {
-                                    label: 'Decision Required',
-                                    active: status === 'Decision Required',
-                                },
-                                {
-                                    label: 'Decision Made',
-                                    active: status === 'Decision Made' || status === 'Resolved',
-                                },
-                                {
-                                    label: 'Resolution Complete',
-                                    active: status === 'Resolved',
-                                },
-                            ],
-                            [status]
-                        )}
+                        events={timelineEvents}
                     />
 
                     <DecisionPanel
