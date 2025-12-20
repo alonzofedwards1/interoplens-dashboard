@@ -18,7 +18,7 @@ export const notificationsData: NotificationItem[] = [
             "Patient Discovery failures exceeded baseline for Epic QHIN over the last 2 hours.",
         severity: "critical",
         timestamp: "5 min ago",
-        link: "/IntegrationIssues",
+        link: "/integration-issues",
         read: false
     },
     {

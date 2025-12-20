@@ -1,4 +1,4 @@
-import { issueSummaryData } from "data/issueSummary.data";
+import { issueSummaryData } from "../data/issueSummary.data";
 
 const AnalystBreakdown = () => {
     const {

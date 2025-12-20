@@ -1,71 +1,83 @@
 import React, { useEffect, useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 
-import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import ViewAllFindings from './pages/ViewAllFindings';
-import PDExecutions from './pages/PDExecutions';
-import IntegrationIssuesPage from './pages/issues/IntegrationIssuesPage';
-import Reports from './pages/Reports';
-import Settings from './pages/Settings';
+import Login from './features/auth/LoginPage';
+import Dashboard from './features/dashboard/DashboardPage';
+import ViewAllFindings from './features/findings/ViewAllFindingsPage';
+import PDExecutions from './features/pd-executions/PDExecutionsPage';
+import IntegrationIssuesPage from './features/integration-issues/IntegrationIssuesPage';
+import Reports from './features/reports/ReportsPage';
+import Settings from './features/settings/SettingsPage';
 
-import CommitteeQueue from './committee/CommitteeQueue';
-import CommitteeCaseDetail from './committee/CommitteeCaseDetail';
+import CommitteeQueue from './features/committee/CommitteeQueue';
+import CommitteeCaseDetail from './features/committee/CommitteeCaseDetail';
+import KnowledgeBasePage from './features/knowledge-base/KnowledgeBasePage';
 
-import OidQueue from './oidDirectory/OidQueue';
-import OidDetail from './oidDirectory/OidDetail';
+import OidQueue from './features/oid-directory/OidQueue';
+import OidDetail from './features/oid-directory/OidDetail';
 
-export type UserRole = 'admin' | 'analyst' | 'committee';
+import { UserRole } from './types/auth';
+import {
+    AuthSession,
+    clearSession,
+    persistSession,
+    readSession,
+    subscribeToSession,
+} from './lib/authClient';
 
 const App: React.FC = () => {
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
-    const [role, setRole] = useState<UserRole | null>(null);
+    const [session, setSession] = useState<AuthSession | null>(null);
     const [authChecked, setAuthChecked] = useState(false);
 
     useEffect(() => {
-        const auth = sessionStorage.getItem('auth');
-        const storedRole = sessionStorage.getItem('role') as UserRole | null;
-        if (auth === 'true' && storedRole) {
-            setIsAuthenticated(true);
-            setRole(storedRole);
-        }
-        setAuthChecked(true);
+        const syncSession = () => {
+            setSession(readSession());
+            setAuthChecked(true);
+        };
+
+        syncSession();
+        const unsubscribe = subscribeToSession(syncSession);
+
+        return () => {
+            unsubscribe();
+        };
     }, []);
 
-    if (!authChecked) return null;
+    if (!authChecked)
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                Checking session...
+            </div>
+        );
 
     const requireAuth = (el: React.ReactElement) =>
-        isAuthenticated ? el : <Navigate to="/" replace />;
+        session ? el : <Navigate to="/" replace />;
+
+    const loginElement = (
+        <Login
+            onLogin={(userRole: UserRole) => {
+                const newSession = persistSession(userRole);
+                setSession(newSession);
+            }}
+        />
+    );
 
     return (
         <Routes>
             <Route
                 path="/"
-                element={
-                    isAuthenticated ? (
-                        <Navigate to="/dashboard" replace />
-                    ) : (
-                        <Login
-                            onLogin={(userRole: UserRole) => {
-                                sessionStorage.setItem('auth', 'true');
-                                sessionStorage.setItem('role', userRole);
-                                setIsAuthenticated(true);
-                                setRole(userRole);
-                            }}
-                        />
-                    )
-                }
+                element={session ? <Navigate to="/dashboard" replace /> : loginElement}
             />
+            <Route path="/login" element={loginElement} />
 
             <Route
                 path="/dashboard"
                 element={requireAuth(
                     <Dashboard
-                        role={role}
+                        role={session?.role ?? null}
                         onLogout={() => {
-                            sessionStorage.clear();
-                            setIsAuthenticated(false);
-                            setRole(null);
+                            clearSession();
+                            setSession(null);
                         }}
                     />
                 )}
@@ -81,6 +93,11 @@ const App: React.FC = () => {
                 element={requireAuth(<CommitteeCaseDetail />)}
             />
 
+            <Route
+                path="/knowledge-base"
+                element={requireAuth(<KnowledgeBasePage />)}
+            />
+
             {/* OID Directory */}
             <Route path="/oids" element={requireAuth(<OidQueue />)} />
             <Route
@@ -89,8 +106,14 @@ const App: React.FC = () => {
             />
 
             <Route
+                path="/integration-issues"
+                element={requireAuth(
+                    <IntegrationIssuesPage role={session?.role ?? null} />
+                )}
+            />
+            <Route
                 path="/IntegrationIssues"
-                element={requireAuth(<IntegrationIssuesPage role={role} />)}
+                element={<Navigate to="/integration-issues" replace />}
             />
 
             <Route path="/reports" element={requireAuth(<Reports />)} />

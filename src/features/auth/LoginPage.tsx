@@ -1,28 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { UserRole } from '../types/auth';
+import { UserRole } from '../../types/auth';
+import { authenticate } from '../../lib/authClient';
 
 interface LoginProps {
     onLogin: (role: UserRole) => void;
 }
-
-const USERS = [
-    {
-        email: 'admin@interoplens.io',
-        password: 'admin123',
-        role: 'admin' as UserRole,
-    },
-    {
-        email: 'analyst@interoplens.io',
-        password: 'analyze123',
-        role: 'analyst' as UserRole,
-    },
-    {
-        email: 'committee@interoplens.io',
-        password: 'committee123',
-        role: 'committee' as UserRole,
-    },
-];
 
 const Login: React.FC<LoginProps> = ({ onLogin }) => {
     const navigate = useNavigate();
@@ -31,21 +14,17 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        const user = USERS.find(
-            u => u.email === email && u.password === password
-        );
-
-        if (!user) {
-            setError('Invalid email or password');
-            return;
+        try {
+            const role = await authenticate(email, password);
+            setError('');
+            onLogin(role);
+            navigate('/dashboard', { replace: true });
+        } catch (err) {
+            setError((err as Error).message);
         }
-
-        setError('');
-        onLogin(user.role);
-        navigate('/dashboard', { replace: true });
     };
 
     return (
