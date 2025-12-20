@@ -9,7 +9,7 @@ import {
     ResponsiveContainer
 } from 'recharts';
 
-import { findingsData, Finding } from '../data/findings.data';
+import { findingsData, Finding } from '../features/findings/data/findings.data';
 
 /* ============================
    Derive Findings by Transaction

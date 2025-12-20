@@ -2,13 +2,19 @@ import React from 'react';
 
 interface ResolutionPanelProps {
     canResolve: boolean;
+    isGenerated?: boolean;
     onGenerateKB?: () => void;
 }
 
 const ResolutionPanel: React.FC<ResolutionPanelProps> = ({
-                                                             canResolve,
-                                                             onGenerateKB,
-                                                         }) => {
+    canResolve,
+    isGenerated,
+    onGenerateKB,
+}) => {
+    const buttonText = isGenerated
+        ? 'Knowledge Base Article Queued'
+        : 'Generate Knowledge Base Article';
+
     return (
         <section className="bg-white rounded-lg shadow p-5">
             <h2 className="text-lg font-semibold mb-2">Resolution</h2>
@@ -24,15 +30,15 @@ const ResolutionPanel: React.FC<ResolutionPanelProps> = ({
             )}
 
             <button
-                disabled={!canResolve}
+                disabled={!canResolve || isGenerated}
                 onClick={onGenerateKB}
                 className={`w-full px-3 py-2 rounded ${
-                    canResolve
+                    canResolve && !isGenerated
                         ? 'bg-blue-600 text-white hover:bg-blue-700'
                         : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                 }`}
             >
-                Generate Knowledge Base Article
+                {buttonText}
             </button>
         </section>
     );

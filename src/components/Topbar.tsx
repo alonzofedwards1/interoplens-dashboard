@@ -11,7 +11,7 @@ import { UserRole } from "../types/auth";
 import {
     notificationsData,
     NotificationItem
-} from "../data/notifications.data";
+} from "../features/settings/data/notifications.data";
 
 interface TopbarProps {
     role: UserRole | null;
