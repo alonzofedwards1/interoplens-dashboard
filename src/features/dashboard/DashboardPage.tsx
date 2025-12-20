@@ -50,6 +50,16 @@ const committeeCount = findingsData.filter(
 
 // PD Executions
 const totalPDExecutions = pdExecutionsData.length;
+const pdSuccessCount = pdExecutionsData.filter(
+    execution => execution.outcome === 'success'
+).length;
+const pdErrorCount = pdExecutionsData.filter(
+    execution => execution.outcome === 'error'
+).length;
+const averagePdLatencyMs = Math.round(
+    pdExecutionsData.reduce((sum, execution) => sum + execution.executionTimeMs, 0) /
+        Math.max(totalPDExecutions, 1)
+);
 
 /* ============================
    Summary Card Data
@@ -99,6 +109,7 @@ const alertCards = [
 ];
 
 /* ============================
+   Operational Insights
    Component
 ============================ */
 
@@ -116,11 +127,12 @@ const Dashboard: React.FC<DashboardProps> = ({ role, onLogout }) => {
                     {/* Alert Summary Cards */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                         {alertCards.map((card, index) => (
-                            <div
+                            <button
                                 key={index}
+                                type="button"
                                 onClick={() => navigate(card.route)}
                                 className={`
-                                    cursor-pointer rounded-lg p-4 shadow
+                                    text-left rounded-lg p-4 shadow w-full
                                     flex items-center space-x-3
                                     transition hover:shadow-md hover:scale-[1.02]
                                     ${card.bgColor} ${card.textColor}
@@ -135,9 +147,42 @@ const Dashboard: React.FC<DashboardProps> = ({ role, onLogout }) => {
                                         {card.title}
                                     </div>
                                 </div>
-                            </div>
+                            </button>
                         ))}
                     </div>
+
+                    {/* Operational Insights */}
+                    <section aria-labelledby="operational-insights" className="space-y-3">
+                        <div className="flex items-center justify-between">
+                            <h2
+                                id="operational-insights"
+                                className="text-lg font-semibold text-gray-800"
+                            >
+                                Operational insights
+                            </h2>
+                            <span className="text-sm text-gray-500">
+                                Derived from current findings and PD execution telemetry
+                            </span>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            {insightCards.map(card => (
+                                <article
+                                    key={card.title}
+                                    className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm"
+                                >
+                                    <div className="text-sm font-semibold text-gray-700">
+                                        {card.title}
+                                    </div>
+                                    <div className="text-2xl font-bold text-gray-900 mt-1">
+                                        {card.summary}
+                                    </div>
+                                    <p className="text-sm text-gray-600 mt-2 leading-relaxed">
+                                        {card.detail}
+                                    </p>
+                                </article>
+                            ))}
+                        </div>
+                    </section>
 
                     {/* Charts */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
