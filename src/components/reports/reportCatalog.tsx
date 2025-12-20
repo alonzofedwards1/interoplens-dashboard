@@ -1,4 +1,5 @@
 import { FileText, BarChart3 } from "lucide-react";
+import type { ReactElement } from "react";
 
 import { ReportId } from "./reportResolver";
 
@@ -10,7 +11,7 @@ export type ReportListItem = {
     generatedAt: string;
     environment: "prod" | "test" | "sandbox";
     status: "healthy" | "degraded" | "failing";
-    icon: JSX.Element;
+    icon: ReactElement;
 };
 
 export const reportCatalog: ReportListItem[] = [
