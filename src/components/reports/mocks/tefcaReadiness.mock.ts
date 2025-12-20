@@ -12,8 +12,8 @@ export const tefcaReadinessMock = {
 
     executiveSummary: {
         readinessScore: 82,
-        riskLevel: "Moderate",
-        overallStatus: "Degraded",
+        riskLevel: "Low",
+        overallStatus: "Healthy",
         trend: "Improving"
     },
 
