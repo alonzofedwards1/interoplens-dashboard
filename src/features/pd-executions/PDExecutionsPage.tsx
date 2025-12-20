@@ -62,11 +62,20 @@ const formatOutcome = (outcome: PDExecution['outcome']) => {
    Component
 ============================ */
 
-const defaultExecutionPreferences = {
+type ExecutionSortKey = 'requestTimestamp' | 'organization' | 'outcome' | 'executionTimeMs';
+
+type ExecutionPreferences = {
+    search: string;
+    outcomeFilter: PDExecution['outcome'] | 'all';
+    sortKey: ExecutionSortKey;
+    sortDirection: 'asc' | 'desc';
+};
+
+const defaultExecutionPreferences: ExecutionPreferences = {
     search: '',
-    outcomeFilter: 'all' as PDExecution['outcome'] | 'all',
-    sortKey: 'requestTimestamp' as const,
-    sortDirection: 'desc' as const,
+    outcomeFilter: 'all',
+    sortKey: 'requestTimestamp',
+    sortDirection: 'desc',
 };
 
 const PDExecutions: React.FC = () => {
@@ -111,7 +120,7 @@ const PDExecutions: React.FC = () => {
         });
     }, [filteredExecutions, sortDirection, sortKey]);
 
-    const toggleSort = (key: typeof sortKey) => {
+    const toggleSort = (key: ExecutionSortKey) => {
         if (sortKey === key) {
             setPreferences(prev => ({
                 ...prev,
@@ -207,7 +216,7 @@ const PDExecutions: React.FC = () => {
                             onChange={event =>
                                 setPreferences(prev => ({
                                     ...prev,
-                                    sortKey: event.target.value as typeof sortKey,
+                                    sortKey: event.target.value as ExecutionSortKey,
                                 }))
                             }
                             className="border rounded px-2 py-1"

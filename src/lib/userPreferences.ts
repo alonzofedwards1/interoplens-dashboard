@@ -45,7 +45,7 @@ const setUserPreference = <T,>(userId: string, key: string, value: T) => {
  */
 export const useUserPreference = <T,>(key: string, defaultValue: T) => {
     const session = useSession();
-    const userId = session?.userId;
+    const userId = session?.id;
 
     const defaultRef = useRef(defaultValue);
     defaultRef.current = defaultValue;

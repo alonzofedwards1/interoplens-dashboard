@@ -56,10 +56,18 @@ const getStatusLabel = (status: Finding['status']) => (
     </span>
 );
 
-const defaultFindingsPreferences = {
+type FindingsSortKey = 'detectedAt' | 'severity' | 'organization';
+
+type FindingsPreferences = {
+    query: string;
+    sortKey: FindingsSortKey;
+    sortDirection: 'asc' | 'desc';
+};
+
+const defaultFindingsPreferences: FindingsPreferences = {
     query: '',
-    sortKey: 'detectedAt' as const,
-    sortDirection: 'desc' as const,
+    sortKey: 'detectedAt',
+    sortDirection: 'desc',
 };
 
 /* ============================
@@ -104,7 +112,7 @@ const FindingsTable: React.FC = () => {
         });
     }, [filteredFindings, sortDirection, sortKey]);
 
-    const toggleSort = (key: typeof sortKey) => {
+    const toggleSort = (key: FindingsSortKey) => {
         if (sortKey === key) {
             setPreferences(prev => ({
                 ...prev,
@@ -151,7 +159,7 @@ const FindingsTable: React.FC = () => {
                         onChange={event =>
                             setPreferences(prev => ({
                                 ...prev,
-                                sortKey: event.target.value as typeof sortKey,
+                                sortKey: event.target.value as FindingsSortKey,
                             }))
                         }
                         className="border rounded px-2 py-1"
