@@ -110,37 +110,6 @@ const alertCards = [
 
 /* ============================
    Operational Insights
-============================ */
-
-const compliantFindings = findingsData.filter(
-    finding => finding.status === 'compliant'
-).length;
-const complianceRate = Math.round(
-    (compliantFindings / Math.max(totalFindings, 1)) * 100
-);
-const prodFindings = findingsData.filter(
-    finding => finding.environment === 'prod'
-).length;
-
-const insightCards = [
-    {
-        title: 'Compliance coverage',
-        summary: `${complianceRate}% compliant (${compliantFindings}/${totalFindings})`,
-        detail: 'Most findings are compliant; review non-compliant items to close remaining gaps.',
-    },
-    {
-        title: 'Production focus',
-        summary: `${prodFindings}/${totalFindings} findings in production`,
-        detail: `${criticalCount} critical issues remain open, including committee-queued cases that need decisions.`,
-    },
-    {
-        title: 'PD execution health',
-        summary: `${Math.round((pdSuccessCount / Math.max(totalPDExecutions, 1)) * 100)}% success rate`,
-        detail: `${pdErrorCount} errors observed; average latency ${averagePdLatencyMs} ms. Track retries tied to critical findings.`,
-    },
-];
-
-/* ============================
    Component
 ============================ */
 
