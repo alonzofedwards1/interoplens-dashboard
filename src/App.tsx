@@ -1,19 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 
-import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import ViewAllFindings from './pages/ViewAllFindings';
-import PDExecutions from './pages/PDExecutions';
-import IntegrationIssuesPage from './pages/issues/IntegrationIssuesPage';
-import Reports from './pages/Reports';
-import Settings from './pages/Settings';
+import Login from './features/auth/LoginPage';
+import Dashboard from './features/dashboard/DashboardPage';
+import ViewAllFindings from './features/findings/ViewAllFindingsPage';
+import PDExecutions from './features/pd-executions/PDExecutionsPage';
+import IntegrationIssuesPage from './features/integration-issues/IntegrationIssuesPage';
+import Reports from './features/reports/ReportsPage';
+import Settings from './features/settings/SettingsPage';
 
-import CommitteeQueue from './committee/CommitteeQueue';
-import CommitteeCaseDetail from './committee/CommitteeCaseDetail';
+import CommitteeQueue from './features/committee/CommitteeQueue';
+import CommitteeCaseDetail from './features/committee/CommitteeCaseDetail';
 
-import OidQueue from './oidDirectory/OidQueue';
-import OidDetail from './oidDirectory/OidDetail';
+import OidQueue from './features/oid-directory/OidQueue';
+import OidDetail from './features/oid-directory/OidDetail';
 
 import { UserRole } from './types/auth';
 import {
