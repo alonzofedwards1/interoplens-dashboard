@@ -41,6 +41,7 @@ const ReportsFilters: React.FC<ReportsFiltersProps> = ({
                 value={environment}
                 onChange={(e) => onEnvironmentChange(e.target.value)}
             >
+                <option value="all">All Environments</option>
                 <option value="prod">Production</option>
                 <option value="test">Test</option>
                 <option value="sandbox">Sandbox</option>
