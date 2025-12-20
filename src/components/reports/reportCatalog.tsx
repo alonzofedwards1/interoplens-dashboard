@@ -23,7 +23,7 @@ export const reportCatalog: ReportListItem[] = [
         audience: "Compliance, Technical Leadership",
         generatedAt: "2025-02-05T10:15:00Z",
         environment: "prod",
-        status: "degraded",
+        status: "healthy",
         icon: <BarChart3 size={20} />
     },
     {

@@ -62,15 +62,24 @@ describe('ReportsPage', () => {
 
         await userEvent.selectOptions(
             screen.getByDisplayValue(/all statuses/i),
-            'degraded'
+            'failing'
         );
 
         expect(
-            screen.getByText(/tefca readiness assessment/i)
+            screen.getByText(/pd anomaly deep dive/i)
         ).toBeInTheDocument();
         expect(
-            screen.queryByText(/pd anomaly deep dive/i)
+            screen.queryByText(/tefca readiness assessment/i)
         ).not.toBeInTheDocument();
+
+        await userEvent.selectOptions(
+            screen.getByDisplayValue(/failing/i),
+            'all'
+        );
+
+        expect(
+            screen.getByDisplayValue(/production/i)
+        ).toHaveDisplayValue(/production/i);
 
         await userEvent.selectOptions(
             screen.getByDisplayValue(/production/i),
