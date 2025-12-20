@@ -30,6 +30,7 @@ const ReportsFilters: React.FC<ReportsFiltersProps> = ({
                 value={dateRange}
                 onChange={(e) => onDateRangeChange(e.target.value)}
             >
+                <option value="all">All Time</option>
                 <option value="24h">Last 24 Hours</option>
                 <option value="7d">Last 7 Days</option>
                 <option value="30d">Last 30 Days</option>

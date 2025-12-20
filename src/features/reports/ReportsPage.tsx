@@ -10,7 +10,7 @@ import { ReportId } from "../../components/reports/reportResolver";
 import { reportCatalog } from "../../components/reports/reportCatalog";
 
 const isWithinRange = (generatedAt: string, dateRange: string) => {
-    if (dateRange === "custom") return true;
+    if (dateRange === "all" || dateRange === "custom") return true;
 
     const now = Date.now();
     const generatedMs = new Date(generatedAt).getTime();
@@ -30,7 +30,7 @@ const isWithinRange = (generatedAt: string, dateRange: string) => {
 const Reports: React.FC = () => {
     const navigate = useNavigate();
 
-    const [dateRange, setDateRange] = useState("30d");
+    const [dateRange, setDateRange] = useState("all");
     const [environment, setEnvironment] = useState("all");
     const [status, setStatus] = useState("all");
     const [selectedReport, setSelectedReport] =
