@@ -25,6 +25,8 @@ const KnowledgeBasePage: React.FC = () => {
         'all'
     );
     const [articles, setArticles] = useState<KnowledgeBaseArticle[]>([]);
+    const [sortKey, setSortKey] = useState<'updatedAt' | 'title' | 'status'>('updatedAt');
+    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
     useEffect(() => {
         setArticles(readKnowledgeBase());
@@ -34,6 +36,22 @@ const KnowledgeBasePage: React.FC = () => {
         if (statusFilter === 'all') return articles;
         return articles.filter((article) => article.status === statusFilter);
     }, [articles, statusFilter]);
+
+    const sortedArticles = useMemo(() => {
+        return [...filteredArticles].sort((a, b) => {
+            if (sortKey === 'updatedAt') {
+                const aDate = new Date(a.updatedAt).getTime();
+                const bDate = new Date(b.updatedAt).getTime();
+                return sortDirection === 'asc' ? aDate - bDate : bDate - aDate;
+            }
+
+            const aVal = a[sortKey];
+            const bVal = b[sortKey];
+            if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+            if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+            return 0;
+        });
+    }, [filteredArticles, sortDirection, sortKey]);
 
     return (
         <div className="p-6 space-y-4">
@@ -71,6 +89,33 @@ const KnowledgeBasePage: React.FC = () => {
                         <option value="draft">Draft</option>
                         <option value="published">Published</option>
                     </select>
+
+                    <label htmlFor="kb-sort" className="text-gray-700">
+                        Sort
+                    </label>
+                    <select
+                        id="kb-sort"
+                        value={sortKey}
+                        onChange={(event) =>
+                            setSortKey(event.target.value as typeof sortKey)
+                        }
+                        className="border rounded px-3 py-1 text-gray-800"
+                    >
+                        <option value="updatedAt">Last Updated</option>
+                        <option value="title">Title</option>
+                        <option value="status">Status</option>
+                    </select>
+                    <button
+                        onClick={() =>
+                            setSortDirection((prev) =>
+                                prev === 'asc' ? 'desc' : 'asc'
+                            )
+                        }
+                        className="border rounded px-3 py-1 text-gray-800"
+                        aria-label={`Toggle sort direction (currently ${sortDirection})`}
+                    >
+                        {sortDirection === 'asc' ? 'Asc' : 'Desc'}
+                    </button>
                 </div>
             </div>
 
@@ -87,7 +132,7 @@ const KnowledgeBasePage: React.FC = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {filteredArticles.map((article) => (
+                        {sortedArticles.map((article) => (
                             <tr
                                 key={article.id}
                                 className="border-t hover:bg-gray-50"

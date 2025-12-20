@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaArrowLeft } from 'react-icons/fa';
 
@@ -63,6 +63,52 @@ const formatOutcome = (outcome: PDExecution['outcome']) => {
 
 const PDExecutions: React.FC = () => {
     const navigate = useNavigate();
+    const [search, setSearch] = useState('');
+    const [outcomeFilter, setOutcomeFilter] = useState<PDExecution['outcome'] | 'all'>('all');
+    const [sortKey, setSortKey] = useState<'requestTimestamp' | 'organization' | 'outcome' | 'executionTimeMs'>('requestTimestamp');
+    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+
+    const filteredExecutions = useMemo(() => {
+        return pdExecutionsData.filter(exec => {
+            const matchesOutcome = outcomeFilter === 'all' || exec.outcome === outcomeFilter;
+
+            if (!search.trim()) return matchesOutcome;
+
+            const query = search.toLowerCase();
+            const matchesText =
+                exec.organization.toLowerCase().includes(query) ||
+                exec.qhin.toLowerCase().includes(query);
+
+            return matchesOutcome && matchesText;
+        });
+    }, [outcomeFilter, search]);
+
+    const sortedExecutions = useMemo(() => {
+        return [...filteredExecutions].sort((a, b) => {
+            if (sortKey === 'requestTimestamp') {
+                const aTs = new Date(a.requestTimestamp).getTime();
+                const bTs = new Date(b.requestTimestamp).getTime();
+                return sortDirection === 'asc' ? aTs - bTs : bTs - aTs;
+            }
+
+            const aValue = a[sortKey];
+            const bValue = b[sortKey];
+
+            if (aValue === undefined || bValue === undefined) return 0;
+            if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+            if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+            return 0;
+        });
+    }, [filteredExecutions, sortDirection, sortKey]);
+
+    const toggleSort = (key: typeof sortKey) => {
+        if (sortKey === key) {
+            setSortDirection(prev => (prev === 'asc' ? 'desc' : 'asc'));
+        } else {
+            setSortKey(key);
+            setSortDirection('asc');
+        }
+    };
 
     return (
         <div className="p-6 space-y-6">
@@ -102,18 +148,70 @@ const PDExecutions: React.FC = () => {
 
             {/* Execution Table */}
             <div className="bg-white rounded-lg shadow overflow-x-auto">
+                <div className="flex flex-wrap gap-3 items-center justify-between p-3 border-b text-sm">
+                    <div className="flex gap-2 items-center">
+                        <label htmlFor="pd-outcome" className="text-gray-700">
+                            Outcome
+                        </label>
+                        <select
+                            id="pd-outcome"
+                            value={outcomeFilter}
+                            onChange={event => setOutcomeFilter(event.target.value as typeof outcomeFilter)}
+                            className="border rounded px-2 py-1"
+                        >
+                            <option value="all">All</option>
+                            <option value="success">Success</option>
+                            <option value="multiple-matches">Multiple Matches</option>
+                            <option value="no-match">No Match</option>
+                            <option value="error">Failure</option>
+                        </select>
+                    </div>
+
+                    <input
+                        type="search"
+                        value={search}
+                        onChange={event => setSearch(event.target.value)}
+                        placeholder="Filter by org or QHIN"
+                        className="border rounded px-3 py-2 w-full sm:w-72"
+                    />
+
+                    <div className="flex gap-2 items-center">
+                        <label htmlFor="pd-sort" className="text-gray-700">
+                            Sort
+                        </label>
+                        <select
+                            id="pd-sort"
+                            value={sortKey}
+                            onChange={event => setSortKey(event.target.value as typeof sortKey)}
+                            className="border rounded px-2 py-1"
+                        >
+                            <option value="requestTimestamp">Timestamp</option>
+                            <option value="organization">Organization</option>
+                            <option value="outcome">Outcome</option>
+                            <option value="executionTimeMs">Response Time</option>
+                        </select>
+                        <button
+                            onClick={() => toggleSort(sortKey)}
+                            className="px-2 py-1 border rounded"
+                            aria-label={`Toggle sort direction (currently ${sortDirection})`}
+                        >
+                            {sortDirection === 'asc' ? 'Asc' : 'Desc'}
+                        </button>
+                    </div>
+                </div>
+
                 <table className="min-w-full border-collapse">
                     <thead className="bg-gray-100">
                     <tr className="text-left text-sm text-gray-700">
-                        <th className="p-3">Timestamp</th>
-                        <th className="p-3">Organization</th>
+                        <th className="p-3 cursor-pointer" onClick={() => toggleSort('requestTimestamp')}>Timestamp</th>
+                        <th className="p-3 cursor-pointer" onClick={() => toggleSort('organization')}>Organization</th>
                         <th className="p-3">QHIN</th>
-                        <th className="p-3">Outcome</th>
-                        <th className="p-3">Response Time</th>
+                        <th className="p-3 cursor-pointer" onClick={() => toggleSort('outcome')}>Outcome</th>
+                        <th className="p-3 cursor-pointer" onClick={() => toggleSort('executionTimeMs')}>Response Time</th>
                     </tr>
                     </thead>
                     <tbody>
-                    {pdExecutionsData.map(exec => {
+                    {sortedExecutions.map(exec => {
                         const outcome = formatOutcome(exec.outcome);
 
                         return (
@@ -142,6 +240,13 @@ const PDExecutions: React.FC = () => {
                             </tr>
                         );
                     })}
+                    {!sortedExecutions.length && (
+                        <tr>
+                            <td colSpan={5} className="p-4 text-center text-gray-500">
+                                No executions match the current filters.
+                            </td>
+                        </tr>
+                    )}
                     </tbody>
                 </table>
             </div>
