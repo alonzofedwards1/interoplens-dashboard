@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { findingsData, Finding } from '../data/findings.data';
+import { findingsData, Finding } from '../features/findings/data/findings.data';
 
 /* ============================
    Derive Recent Findings

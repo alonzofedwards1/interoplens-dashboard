@@ -13,14 +13,14 @@ import {
 import { Link } from "react-router-dom";
 
 /* ---- Section Components ---- */
-import AccountSettings from "../components/settings/AccountSettings";
-import SecuritySettings from "../components/settings/SecuritySettings";
-import DashboardPreferencesSettings from "../components/settings/DashboardPreferencesSettings";
-import InteroperabilitySettings from "../components/settings/InteroperabilitySettings";
-import NotificationsSettings from "../components/settings/NotificationsSettings";
-import AppearanceSettings from "../components/settings/AppearanceSettings";
-import AuditComplianceSettings from "../components/settings/AuditComplianceSettings";
-import AboutSettings from "../components/settings/AboutSettings";
+import AccountSettings from "../../components/settings/AccountSettings";
+import SecuritySettings from "../../components/settings/SecuritySettings";
+import DashboardPreferencesSettings from "../../components/settings/DashboardPreferencesSettings";
+import InteroperabilitySettings from "../../components/settings/InteroperabilitySettings";
+import NotificationsSettings from "../../components/settings/NotificationsSettings";
+import AppearanceSettings from "../../components/settings/AppearanceSettings";
+import AuditComplianceSettings from "../../components/settings/AuditComplianceSettings";
+import AboutSettings from "../../components/settings/AboutSettings";
 
 /* ----------------------------------
    Section Config
