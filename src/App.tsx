@@ -16,7 +16,6 @@ import KnowledgeBasePage from './features/knowledge-base/KnowledgeBasePage';
 import OidQueue from './features/oid-directory/OidQueue';
 import OidDetail from './features/oid-directory/OidDetail';
 
-import { UserRole } from './types/auth';
 import {
     AuthSession,
     clearSession,
@@ -24,6 +23,7 @@ import {
     readSession,
     subscribeToSession,
 } from './lib/authClient';
+import { SessionProvider } from './lib/SessionContext';
 
 const App: React.FC = () => {
     const [session, setSession] = useState<AuthSession | null>(null);
@@ -55,15 +55,16 @@ const App: React.FC = () => {
 
     const loginElement = (
         <Login
-            onLogin={(userRole: UserRole) => {
-                const newSession = persistSession(userRole);
+            onLogin={user => {
+                const newSession = persistSession(user);
                 setSession(newSession);
             }}
         />
     );
 
     return (
-        <Routes>
+        <SessionProvider session={session}>
+            <Routes>
             <Route
                 path="/"
                 element={session ? <Navigate to="/dashboard" replace /> : loginElement}
@@ -123,7 +124,8 @@ const App: React.FC = () => {
             />
 
             <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+            </Routes>
+        </SessionProvider>
     );
 };
 

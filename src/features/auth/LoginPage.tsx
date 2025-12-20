@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { UserRole } from '../../types/auth';
-import { authenticate } from '../../lib/authClient';
+import { authenticate, AuthenticatedUser } from '../../lib/authClient';
 
 interface LoginProps {
-    onLogin: (role: UserRole) => void;
+    onLogin: (user: AuthenticatedUser) => void;
 }
 
 const Login: React.FC<LoginProps> = ({ onLogin }) => {
@@ -18,9 +17,9 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         e.preventDefault();
 
         try {
-            const role = await authenticate(email, password);
+            const user = await authenticate(email, password);
             setError('');
-            onLogin(role);
+            onLogin(user);
             navigate('/dashboard', { replace: true });
         } catch (err) {
             setError((err as Error).message);

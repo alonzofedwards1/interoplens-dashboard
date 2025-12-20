@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import Login from './LoginPage';
-import { authenticate } from '../../lib/authClient';
+import { authenticate, AuthenticatedUser } from '../../lib/authClient';
 
 jest.mock('../../lib/authClient');
 
@@ -21,7 +21,13 @@ describe('LoginPage', () => {
     });
 
     test('authenticates and redirects on success', async () => {
-        (authenticate as jest.Mock).mockResolvedValue('admin');
+        const authenticatedUser: AuthenticatedUser = {
+            id: 'user-admin',
+            email: 'admin@interoplens.io',
+            name: 'Interoplens Admin',
+            role: 'admin',
+        };
+        (authenticate as jest.Mock).mockResolvedValue(authenticatedUser);
         const onLogin = jest.fn();
 
         render(<Login onLogin={onLogin} />);
@@ -37,7 +43,7 @@ describe('LoginPage', () => {
         await userEvent.type(passwordInput, 'admin123');
         await userEvent.click(screen.getByRole('button', { name: /sign in/i }));
 
-        await waitFor(() => expect(onLogin).toHaveBeenCalledWith('admin'));
+        await waitFor(() => expect(onLogin).toHaveBeenCalledWith(authenticatedUser));
 
         expect(authenticate).toHaveBeenCalledWith(
             'admin@interoplens.io',

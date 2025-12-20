@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 
@@ -8,6 +8,7 @@ import ReportsGrid from "../../components/reports/ReportsGrid";
 import ReportDetailPanel from "../../components/reports/ReportDetailPanel";
 import { ReportId } from "../../components/reports/reportResolver";
 import { reportCatalog } from "../../components/reports/reportCatalog";
+import { useUserPreference } from "../../lib/userPreferences";
 
 const isWithinRange = (generatedAt: string, dateRange: string) => {
     if (dateRange === "all" || dateRange === "custom") return true;
@@ -27,14 +28,23 @@ const isWithinRange = (generatedAt: string, dateRange: string) => {
     }
 };
 
+const defaultReportFilters = {
+    dateRange: "all",
+    environment: "all",
+    status: "all",
+};
+
 const Reports: React.FC = () => {
     const navigate = useNavigate();
 
-    const [dateRange, setDateRange] = useState("all");
-    const [environment, setEnvironment] = useState("all");
-    const [status, setStatus] = useState("all");
+    const [filters, setFilters] = useUserPreference(
+        "reports.filters",
+        defaultReportFilters
+    );
     const [selectedReport, setSelectedReport] =
-        useState<ReportId | null>(null);
+        React.useState<ReportId | null>(null);
+
+    const { dateRange, environment, status } = filters;
 
     const filteredReports = useMemo(
         () =>
@@ -82,9 +92,15 @@ const Reports: React.FC = () => {
                 dateRange={dateRange}
                 environment={environment}
                 status={status}
-                onDateRangeChange={setDateRange}
-                onEnvironmentChange={setEnvironment}
-                onStatusChange={setStatus}
+                onDateRangeChange={value =>
+                    setFilters(prev => ({ ...prev, dateRange: value }))
+                }
+                onEnvironmentChange={value =>
+                    setFilters(prev => ({ ...prev, environment: value }))
+                }
+                onStatusChange={value =>
+                    setFilters(prev => ({ ...prev, status: value }))
+                }
             />
 
             <ReportsGrid

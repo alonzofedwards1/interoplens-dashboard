@@ -1,6 +1,7 @@
 import { webcrypto } from 'crypto';
 import { TextEncoder } from 'util';
 import {
+    AuthenticatedUser,
     authenticate,
     clearSession,
     persistSession,
@@ -32,9 +33,13 @@ describe('authClient', () => {
     });
 
     test('authenticates a known demo user with the expected password', async () => {
-        const role = await authenticate('admin@interoplens.io', 'admin123');
+        const user = await authenticate('admin@interoplens.io', 'admin123');
 
-        expect(role).toBe('admin');
+        expect(user).toMatchObject({
+            id: 'user-admin',
+            email: 'admin@interoplens.io',
+            role: 'admin',
+        });
     });
 
     test('rejects invalid credentials', async () => {
@@ -51,16 +56,26 @@ describe('authClient', () => {
             password: 'ops12345',
         });
 
-        const role = await authenticate('ops@example.com', 'ops12345');
+        const user = await authenticate('ops@example.com', 'ops12345');
 
-        expect(role).toBe('analyst');
+        expect(user.role).toBe('analyst');
     });
 
     test('persists and reads a valid session', () => {
-        const session = persistSession('analyst');
+        const demoUser: AuthenticatedUser = {
+            id: 'user-analyst',
+            name: 'Analyst User',
+            email: 'analyst@interoplens.io',
+            role: 'analyst',
+        };
+        const session = persistSession(demoUser);
 
         expect(session.token).toBeTruthy();
-        expect(readSession()).toMatchObject({ role: 'analyst', token: session.token });
+        expect(readSession()).toMatchObject({
+            role: 'analyst',
+            token: session.token,
+            email: demoUser.email,
+        });
     });
 
     test('returns null when an existing session is expired', () => {

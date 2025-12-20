@@ -1,13 +1,19 @@
 import { UserRole } from '../types/auth';
-import { getUsers } from '../features/settings/data/usersStore';
+import { AppUser, getUsers } from '../features/settings/data/usersStore';
 import { hashPassword } from './password';
 
 const STORAGE_KEY = 'authSession';
 const SESSION_TTL_MS = 30 * 60 * 1000; // 30 minutes
 
-export interface AuthSession {
-    token: string;
+export interface AuthenticatedUser {
+    id: string;
+    name: string;
+    email: string;
     role: UserRole;
+}
+
+export interface AuthSession extends AuthenticatedUser {
+    token: string;
     issuedAt: number;
 }
 
@@ -33,10 +39,10 @@ const parseSession = (raw: string | null): AuthSession | null => {
 export const readSession = (): AuthSession | null =>
     parseSession(sessionStorage.getItem(STORAGE_KEY));
 
-export const persistSession = (role: UserRole): AuthSession => {
+export const persistSession = (user: AuthenticatedUser): AuthSession => {
     const session: AuthSession = {
+        ...user,
         token: generateToken(),
-        role,
         issuedAt: Date.now(),
     };
 
@@ -68,6 +74,13 @@ export const subscribeToSession = (callback: () => void) => {
     };
 };
 
+const toAuthenticatedUser = (user: AppUser): AuthenticatedUser => ({
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+});
+
 export const authenticate = async (email: string, password: string) => {
     const providedHash = await hashPassword(password);
     const user = getUsers().find(
@@ -76,5 +89,5 @@ export const authenticate = async (email: string, password: string) => {
 
     if (!user) throw new Error('Invalid email or password');
 
-    return user.role;
+    return toAuthenticatedUser(user);
 };

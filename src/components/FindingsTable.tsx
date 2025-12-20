@@ -1,7 +1,8 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { findingsData, Finding } from '../features/findings/data/findings.data';
+import { useUserPreference } from '../lib/userPreferences';
 
 /* ============================
    Derive Recent Findings
@@ -55,15 +56,24 @@ const getStatusLabel = (status: Finding['status']) => (
     </span>
 );
 
+const defaultFindingsPreferences = {
+    query: '',
+    sortKey: 'detectedAt' as const,
+    sortDirection: 'desc' as const,
+};
+
 /* ============================
    Component
 ============================ */
 
 const FindingsTable: React.FC = () => {
     const navigate = useNavigate();
-    const [query, setQuery] = useState('');
-    const [sortKey, setSortKey] = useState<'detectedAt' | 'severity' | 'organization'>('detectedAt');
-    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+    const [preferences, setPreferences] = useUserPreference(
+        'findings.dashboard.table',
+        defaultFindingsPreferences
+    );
+
+    const { query, sortDirection, sortKey } = preferences;
 
     const filteredFindings = useMemo(() => {
         return recentFindings.filter(finding => {
@@ -96,10 +106,12 @@ const FindingsTable: React.FC = () => {
 
     const toggleSort = (key: typeof sortKey) => {
         if (sortKey === key) {
-            setSortDirection(prev => (prev === 'asc' ? 'desc' : 'asc'));
+            setPreferences(prev => ({
+                ...prev,
+                sortDirection: prev.sortDirection === 'asc' ? 'desc' : 'asc',
+            }));
         } else {
-            setSortKey(key);
-            setSortDirection('asc');
+            setPreferences(prev => ({ ...prev, sortKey: key, sortDirection: 'asc' }));
         }
     };
 
@@ -122,7 +134,12 @@ const FindingsTable: React.FC = () => {
                 <input
                     type="search"
                     value={query}
-                    onChange={event => setQuery(event.target.value)}
+                    onChange={event =>
+                        setPreferences(prev => ({
+                            ...prev,
+                            query: event.target.value,
+                        }))
+                    }
                     placeholder="Filter by organization or type"
                     className="border rounded px-3 py-2 text-sm w-full sm:w-72"
                 />
@@ -131,7 +148,12 @@ const FindingsTable: React.FC = () => {
                     <span className="text-gray-600">Sort by</span>
                     <select
                         value={sortKey}
-                        onChange={event => setSortKey(event.target.value as typeof sortKey)}
+                        onChange={event =>
+                            setPreferences(prev => ({
+                                ...prev,
+                                sortKey: event.target.value as typeof sortKey,
+                            }))
+                        }
                         className="border rounded px-2 py-1"
                     >
                         <option value="detectedAt">Detected</option>

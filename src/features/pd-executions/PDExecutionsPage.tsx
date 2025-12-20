@@ -1,8 +1,9 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaArrowLeft } from 'react-icons/fa';
 
 import { pdExecutionsData, PDExecution } from './data/pdExecutions.data';
+import { useUserPreference } from '../../lib/userPreferences';
 
 /* ============================
    Derived Metrics
@@ -61,12 +62,21 @@ const formatOutcome = (outcome: PDExecution['outcome']) => {
    Component
 ============================ */
 
+const defaultExecutionPreferences = {
+    search: '',
+    outcomeFilter: 'all' as PDExecution['outcome'] | 'all',
+    sortKey: 'requestTimestamp' as const,
+    sortDirection: 'desc' as const,
+};
+
 const PDExecutions: React.FC = () => {
     const navigate = useNavigate();
-    const [search, setSearch] = useState('');
-    const [outcomeFilter, setOutcomeFilter] = useState<PDExecution['outcome'] | 'all'>('all');
-    const [sortKey, setSortKey] = useState<'requestTimestamp' | 'organization' | 'outcome' | 'executionTimeMs'>('requestTimestamp');
-    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+    const [preferences, setPreferences] = useUserPreference(
+        'pd.executions.table',
+        defaultExecutionPreferences
+    );
+
+    const { outcomeFilter, search, sortDirection, sortKey } = preferences;
 
     const filteredExecutions = useMemo(() => {
         return pdExecutionsData.filter(exec => {
@@ -103,10 +113,12 @@ const PDExecutions: React.FC = () => {
 
     const toggleSort = (key: typeof sortKey) => {
         if (sortKey === key) {
-            setSortDirection(prev => (prev === 'asc' ? 'desc' : 'asc'));
+            setPreferences(prev => ({
+                ...prev,
+                sortDirection: prev.sortDirection === 'asc' ? 'desc' : 'asc',
+            }));
         } else {
-            setSortKey(key);
-            setSortDirection('asc');
+            setPreferences(prev => ({ ...prev, sortKey: key, sortDirection: 'asc' }));
         }
     };
 
@@ -156,7 +168,12 @@ const PDExecutions: React.FC = () => {
                         <select
                             id="pd-outcome"
                             value={outcomeFilter}
-                            onChange={event => setOutcomeFilter(event.target.value as typeof outcomeFilter)}
+                            onChange={event =>
+                                setPreferences(prev => ({
+                                    ...prev,
+                                    outcomeFilter: event.target.value as typeof outcomeFilter,
+                                }))
+                            }
                             className="border rounded px-2 py-1"
                         >
                             <option value="all">All</option>
@@ -170,7 +187,12 @@ const PDExecutions: React.FC = () => {
                     <input
                         type="search"
                         value={search}
-                        onChange={event => setSearch(event.target.value)}
+                        onChange={event =>
+                            setPreferences(prev => ({
+                                ...prev,
+                                search: event.target.value,
+                            }))
+                        }
                         placeholder="Filter by org or QHIN"
                         className="border rounded px-3 py-2 w-full sm:w-72"
                     />
@@ -182,7 +204,12 @@ const PDExecutions: React.FC = () => {
                         <select
                             id="pd-sort"
                             value={sortKey}
-                            onChange={event => setSortKey(event.target.value as typeof sortKey)}
+                            onChange={event =>
+                                setPreferences(prev => ({
+                                    ...prev,
+                                    sortKey: event.target.value as typeof sortKey,
+                                }))
+                            }
                             className="border rounded px-2 py-1"
                         >
                             <option value="requestTimestamp">Timestamp</option>
