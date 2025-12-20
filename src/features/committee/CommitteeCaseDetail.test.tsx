@@ -21,6 +21,10 @@ const renderCase = (caseId: string) => {
     return render(<CommitteeCaseDetail />);
 };
 
+beforeEach(() => {
+    localStorage.clear();
+});
+
 test('decision required case records decision before resolution', async () => {
     renderCase('FND-1029');
 
@@ -77,14 +81,8 @@ test('resolved cases keep guidance visible and gate knowledge base generation', 
         )
     ).toBeInTheDocument();
 
-    const generateButton = screen.getByRole('button', {
-        name: /generate knowledge base article/i,
+    const queuedButton = screen.getByRole('button', {
+        name: /knowledge base article queued/i,
     });
-    expect(generateButton).toBeEnabled();
-
-    await userEvent.click(generateButton);
-
-    expect(
-        screen.getByRole('button', { name: /knowledge base article queued/i })
-    ).toBeDisabled();
+    expect(queuedButton).toBeDisabled();
 });

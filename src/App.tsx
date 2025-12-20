@@ -11,6 +11,7 @@ import Settings from './features/settings/SettingsPage';
 
 import CommitteeQueue from './features/committee/CommitteeQueue';
 import CommitteeCaseDetail from './features/committee/CommitteeCaseDetail';
+import KnowledgeBasePage from './features/knowledge-base/KnowledgeBasePage';
 
 import OidQueue from './features/oid-directory/OidQueue';
 import OidDetail from './features/oid-directory/OidDetail';
@@ -91,6 +92,11 @@ const App: React.FC = () => {
             <Route
                 path="/committee/:id"
                 element={requireAuth(<CommitteeCaseDetail />)}
+            />
+
+            <Route
+                path="/knowledge-base"
+                element={requireAuth(<KnowledgeBasePage />)}
             />
 
             {/* OID Directory */}

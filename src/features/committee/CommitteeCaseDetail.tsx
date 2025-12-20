@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { committeeCasesData } from './data/committeeCases.data';
@@ -13,6 +13,10 @@ import DecisionTimeline from './components/DecisionTimeline';
 import DecisionPanel from './components/DecisionPanel';
 import LinkedFindingsTable from './components/LinkedFindingsTable';
 import ResolutionPanel from './components/ResolutionPanel';
+import {
+    hasKnowledgeBaseArticle,
+    upsertKnowledgeBaseArticleFromCase,
+} from '../knowledge-base/knowledgeBaseStore';
 
 const CommitteeCaseDetail: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -28,6 +32,11 @@ const CommitteeCaseDetail: React.FC = () => {
     );
     const [kbGenerated, setKbGenerated] = useState(false);
     const [alert, setAlert] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!caseData) return;
+        setKbGenerated(hasKnowledgeBaseArticle(caseData.id));
+    }, [caseData]);
 
     const hasDecision = Boolean(selectedDecision);
     const isDecisionPending = status === 'Decision Required';
@@ -201,15 +210,20 @@ const CommitteeCaseDetail: React.FC = () => {
                     </div>
 
                     {/* Resolution Panel */}
-                    <ResolutionPanel
-                        canResolve={isResolved}
-                        isGenerated={kbGenerated}
-                        onGenerateKB={() => {
-                            if (!canGenerateKb) return;
-                            setKbGenerated(true);
-                            setAlert('Knowledge base article queued for publication.');
-                        }}
-                    />
+                        <ResolutionPanel
+                            canResolve={isResolved}
+                            isGenerated={kbGenerated}
+                            onGenerateKB={() => {
+                                if (!canGenerateKb) return;
+                                upsertKnowledgeBaseArticleFromCase(
+                                    caseData,
+                                    selectedDecision,
+                                    'queued'
+                                );
+                                setKbGenerated(true);
+                                setAlert('Knowledge base article queued for publication.');
+                            }}
+                        />
                 </div>
             </div>
 
