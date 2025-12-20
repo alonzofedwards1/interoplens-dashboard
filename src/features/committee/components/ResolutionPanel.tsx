@@ -7,10 +7,10 @@ interface ResolutionPanelProps {
 }
 
 const ResolutionPanel: React.FC<ResolutionPanelProps> = ({
-                                                         canResolve,
-                                                         isGenerated,
-                                                         onGenerateKB,
-                                                     }) => {
+    canResolve,
+    isGenerated,
+    onGenerateKB,
+}) => {
     const buttonText = isGenerated
         ? 'Knowledge Base Article Queued'
         : 'Generate Knowledge Base Article';

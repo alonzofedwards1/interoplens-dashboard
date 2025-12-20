@@ -28,6 +28,9 @@ test('decision required case records decision before resolution', async () => {
         name: /mark decision made/i,
     });
     expect(markDecisionButton).toBeDisabled();
+    expect(
+        screen.getByText(/select a decision option to record the committee decision/i)
+    ).toBeInTheDocument();
 
     await userEvent.click(
         screen.getByLabelText('Require immediate certificate rotation')
@@ -63,4 +66,25 @@ test('decision made case can be resolved and queued for knowledge base publicati
     expect(
         screen.getByText(/knowledge base article queued for publication/i)
     ).toBeInTheDocument();
+});
+
+test('resolved cases keep guidance visible and gate knowledge base generation', async () => {
+    renderCase('FND-1041');
+
+    expect(
+        screen.getByText(
+            /decision documented and case resolved\. publish to the knowledge base to share learnings\./i
+        )
+    ).toBeInTheDocument();
+
+    const generateButton = screen.getByRole('button', {
+        name: /generate knowledge base article/i,
+    });
+    expect(generateButton).toBeEnabled();
+
+    await userEvent.click(generateButton);
+
+    expect(
+        screen.getByRole('button', { name: /knowledge base article queued/i })
+    ).toBeDisabled();
 });

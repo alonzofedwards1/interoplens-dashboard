@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { UserRole } from '../types/auth';
-import { authenticate } from '../lib/authClient';
+import { UserRole } from '../../types/auth';
+import { authenticate } from '../../lib/authClient';
 
 interface LoginProps {
     onLogin: (role: UserRole) => void;

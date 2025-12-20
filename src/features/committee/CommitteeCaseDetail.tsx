@@ -29,6 +29,15 @@ const CommitteeCaseDetail: React.FC = () => {
     const [kbGenerated, setKbGenerated] = useState(false);
     const [alert, setAlert] = useState<string | null>(null);
 
+    const hasDecision = Boolean(selectedDecision);
+    const isDecisionPending = status === 'Decision Required';
+    const isDecisionMade = status === 'Decision Made';
+    const isResolved = status === 'Resolved';
+
+    const canRecordDecision = isDecisionPending && hasDecision;
+    const canResolveCase = (isDecisionMade || isResolved) && hasDecision;
+    const canGenerateKb = isResolved && !kbGenerated;
+
     if (!caseData) {
         return (
             <div className="p-6">
@@ -137,45 +146,53 @@ const CommitteeCaseDetail: React.FC = () => {
 
                     {/* Action Buttons */}
                     <div className="bg-white rounded-lg shadow p-5 space-y-3">
-                        {status === 'Decision Required' && (
-                            <button
-                                disabled={!selectedDecision}
-                                onClick={() => {
-                                    if (!selectedDecision) return;
-                                    setStatus('Decision Made');
-                                    setAlert('Decision recorded. Ready for resolution.');
-                                }}
-                                className={`w-full px-4 py-2 rounded font-medium ${
-                                    selectedDecision
-                                        ? 'bg-blue-600 text-white hover:bg-blue-700'
-                                        : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                }`}
-                            >
-                                Mark Decision Made
-                            </button>
+                        <button
+                            disabled={!canRecordDecision}
+                            onClick={() => {
+                                if (!canRecordDecision) return;
+                                setStatus('Decision Made');
+                                setAlert('Decision recorded. Ready for resolution.');
+                            }}
+                            className={`w-full px-4 py-2 rounded font-medium ${
+                                canRecordDecision
+                                    ? 'bg-blue-600 text-white hover:bg-blue-700'
+                                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                            }`}
+                        >
+                            Mark Decision Made
+                        </button>
+
+                        {!canRecordDecision && (
+                            <p className="text-xs text-gray-500" role="note">
+                                Select a decision option to record the committee decision.
+                            </p>
                         )}
 
-                        {status === 'Decision Made' && (
-                            <button
-                                disabled={!selectedDecision}
-                                onClick={() => {
-                                    if (!selectedDecision) return;
-                                    setStatus('Resolved');
-                                    setAlert(
-                                        'Case resolved. You can now publish a knowledge base article.'
-                                    );
-                                }}
-                                className={`w-full px-4 py-2 rounded font-medium ${
-                                    selectedDecision
-                                        ? 'bg-green-600 text-white hover:bg-green-700'
-                                        : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                }`}
-                            >
-                                Resolve Case
-                            </button>
+                        <button
+                            disabled={!canResolveCase}
+                            onClick={() => {
+                                if (!canResolveCase) return;
+                                setStatus('Resolved');
+                                setAlert(
+                                    'Case resolved. You can now publish a knowledge base article.'
+                                );
+                            }}
+                            className={`w-full px-4 py-2 rounded font-medium ${
+                                canResolveCase
+                                    ? 'bg-green-600 text-white hover:bg-green-700'
+                                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                            }`}
+                        >
+                            Resolve Case
+                        </button>
+
+                        {status !== 'Decision Made' && !isResolved && (
+                            <p className="text-xs text-gray-500" role="note">
+                                A recorded decision is required before the case can be resolved.
+                            </p>
                         )}
 
-                        {status === 'Resolved' && (
+                        {isResolved && (
                             <p className="text-sm text-gray-600">
                                 Decision documented and case resolved. Publish to the knowledge
                                 base to share learnings.
@@ -185,10 +202,10 @@ const CommitteeCaseDetail: React.FC = () => {
 
                     {/* Resolution Panel */}
                     <ResolutionPanel
-                        canResolve={status === 'Resolved'}
+                        canResolve={isResolved}
                         isGenerated={kbGenerated}
                         onGenerateKB={() => {
-                            if (kbGenerated || status !== 'Resolved') return;
+                            if (!canGenerateKb) return;
                             setKbGenerated(true);
                             setAlert('Knowledge base article queued for publication.');
                         }}
