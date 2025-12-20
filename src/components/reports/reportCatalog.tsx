@@ -36,6 +36,28 @@ export const reportCatalog: ReportListItem[] = [
         environment: "test",
         status: "healthy",
         icon: <FileText size={20} />
+    },
+    {
+        id: "pd-anomaly-deep-dive",
+        title: "PD Anomaly Deep Dive",
+        description:
+            "Root-cause analysis of Patient Discovery retry loops and certificate trust misalignments across partners.",
+        audience: "Operations, Engineering",
+        generatedAt: "2025-02-03T16:45:00Z",
+        environment: "prod",
+        status: "failing",
+        icon: <BarChart3 size={20} />
+    },
+    {
+        id: "cert-renewal-forecast",
+        title: "Certificate Renewal Forecast",
+        description:
+            "Quarterly projection of certificate expirations with prioritized renewal recommendations.",
+        audience: "Security, Compliance",
+        generatedAt: "2025-01-28T08:20:00Z",
+        environment: "sandbox",
+        status: "degraded",
+        icon: <FileText size={20} />
     }
 ];
 

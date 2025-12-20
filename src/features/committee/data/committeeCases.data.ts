@@ -203,7 +203,7 @@ export const committeeCasesData: CommitteeCase[] = [
 
         linkedFindings: [
             {
-                id: 'FND-1012',
+                id: 'FND-1041',
                 type: 'Patient Discovery',
                 date: '2025-12-05',
                 severity: 'Critical',

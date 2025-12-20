@@ -30,13 +30,17 @@ describe('ReportsPage', () => {
         render(<ReportsPage />);
 
         expect(
-            screen.getByText(/showing 2 of 2 reports/i)
+            screen.getByText(/showing 4 of 4 reports/i)
         ).toBeInTheDocument();
         expect(
             screen.getByText(/tefca readiness assessment/i)
         ).toBeInTheDocument();
         expect(
             screen.getByText(/tefca interoperability snapshot/i)
+        ).toBeInTheDocument();
+        expect(screen.getByText(/pd anomaly deep dive/i)).toBeInTheDocument();
+        expect(
+            screen.getByText(/certificate renewal forecast/i)
         ).toBeInTheDocument();
     });
 
@@ -51,8 +55,21 @@ describe('ReportsPage', () => {
         expect(
             screen.getByText(/tefca readiness assessment/i)
         ).toBeInTheDocument();
+        expect(screen.getByText(/pd anomaly deep dive/i)).toBeInTheDocument();
         expect(
             screen.queryByText(/tefca interoperability snapshot/i)
+        ).not.toBeInTheDocument();
+
+        await userEvent.selectOptions(
+            screen.getByDisplayValue(/all statuses/i),
+            'degraded'
+        );
+
+        expect(
+            screen.getByText(/tefca readiness assessment/i)
+        ).toBeInTheDocument();
+        expect(
+            screen.queryByText(/pd anomaly deep dive/i)
         ).not.toBeInTheDocument();
 
         await userEvent.selectOptions(
@@ -61,20 +78,7 @@ describe('ReportsPage', () => {
         );
 
         expect(
-            screen.getByText(/no reports match the selected filters/i)
-        ).toBeInTheDocument();
-
-        await userEvent.selectOptions(
-            screen.getByDisplayValue(/sandbox/i),
-            'test'
-        );
-        await userEvent.selectOptions(
-            screen.getByDisplayValue(/all statuses/i),
-            'healthy'
-        );
-
-        expect(
-            screen.getByText(/tefca interoperability snapshot/i)
+            screen.getByText(/certificate renewal forecast/i)
         ).toBeInTheDocument();
     });
 

@@ -71,21 +71,22 @@ export const findingsData: Finding[] = [
         source: 'Certificate Inspector'
     },
     {
-        id: 'F-003',
-        organization: 'Cleveland Clinic',
+        id: 'FND-1029',
+        organization: 'Mount Sinai Health System',
         environment: 'prod',
-        type: 'Committee',
+        type: 'Certificate',
+        transaction: 'Directory',
         severity: 'critical',
         status: 'non-compliant',
-        title: 'CommitteeQueue Review Required',
+        title: 'Production Certificate At Risk',
         description:
-            'Sustained non-standard exchange behavior triggered mandatory committee review.',
-        detectedAt: '2025-12-17T21:45:00Z',
+            'Primary production certificate will expire in six days; partner trust chains already warning.',
+        detectedAt: '2025-12-12T10:30:00Z',
         source: 'Governance Rules Engine'
     },
     {
         id: 'F-004',
-        organization: 'Intermountain Health',
+        organization: 'Intermountain Healthcare',
         environment: 'test',
         type: 'Execution',
         transaction: 'XDS.b',
@@ -96,6 +97,34 @@ export const findingsData: Finding[] = [
             'XDS.b execution failures exceeded 25% over a rolling 1-hour window.',
         detectedAt: '2025-12-17T18:02:00Z',
         source: 'Execution Monitor'
+    },
+    {
+        id: 'FND-1034',
+        organization: 'Intermountain Healthcare',
+        environment: 'prod',
+        type: 'PD',
+        transaction: 'PD',
+        severity: 'critical',
+        status: 'non-compliant',
+        title: 'Patient Discovery Retry Loop',
+        description:
+            'Patient Discovery retry loop detected after upstream timeout; volume now 4× baseline.',
+        detectedAt: '2025-12-11T09:15:00Z',
+        source: 'Interoplens Analyzer'
+    },
+    {
+        id: 'FND-1041',
+        organization: 'VA Puget Sound',
+        environment: 'test',
+        type: 'PD',
+        transaction: 'PD',
+        severity: 'critical',
+        status: 'non-compliant',
+        title: 'Repeated PD Query Failures',
+        description:
+            'PD queries failing due to inconsistent certificate chain validation across responders.',
+        detectedAt: '2025-12-10T08:20:00Z',
+        source: 'Interoplens Analyzer'
     },
     {
         id: 'F-005',
@@ -144,6 +173,20 @@ export const findingsData: Finding[] = [
         source: 'Interoplens Analyzer'
     },
     {
+        id: 'FND-1028',
+        organization: 'Cleveland Clinic',
+        environment: 'test',
+        type: 'PD',
+        transaction: 'PD',
+        severity: 'warning',
+        status: 'compliant',
+        title: 'Emerging PD Latency Variance',
+        description:
+            'Gradual increase in PD response time over baseline; monitoring enabled during committee review.',
+        detectedAt: '2025-12-13T12:10:00Z',
+        source: 'Interoplens Analyzer'
+    },
+    {
         id: 'F-008',
         organization: 'Cleveland Clinic',
         environment: 'prod',
@@ -159,7 +202,7 @@ export const findingsData: Finding[] = [
     },
     {
         id: 'F-009',
-        organization: 'Intermountain Health',
+        organization: 'Intermountain Healthcare',
         environment: 'test',
         type: 'Metadata',
         transaction: 'XDS.b',
@@ -219,7 +262,7 @@ export const findingsData: Finding[] = [
     },
     {
         id: 'F-013',
-        organization: 'Intermountain Health',
+        organization: 'Intermountain Healthcare',
         environment: 'prod',
         type: 'Metadata',
         transaction: 'XDS.b',
@@ -243,5 +286,33 @@ export const findingsData: Finding[] = [
             'Exchange behavior well below governance thresholds.',
         detectedAt: '2025-12-18T11:20:00Z',
         source: 'Governance Rules Engine'
+    },
+    {
+        id: 'F-015',
+        organization: 'VA Puget Sound',
+        environment: 'test',
+        type: 'Execution',
+        transaction: 'XDS.b',
+        severity: 'ok',
+        status: 'compliant',
+        title: 'PD Recovery Verified',
+        description:
+            'Post-mitigation PD retries processed successfully with no certificate validation errors.',
+        detectedAt: '2025-12-18T10:05:00Z',
+        source: 'Execution Monitor'
+    },
+    {
+        id: 'F-016',
+        organization: 'Mount Sinai Health System',
+        environment: 'prod',
+        type: 'Certificate',
+        transaction: 'Directory',
+        severity: 'ok',
+        status: 'compliant',
+        title: 'Certificate Rotation Completed',
+        description:
+            'Production certificate rotated successfully and validated with all trading partners.',
+        detectedAt: '2025-12-18T10:45:00Z',
+        source: 'Certificate Inspector'
     }
 ];
