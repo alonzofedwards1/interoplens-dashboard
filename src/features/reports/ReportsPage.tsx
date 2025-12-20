@@ -2,11 +2,11 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 
-import ReportsHeader from "../components/reports/ReportsHeader";
-import ReportsFilters from "../components/reports/ReportsFilters";
-import ReportsGrid from "../components/reports/ReportsGrid";
-import ReportDetailPanel from "../components/reports/ReportDetailPanel";
-import { ReportId } from "../components/reports/reportResolver";
+import ReportsHeader from "../../components/reports/ReportsHeader";
+import ReportsFilters from "../../components/reports/ReportsFilters";
+import ReportsGrid from "../../components/reports/ReportsGrid";
+import ReportDetailPanel from "../../components/reports/ReportDetailPanel";
+import { ReportId } from "../../components/reports/reportResolver";
 
 const Reports: React.FC = () => {
     const navigate = useNavigate();

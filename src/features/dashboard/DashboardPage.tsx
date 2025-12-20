@@ -1,13 +1,13 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import Sidebar from '../components/Sidebar';
-import Topbar from '../components/Topbar';
-import BarChart from '../components/BarChart';
-import PieChart from '../components/PieChart';
-import Filters from '../components/Filters';
-import FindingsTable from '../components/FindingsTable';
-import ExampleFindings from '../components/ExampleFindings';
+import Sidebar from '../../components/Sidebar';
+import Topbar from '../../components/Topbar';
+import BarChart from '../../components/BarChart';
+import PieChart from '../../components/PieChart';
+import Filters from '../../components/Filters';
+import FindingsTable from '../../components/FindingsTable';
+import ExampleFindings from '../../components/ExampleFindings';
 
 import {
     FaUsers,
@@ -17,8 +17,8 @@ import {
     FaGavel
 } from 'react-icons/fa';
 
-import { findingsData } from '../data/findings.data';
-import { pdExecutionsData } from '../data/pdExecutions.data';
+import { findingsData } from '../findings/data/findings.data';
+import { pdExecutionsData } from '../pd-executions/data/pdExecutions.data';
 
 /* ============================
    Types
