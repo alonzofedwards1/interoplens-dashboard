@@ -1,4 +1,8 @@
-export type ReportId = "tefca-readiness" | "tefca-snapshot";
+export type ReportId =
+    | "tefca-readiness"
+    | "tefca-snapshot"
+    | "pd-anomaly-deep-dive"
+    | "cert-renewal-forecast";
 
 export interface BaseReport {
     reportId: ReportId;
