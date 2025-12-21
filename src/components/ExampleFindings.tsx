@@ -7,21 +7,21 @@ import {
     FaChevronUp,
 } from 'react-icons/fa';
 
-import { findingsData, Finding } from '../data/findings.data';
+import { Finding } from '../features/findings/data/findings.data';
 
 /* ============================
    Derive Example Findings
 ============================ */
 
-// Non-OK findings only, most recent first
-const exampleFindings: Finding[] = findingsData
-    .filter(f => f.severity !== 'ok')
-    .sort(
-        (a, b) =>
-            new Date(b.detectedAt).getTime() -
-            new Date(a.detectedAt).getTime()
-    )
-    .slice(0, 3);
+const buildExampleFindings = (findings: Finding[]) =>
+    findings
+        .filter(f => f.severity !== 'ok')
+        .sort(
+            (a, b) =>
+                new Date(b.detectedAt).getTime() -
+                new Date(a.detectedAt).getTime()
+        )
+        .slice(0, 3);
 
 /* ============================
    Helpers
@@ -48,8 +48,14 @@ const getSeverityMeta = (severity: Finding['severity']) => {
    Component
 ============================ */
 
-const ExampleFindings: React.FC = () => {
+type Props = { findings: Finding[] };
+
+const ExampleFindings: React.FC<Props> = ({ findings }) => {
     const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
+    const exampleFindings = React.useMemo(
+        () => buildExampleFindings(findings),
+        [findings]
+    );
 
     const toggleExpand = (index: number) => {
         setExpandedIndex(prev => (prev === index ? null : index));
