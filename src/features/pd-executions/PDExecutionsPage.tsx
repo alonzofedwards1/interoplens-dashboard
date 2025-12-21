@@ -2,44 +2,9 @@ import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaArrowLeft } from 'react-icons/fa';
 
-import { pdExecutionsData, PDExecution } from './data/pdExecutions.data';
+import { PDExecution } from './data/pdExecutions.data';
 import { useUserPreference } from '../../lib/userPreferences';
-
-/* ============================
-   Derived Metrics
-============================ */
-
-const totalExecutions = pdExecutionsData.length;
-
-const executionsByDay = 1; // mock window (single day demo)
-const avgPerDay = Math.round(totalExecutions / executionsByDay);
-
-const failures = pdExecutionsData.filter(
-    e => e.outcome === 'error'
-).length;
-
-const failureRate = totalExecutions
-    ? ((failures / totalExecutions) * 100).toFixed(1)
-    : '0.0';
-
-const peakHour = (() => {
-    const hourCounts: Record<string, number> = {};
-
-    pdExecutionsData.forEach(e => {
-        const hour = new Date(e.requestTimestamp)
-            .getUTCHours()
-            .toString()
-            .padStart(2, '0');
-
-        hourCounts[hour] = (hourCounts[hour] || 0) + 1;
-    });
-
-    const peak = Object.entries(hourCounts).sort(
-        (a, b) => b[1] - a[1]
-    )[0];
-
-    return peak ? `${peak[0]}:00–${peak[0]}:59` : '—';
-})();
+import { useServerData } from '../../lib/ServerDataContext';
 
 /* ============================
    Helpers
@@ -80,6 +45,7 @@ const defaultExecutionPreferences: ExecutionPreferences = {
 
 const PDExecutions: React.FC = () => {
     const navigate = useNavigate();
+    const { pdExecutions, loading } = useServerData();
     const [preferences, setPreferences] = useUserPreference(
         'pd.executions.table',
         defaultExecutionPreferences
@@ -88,7 +54,7 @@ const PDExecutions: React.FC = () => {
     const { outcomeFilter, search, sortDirection, sortKey } = preferences;
 
     const filteredExecutions = useMemo(() => {
-        return pdExecutionsData.filter(exec => {
+        return pdExecutions.filter(exec => {
             const matchesOutcome = outcomeFilter === 'all' || exec.outcome === outcomeFilter;
 
             if (!search.trim()) return matchesOutcome;
@@ -100,7 +66,7 @@ const PDExecutions: React.FC = () => {
 
             return matchesOutcome && matchesText;
         });
-    }, [outcomeFilter, search]);
+    }, [outcomeFilter, pdExecutions, search]);
 
     const sortedExecutions = useMemo(() => {
         return [...filteredExecutions].sort((a, b) => {
@@ -119,6 +85,41 @@ const PDExecutions: React.FC = () => {
             return 0;
         });
     }, [filteredExecutions, sortDirection, sortKey]);
+
+    const summaryStats = useMemo(() => {
+        const totalExecutions = pdExecutions.length;
+        const failures = pdExecutions.filter(e => e.outcome === 'error').length;
+        const failureRate = totalExecutions
+            ? ((failures / totalExecutions) * 100).toFixed(1)
+            : '0.0';
+
+        const hourCounts: Record<string, number> = {};
+        pdExecutions.forEach(e => {
+            const hour = new Date(e.requestTimestamp)
+                .getUTCHours()
+                .toString()
+                .padStart(2, '0');
+
+            hourCounts[hour] = (hourCounts[hour] || 0) + 1;
+        });
+
+        const peak = Object.entries(hourCounts).sort(
+            (a, b) => b[1] - a[1]
+        )[0];
+
+        const peakHour = peak ? `${peak[0]}:00–${peak[0]}:59` : '—';
+        const avgPerDay = Math.round(totalExecutions || 0);
+
+        return { totalExecutions, failures, failureRate, peakHour, avgPerDay };
+    }, [pdExecutions]);
+
+    if (loading) {
+        return (
+            <div className="flex min-h-screen items-center justify-center text-gray-700">
+                Loading Patient Discovery executions...
+            </div>
+        );
+    }
 
     const toggleSort = (key: ExecutionSortKey) => {
         if (sortKey === key) {
@@ -151,10 +152,16 @@ const PDExecutions: React.FC = () => {
 
             {/* Summary Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <SummaryCard label="Total PD Executions" value={totalExecutions} />
-                <SummaryCard label="Avg / Day" value={avgPerDay} />
-                <SummaryCard label="Peak Hour" value={peakHour} />
-                <SummaryCard label="Failure Rate" value={`${failureRate}%`} />
+                <SummaryCard
+                    label="Total PD Executions"
+                    value={summaryStats.totalExecutions}
+                />
+                <SummaryCard label="Avg / Day" value={summaryStats.avgPerDay} />
+                <SummaryCard label="Peak Hour" value={summaryStats.peakHour} />
+                <SummaryCard
+                    label="Failure Rate"
+                    value={`${summaryStats.failureRate}%`}
+                />
             </div>
 
             {/* Charts (placeholders) */}

@@ -7,24 +7,26 @@ import {
     Tooltip
 } from 'recharts';
 
-import { findingsData } from '../features/findings/data/findings.data';
+import { Finding } from '../features/findings/data/findings.data';
 
 /* ============================
    Derive Compliance Data
 ============================ */
 
-const compliantCount = findingsData.filter(
-    f => f.status === 'compliant'
-).length;
+const buildChartData = (findings: Finding[]) => {
+    const compliantCount = findings.filter(
+        f => f.status === 'compliant'
+    ).length;
 
-const nonCompliantCount = findingsData.filter(
-    f => f.status === 'non-compliant'
-).length;
+    const nonCompliantCount = findings.filter(
+        f => f.status === 'non-compliant'
+    ).length;
 
-const data = [
-    { name: 'Compliant', value: compliantCount },
-    { name: 'Non-Compliant', value: nonCompliantCount },
-];
+    return [
+        { name: 'Compliant', value: compliantCount },
+        { name: 'Non-Compliant', value: nonCompliantCount },
+    ];
+};
 
 const COLORS = ['#10B981', '#EF4444'];
 
@@ -32,7 +34,11 @@ const COLORS = ['#10B981', '#EF4444'];
    Component
 ============================ */
 
-const PieChartComponent: React.FC = () => {
+type Props = { findings: Finding[] };
+
+const PieChartComponent: React.FC<Props> = ({ findings }) => {
+    const data = React.useMemo(() => buildChartData(findings), [findings]);
+
     return (
         <div className="bg-white rounded-2xl shadow p-4 w-full h-[300px]">
             <h2 className="text-lg font-semibold mb-2">

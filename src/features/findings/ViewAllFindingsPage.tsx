@@ -11,7 +11,8 @@ import {
     FaSortDown,
 } from 'react-icons/fa';
 
-import { findingsData, Finding } from './data/findings.data';
+import { Finding } from './data/findings.data';
+import { useServerData } from '../../lib/ServerDataContext';
 
 /* ============================
    Severity Badge
@@ -61,6 +62,7 @@ type SortDirection = 'asc' | 'desc';
 
 const ViewAllFindings: React.FC = () => {
     const navigate = useNavigate();
+    const { findings } = useServerData();
     const [expandedId, setExpandedId] = useState<string | null>(null);
     const [sortKey, setSortKey] = useState<SortKey>('detectedAt');
     const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
@@ -86,7 +88,7 @@ const ViewAllFindings: React.FC = () => {
     };
 
     const sortedFindings = useMemo(() => {
-        return [...findingsData].sort((a, b) => {
+        return [...findings].sort((a, b) => {
             const aVal = a[sortKey as keyof Finding] ?? '';
             const bVal = b[sortKey as keyof Finding] ?? '';
 
@@ -94,7 +96,7 @@ const ViewAllFindings: React.FC = () => {
             if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
             return 0;
         });
-    }, [sortKey, sortDirection]);
+    }, [findings, sortKey, sortDirection]);
 
     return (
         <div className="p-6 space-y-4">

@@ -1,21 +1,22 @@
 import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { findingsData, Finding } from '../features/findings/data/findings.data';
+import { Finding } from '../features/findings/data/findings.data';
 import { useUserPreference } from '../lib/userPreferences';
 
 /* ============================
    Derive Recent Findings
 ============================ */
 
-const recentFindings: Finding[] = findingsData
-    .slice()
-    .sort(
-        (a, b) =>
-            new Date(b.detectedAt).getTime() -
-            new Date(a.detectedAt).getTime()
-    )
-    .slice(0, 5);
+const buildRecentFindings = (findings: Finding[]) =>
+    findings
+        .slice()
+        .sort(
+            (a, b) =>
+                new Date(b.detectedAt).getTime() -
+                new Date(a.detectedAt).getTime()
+        )
+        .slice(0, 5);
 
 /* ============================
    Helpers
@@ -74,7 +75,11 @@ const defaultFindingsPreferences: FindingsPreferences = {
    Component
 ============================ */
 
-const FindingsTable: React.FC = () => {
+interface FindingsTableProps {
+    findings: Finding[];
+}
+
+const FindingsTable: React.FC<FindingsTableProps> = ({ findings }) => {
     const navigate = useNavigate();
     const [preferences, setPreferences] = useUserPreference(
         'findings.dashboard.table',
@@ -84,6 +89,7 @@ const FindingsTable: React.FC = () => {
     const { query, sortDirection, sortKey } = preferences;
 
     const filteredFindings = useMemo(() => {
+        const recentFindings = buildRecentFindings(findings);
         return recentFindings.filter(finding => {
             if (!query.trim()) return true;
 
@@ -93,7 +99,7 @@ const FindingsTable: React.FC = () => {
                 finding.type.toLowerCase().includes(lowerQuery)
             );
         });
-    }, [query]);
+    }, [findings, query]);
 
     const sortedFindings = useMemo(() => {
         return [...filteredFindings].sort((a, b) => {

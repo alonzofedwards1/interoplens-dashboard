@@ -17,9 +17,10 @@ import {
     FaGavel
 } from 'react-icons/fa';
 
-import { findingsData } from '../findings/data/findings.data';
-import { pdExecutionsData } from '../pd-executions/data/pdExecutions.data';
-import { committeeQueueData } from '../committee/data/committeeQueue.data';
+import { useServerData } from '../../lib/ServerDataContext';
+import { Finding } from '../findings/data/findings.data';
+import { PDExecution } from '../pd-executions/data/pdExecutions.data';
+import { CommitteeQueueItem } from '../committee/data/committeeQueue.data';
 
 /* ============================
    Types
@@ -34,40 +35,46 @@ interface DashboardProps {
    Derived Metrics (Single Source of Truth)
 ============================ */
 
-// Findings
-const totalFindings = findingsData.length;
+const deriveFindingsMetrics = (findings: Finding[]) => {
+    const totalFindings = findings.length;
+    const warningCount = findings.filter(f => f.severity === 'warning').length;
+    const criticalCount = findings.filter(f => f.severity === 'critical').length;
 
-const warningCount = findingsData.filter(
-    f => f.severity === 'warning'
-).length;
+    return { totalFindings, warningCount, criticalCount };
+};
 
-const criticalCount = findingsData.filter(
-    f => f.severity === 'critical'
-).length;
+const deriveCommitteeMetrics = (queue: CommitteeQueueItem[]) => ({
+    committeeCount: queue.length,
+});
 
-const committeeCount = committeeQueueData.length;
+const derivePdMetrics = (executions: PDExecution[]) => {
+    const totalPDExecutions = executions.length;
+    const pdSuccessCount = executions.filter(
+        execution => execution.outcome === 'success'
+    ).length;
+    const pdErrorCount = executions.filter(
+        execution => execution.outcome === 'error'
+    ).length;
+    const averagePdLatencyMs = Math.round(
+        executions.reduce((sum, execution) => sum + execution.executionTimeMs, 0) /
+            Math.max(totalPDExecutions, 1)
+    );
 
-// PD Executions
-const totalPDExecutions = pdExecutionsData.length;
-const pdSuccessCount = pdExecutionsData.filter(
-    execution => execution.outcome === 'success'
-).length;
-const pdErrorCount = pdExecutionsData.filter(
-    execution => execution.outcome === 'error'
-).length;
-const averagePdLatencyMs = Math.round(
-    pdExecutionsData.reduce((sum, execution) => sum + execution.executionTimeMs, 0) /
-        Math.max(totalPDExecutions, 1)
-);
+    return { totalPDExecutions, pdSuccessCount, pdErrorCount, averagePdLatencyMs };
+};
 
 /* ============================
    Summary Card Data
 ============================ */
 
-const alertCards = [
+const buildAlertCards = (
+    pdMetrics: ReturnType<typeof derivePdMetrics>,
+    findingsMetrics: ReturnType<typeof deriveFindingsMetrics>,
+    committeeMetrics: ReturnType<typeof deriveCommitteeMetrics>
+) => [
     {
         title: 'Total PD Executions',
-        value: totalPDExecutions.toString(),
+        value: pdMetrics.totalPDExecutions.toString(),
         icon: <FaUsers className="text-blue-500 text-2xl" />,
         bgColor: 'bg-blue-100',
         textColor: 'text-blue-800',
@@ -75,7 +82,7 @@ const alertCards = [
     },
     {
         title: 'Findings Detected',
-        value: totalFindings.toString(),
+        value: findingsMetrics.totalFindings.toString(),
         icon: <FaExclamationTriangle className="text-red-500 text-2xl" />,
         bgColor: 'bg-red-100',
         textColor: 'text-red-800',
@@ -83,7 +90,7 @@ const alertCards = [
     },
     {
         title: 'Warnings',
-        value: warningCount.toString(),
+        value: findingsMetrics.warningCount.toString(),
         icon: <FaBell className="text-yellow-500 text-2xl" />,
         bgColor: 'bg-yellow-100',
         textColor: 'text-yellow-800',
@@ -91,7 +98,7 @@ const alertCards = [
     },
     {
         title: 'Critical Issues',
-        value: criticalCount.toString(),
+        value: findingsMetrics.criticalCount.toString(),
         icon: <FaExclamationCircle className="text-orange-600 text-2xl" />,
         bgColor: 'bg-orange-100',
         textColor: 'text-orange-800',
@@ -99,7 +106,7 @@ const alertCards = [
     },
     {
         title: 'CommitteeQueue',
-        value: committeeCount.toString(),
+        value: committeeMetrics.committeeCount.toString(),
         icon: <FaGavel className="text-red-600 text-2xl" />,
         bgColor: 'bg-red-200',
         textColor: 'text-red-900',
@@ -113,15 +120,53 @@ const alertCards = [
 
 const Dashboard: React.FC<DashboardProps> = ({ role, onLogout }) => {
     const navigate = useNavigate();
+    const { findings, pdExecutions, committeeQueue, loading, error, refresh } =
+        useServerData();
+
+    const { totalFindings, warningCount, criticalCount } = React.useMemo(
+        () => deriveFindingsMetrics(findings),
+        [findings]
+    );
+
+    const committeeMetrics = React.useMemo(
+        () => deriveCommitteeMetrics(committeeQueue),
+        [committeeQueue]
+    );
+
+    const {
+        totalPDExecutions,
+        pdSuccessCount,
+        pdErrorCount,
+        averagePdLatencyMs,
+    } = React.useMemo(() => derivePdMetrics(pdExecutions), [pdExecutions]);
+
+    const alertCards = React.useMemo(
+        () =>
+            buildAlertCards(
+                { totalPDExecutions, pdSuccessCount, pdErrorCount, averagePdLatencyMs },
+                { totalFindings, warningCount, criticalCount },
+                committeeMetrics
+            ),
+        [
+            averagePdLatencyMs,
+            committeeMetrics,
+            criticalCount,
+            pdErrorCount,
+            pdSuccessCount,
+            totalFindings,
+            totalPDExecutions,
+            warningCount,
+        ]
+    );
 
     const { complianceRate, compliantFindings, prodFindings } = React.useMemo(() => {
-        const compliant = findingsData.filter(
+        const compliant = findings.filter(
             finding => finding.status === 'compliant'
         ).length;
         const compliancePct = Math.round(
             (compliant / Math.max(totalFindings, 1)) * 100
         );
-        const prod = findingsData.filter(
+        const prod = findings.filter(
             finding => finding.environment === 'prod'
         ).length;
 
@@ -130,7 +175,7 @@ const Dashboard: React.FC<DashboardProps> = ({ role, onLogout }) => {
             compliantFindings: compliant,
             prodFindings: prod,
         };
-    }, []);
+    }, [findings, totalFindings]);
 
     const insightCards = React.useMemo(
         () => [
@@ -163,6 +208,14 @@ const Dashboard: React.FC<DashboardProps> = ({ role, onLogout }) => {
         ]
     );
 
+    if (loading) {
+        return (
+            <div className="flex min-h-screen items-center justify-center">
+                <div className="text-gray-600">Loading dashboard...</div>
+            </div>
+        );
+    }
+
     return (
         <div className="flex min-h-screen bg-gray-100">
             <Sidebar />
@@ -172,6 +225,19 @@ const Dashboard: React.FC<DashboardProps> = ({ role, onLogout }) => {
 
                 <main className="p-4 space-y-6">
                     {/* Alert Summary Cards */}
+                    {error && (
+                        <div className="rounded-md border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-800">
+                            {error}. Showing cached fixtures; refresh once the API is available.
+                            <button
+                                type="button"
+                                onClick={refresh}
+                                className="ml-2 text-blue-700 underline"
+                            >
+                                Retry
+                            </button>
+                        </div>
+                    )}
+
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                         {alertCards.map((card, index) => (
                             <button
@@ -233,18 +299,18 @@ const Dashboard: React.FC<DashboardProps> = ({ role, onLogout }) => {
 
                     {/* Charts */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <BarChart />
-                        <PieChart />
+                        <BarChart findings={findings} />
+                        <PieChart findings={findings} />
                     </div>
 
                     {/* Filters */}
                     <Filters />
 
                     {/* Findings Table */}
-                    <FindingsTable />
+                    <FindingsTable findings={findings} />
 
                     {/* Example Findings */}
-                    <ExampleFindings />
+                    <ExampleFindings findings={findings} />
                 </main>
             </div>
         </div>

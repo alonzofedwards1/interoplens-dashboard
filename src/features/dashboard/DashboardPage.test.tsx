@@ -3,7 +3,6 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import DashboardPage from './DashboardPage';
-
 const mockNavigate = jest.fn();
 
 jest.mock(
@@ -22,6 +21,16 @@ jest.mock('../../components/PieChart', () => () => <div data-testid="pie-chart" 
 jest.mock('../../components/Filters', () => () => <div data-testid="filters" />);
 jest.mock('../../components/FindingsTable', () => () => <div data-testid="findings-table" />);
 jest.mock('../../components/ExampleFindings', () => () => <div data-testid="example-findings" />);
+jest.mock('../../lib/ServerDataContext', () => ({
+    useServerData: () => ({
+        findings: require('../findings/data/findings.data').findingsData,
+        pdExecutions: require('../pd-executions/data/pdExecutions.data').pdExecutionsData,
+        committeeQueue: require('../committee/data/committeeQueue.data').committeeQueueData,
+        loading: false,
+        error: undefined,
+        refresh: jest.fn(),
+    }),
+}));
 
 const renderDashboard = () =>
     render(<DashboardPage role="admin" onLogout={() => undefined} />);

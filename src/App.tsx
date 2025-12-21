@@ -24,6 +24,7 @@ import {
     subscribeToSession,
 } from './lib/authClient';
 import { SessionProvider } from './lib/SessionContext';
+import { ServerDataProvider } from './lib/ServerDataContext';
 
 const App: React.FC = () => {
     const [session, setSession] = useState<AuthSession | null>(null);
@@ -64,7 +65,8 @@ const App: React.FC = () => {
 
     return (
         <SessionProvider session={session}>
-            <Routes>
+            <ServerDataProvider>
+                <Routes>
             <Route
                 path="/"
                 element={session ? <Navigate to="/dashboard" replace /> : loginElement}
@@ -124,7 +126,8 @@ const App: React.FC = () => {
             />
 
             <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
+                </Routes>
+            </ServerDataProvider>
         </SessionProvider>
     );
 };
