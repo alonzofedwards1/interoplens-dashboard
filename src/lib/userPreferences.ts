@@ -65,6 +65,19 @@ export const useUserPreference = <T,>(key: string, defaultValue: T) => {
         setValue(getUserPreference(userId, key, defaultRef.current));
     }, [userId, key]);
 
+    useEffect(() => {
+        if (!userId) return undefined;
+
+        const handleStorage = (event: StorageEvent) => {
+            if (event.key === STORAGE_KEY) {
+                setValue(getUserPreference(userId, key, defaultRef.current));
+            }
+        };
+
+        window.addEventListener('storage', handleStorage);
+        return () => window.removeEventListener('storage', handleStorage);
+    }, [key, userId]);
+
     const update = useCallback<React.Dispatch<React.SetStateAction<T>>>(
         next => {
             setValue(prev => {
