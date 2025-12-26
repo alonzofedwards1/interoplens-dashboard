@@ -5,43 +5,55 @@ import { FaArrowLeft, FaChartBar, FaClock, FaTimesCircle, FaCheckCircle } from '
 import { TelemetryEvent } from '../../telemetry/TelemetryEvent';
 import { fetchTelemetryEvents } from '../../lib/telemetryClient';
 
-const formatStatus = (status: string) => {
-    switch (status) {
+const formatStatus = (status?: string) => {
+    const normalized = (status || 'UNKNOWN').toUpperCase();
+    switch (normalized) {
         case 'SUCCESS':
             return {
-                label: 'Success',
+                label: 'SUCCESS',
                 className: 'bg-green-100 text-green-800',
                 icon: <FaCheckCircle aria-hidden className="mr-1" />,
             };
+        case 'NF':
         case 'NO_MATCH':
             return {
-                label: 'No Match',
+                label: 'NF',
                 className: 'bg-gray-100 text-gray-800',
                 icon: <FaChartBar aria-hidden className="mr-1" />,
             };
         case 'ERROR':
             return {
-                label: 'Error',
+                label: 'ERROR',
                 className: 'bg-red-100 text-red-800',
                 icon: <FaTimesCircle aria-hidden className="mr-1" />,
             };
-        case 'PARTIAL':
-            return {
-                label: 'Partial',
-                className: 'bg-yellow-100 text-yellow-800',
-                icon: <FaClock aria-hidden className="mr-1" />,
-            };
         default:
             return {
-                label: 'Unknown',
-                className: 'bg-gray-100 text-gray-800',
-                icon: <FaChartBar aria-hidden className="mr-1" />,
+                label: normalized,
+                className: 'bg-yellow-100 text-yellow-800',
+                icon: <FaClock aria-hidden className="mr-1" />,
             };
     }
 };
 
-const formatEnvironment = (environment?: string) =>
-    environment === 'PROD' ? 'Production' : environment === 'TEST' ? 'Test' : '—';
+const formatEnvironment = (environment?: string) => {
+    if (!environment) return '—';
+    const normalized = environment.toUpperCase();
+    if (normalized === 'PROD') return 'PROD';
+    if (normalized === 'TEST') return 'TEST';
+    return normalized;
+};
+
+const formatTimestamp = (timestamp?: string) => {
+    if (!timestamp) return '—';
+    const date = new Date(timestamp);
+    return Number.isNaN(date.getTime())
+        ? '—'
+        : date.toLocaleString(undefined, {
+              dateStyle: 'medium',
+              timeStyle: 'medium',
+          });
+};
 
 const TelemetryPage: React.FC = () => {
     const navigate = useNavigate();
@@ -49,38 +61,55 @@ const TelemetryPage: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string>();
 
-    const [statusFilter, setStatusFilter] = useState<
-        TelemetryEvent['outcome']['status'] | 'all'
-    >('all');
+    const [statusFilter, setStatusFilter] = useState<TelemetryEvent['outcome']['status'] | 'all'>(
+        'all'
+    );
     const [environmentFilter, setEnvironmentFilter] = useState<
         TelemetryEvent['source']['environment'] | 'all'
     >('all');
     const [search, setSearch] = useState('');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
+    const loadTelemetry = React.useCallback(async () => {
+        setLoading(true);
+        setError(undefined);
+        try {
+            const events = await fetchTelemetryEvents();
+            setTelemetryEvents(events);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to load telemetry');
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        loadTelemetry();
+    }, [loadTelemetry]);
+
     const filteredEvents = useMemo(() => {
         const query = search.trim().toLowerCase();
 
         return telemetryEvents.filter(event => {
-            const outcomeStatus = (event.outcome?.status as string) || 'UNKNOWN';
+            const outcomeStatus = (event.outcome?.status as string)?.toUpperCase() || 'UNKNOWN';
             const source = event.source || {};
             const correlation = event.correlation || {};
+            const protocol = event.protocol || {};
 
-            const matchesStatus = statusFilter === 'all' || outcomeStatus === statusFilter;
+            const matchesStatus =
+                statusFilter === 'all' || outcomeStatus === statusFilter?.toUpperCase();
             const matchesEnvironment =
                 environmentFilter === 'all' || source.environment === environmentFilter;
 
-            if (!matchesStatus || !matchesEnvironment) {
-                return false;
-            }
-
+            if (!matchesStatus || !matchesEnvironment) return false;
             if (!query) return true;
 
             return (
-                (source.organization || '').toLowerCase().includes(query) ||
-                (source.qhin || '').toLowerCase().includes(query) ||
                 (correlation.requestId || '').toLowerCase().includes(query) ||
-                (correlation.messageId || '').toLowerCase().includes(query)
+                (correlation.messageId || '').toLowerCase().includes(query) ||
+                (source.channelId || '').toLowerCase().includes(query) ||
+                (protocol.interactionId || '').toLowerCase().includes(query) ||
+                (event.eventId || '').toLowerCase().includes(query)
             );
         });
     }, [environmentFilter, search, statusFilter, telemetryEvents]);
@@ -96,10 +125,10 @@ const TelemetryPage: React.FC = () => {
     const metrics = useMemo(() => {
         const total = telemetryEvents.length;
         const successes = telemetryEvents.filter(
-            e => (e.outcome?.status as string) === 'SUCCESS'
+            e => (e.outcome?.status as string)?.toUpperCase() === 'SUCCESS'
         ).length;
         const errors = telemetryEvents.filter(
-            e => (e.outcome?.status as string) === 'ERROR'
+            e => (e.outcome?.status as string)?.toUpperCase() === 'ERROR'
         ).length;
         const averageDuration = Math.round(
             telemetryEvents.reduce(
@@ -118,23 +147,6 @@ const TelemetryPage: React.FC = () => {
             successRate,
         };
     }, [telemetryEvents]);
-
-    const loadTelemetry = React.useCallback(async () => {
-        setLoading(true);
-        setError(undefined);
-        try {
-            const events = await fetchTelemetryEvents();
-            setTelemetryEvents(events);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to load telemetry');
-        } finally {
-            setLoading(false);
-        }
-    }, []);
-
-    useEffect(() => {
-        loadTelemetry();
-    }, [loadTelemetry]);
 
     if (loading) {
         return (
@@ -163,23 +175,29 @@ const TelemetryPage: React.FC = () => {
 
     return (
         <div className="p-6 space-y-6">
-            {/* Header */}
-            <div className="flex items-center space-x-4">
-                <button
-                    onClick={() => navigate('/dashboard')}
-                    className="text-gray-600 hover:text-gray-900"
-                >
-                    <FaArrowLeft />
-                </button>
-                <div>
-                    <h1 className="text-2xl font-semibold">Telemetry</h1>
-                    <p className="text-gray-600">
-                        In-process PD execution telemetry with outcomes and timing
-                    </p>
+            <div className="flex items-center justify-between flex-wrap gap-3">
+                <div className="flex items-center space-x-4">
+                    <button
+                        onClick={() => navigate('/dashboard')}
+                        className="text-gray-600 hover:text-gray-900"
+                    >
+                        <FaArrowLeft />
+                    </button>
+                    <div>
+                        <h1 className="text-2xl font-semibold">Telemetry</h1>
+                        <p className="text-gray-600">
+                            Live PD execution telemetry with outcomes and timing
+                        </p>
+                    </div>
                 </div>
+                <button
+                    onClick={loadTelemetry}
+                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                >
+                    Refresh
+                </button>
             </div>
 
-            {/* Summary */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <SummaryCard label="Events" value={metrics.total} />
                 <SummaryCard label="Success rate" value={`${metrics.successRate}%`} />
@@ -187,7 +205,6 @@ const TelemetryPage: React.FC = () => {
                 <SummaryCard label="Avg duration" value={`${metrics.averageDuration} ms`} />
             </div>
 
-            {/* Filters */}
             <div className="bg-white rounded-lg shadow p-4 flex flex-wrap gap-3 items-center justify-between">
                 <div className="flex gap-2 items-center text-sm">
                     <label htmlFor="telemetry-status" className="text-gray-700">
@@ -203,8 +220,8 @@ const TelemetryPage: React.FC = () => {
                     >
                         <option value="all">All</option>
                         <option value="SUCCESS">Success</option>
+                        <option value="NF">NF</option>
                         <option value="NO_MATCH">No match</option>
-                        <option value="PARTIAL">Partial</option>
                         <option value="ERROR">Error</option>
                     </select>
                 </div>
@@ -217,9 +234,7 @@ const TelemetryPage: React.FC = () => {
                         id="telemetry-environment"
                         value={environmentFilter}
                         onChange={event =>
-                            setEnvironmentFilter(
-                                event.target.value as typeof environmentFilter
-                            )
+                            setEnvironmentFilter(event.target.value as typeof environmentFilter)
                         }
                         className="border rounded px-2 py-1"
                     >
@@ -233,49 +248,42 @@ const TelemetryPage: React.FC = () => {
                     type="search"
                     value={search}
                     onChange={event => setSearch(event.target.value)}
-                    placeholder="Search org, QHIN, or request ID"
-                    className="border rounded px-3 py-2 w-full sm:w-72"
+                    placeholder="Search request, message, channel, or interaction"
+                    className="border rounded px-3 py-2 w-full sm:w-80"
                 />
 
                 <button
-                    onClick={() =>
-                        setSortDirection(prev => (prev === 'asc' ? 'desc' : 'asc'))
-                    }
+                    onClick={() => setSortDirection(prev => (prev === 'asc' ? 'desc' : 'asc'))}
                     className="px-3 py-2 border rounded text-sm"
                 >
                     Sort: {sortDirection === 'asc' ? 'Oldest first' : 'Newest first'}
                 </button>
             </div>
 
-            {/* Table */}
             <div className="bg-white rounded-lg shadow overflow-x-auto">
                 <table className="min-w-full border-collapse">
                     <thead className="bg-gray-100 text-left text-sm text-gray-700">
                         <tr>
-                            <th className="p-3">Event ID</th>
-                            <th className="p-3">Timestamp (UTC)</th>
-                            <th className="p-3">Source</th>
-                            <th className="p-3">Environment</th>
+                            <th className="p-3">Timestamp</th>
+                            <th className="p-3">Event Type</th>
                             <th className="p-3">Status</th>
-                            <th className="p-3">Duration</th>
+                            <th className="p-3">Request ID</th>
+                            <th className="p-3">Channel ID</th>
+                            <th className="p-3">Interaction ID</th>
+                            <th className="p-3">Duration (ms)</th>
+                            <th className="p-3">Environment</th>
                         </tr>
                     </thead>
                     <tbody>
                         {sortedEvents.map(event => {
-                            const source = event.source || {};
                             const statusValue = (event.outcome?.status as string) || 'UNKNOWN';
                             const status = formatStatus(statusValue);
                             return (
                                 <tr key={event.eventId} className="border-t text-sm">
-                                    <td className="p-3 font-mono break-all">{event.eventId}</td>
-                                    <td className="p-3 font-mono">
-                                        {new Date(event.timestamp).toUTCString()}
+                                    <td className="p-3 whitespace-nowrap">
+                                        {formatTimestamp(event.timestamp)}
                                     </td>
-                                    <td className="p-3">
-                                        {source.organization || '—'}
-                                        {source.qhin ? ` (${source.qhin})` : ''}
-                                    </td>
-                                    <td className="p-3">{formatEnvironment(source.environment)}</td>
+                                    <td className="p-3">{event.eventType || '—'}</td>
                                     <td className="p-3">
                                         <span
                                             className={`inline-flex items-center px-2 py-1 rounded text-xs ${status.className}`}
@@ -284,7 +292,17 @@ const TelemetryPage: React.FC = () => {
                                             {status.label}
                                         </span>
                                     </td>
-                                    <td className="p-3">{Number(event.execution?.durationMs ?? 0)} ms</td>
+                                    <td className="p-3 font-mono break-all">
+                                        {event.correlation?.requestId || '—'}
+                                    </td>
+                                    <td className="p-3 font-mono break-all">
+                                        {event.source?.channelId || '—'}
+                                    </td>
+                                    <td className="p-3 font-mono break-all">
+                                        {event.protocol?.interactionId || '—'}
+                                    </td>
+                                    <td className="p-3">{Number(event.execution?.durationMs ?? 0)}</td>
+                                    <td className="p-3">{formatEnvironment(event.source?.environment)}</td>
                                 </tr>
                             );
                         })}
