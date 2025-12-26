@@ -78,7 +78,7 @@ const buildAlertCards = (
         icon: <FaUsers className="text-blue-500 text-2xl" />,
         bgColor: 'bg-blue-100',
         textColor: 'text-blue-800',
-        route: '/pd-executions',
+        route: '/telemetry',
     },
     {
         title: 'Findings Detected',
