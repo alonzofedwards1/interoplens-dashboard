@@ -8,7 +8,6 @@ import {
 } from '../features/committee/data/committeeQueue.data';
 import { findingsData as fixtureFindings } from '../features/findings/data/findings.data';
 import { pdExecutionsData as fixturePdExecutions } from '../features/pd-executions/data/pdExecutions.data';
-import { telemetryEventsData as fixtureTelemetryEvents } from '../features/telemetry/data/telemetryEvents.data';
 import { TelemetryEvent } from '../telemetry/TelemetryEvent';
 
 interface ServerDataContextValue {
@@ -42,7 +41,7 @@ const loadFromFixtures = () => ({
     findings: fixtureFindings,
     pdExecutions: fixturePdExecutions,
     committeeQueue: fixtureCommitteeQueue,
-    telemetryEvents: fixtureTelemetryEvents,
+    telemetryEvents: [] as TelemetryEvent[],
 });
 
 export const ServerDataProvider: React.FC<{ children: React.ReactNode }> = ({

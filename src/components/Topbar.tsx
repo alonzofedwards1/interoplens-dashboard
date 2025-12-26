@@ -62,12 +62,6 @@ const Topbar: React.FC<TopbarProps> = ({ role, onLogout }) => {
                 icon: <FaWaveSquare className="text-indigo-600" aria-hidden />,
                 path: "/telemetry",
             },
-            {
-                label: "Telemetry",
-                description: "Inspect structured PD telemetry timing and outcomes",
-                icon: <FaWaveSquare className="text-indigo-600" aria-hidden />,
-                path: "/telemetry",
-            },
         ],
         []
     );
