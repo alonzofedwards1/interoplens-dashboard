@@ -61,6 +61,15 @@ const TelemetryPage: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string>();
 
+    const [statusFilter, setStatusFilter] = useState<TelemetryEvent['outcome']['status'] | 'all'>(
+        'all'
+    );
+    const [environmentFilter, setEnvironmentFilter] = useState<
+        TelemetryEvent['source']['environment'] | 'all'
+    >('all');
+    const [search, setSearch] = useState('');
+    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+
     const loadTelemetry = React.useCallback(async () => {
         setLoading(true);
         setError(undefined);
@@ -77,6 +86,33 @@ const TelemetryPage: React.FC = () => {
     useEffect(() => {
         loadTelemetry();
     }, [loadTelemetry]);
+
+    const filteredEvents = useMemo(() => {
+        const query = search.trim().toLowerCase();
+
+        return telemetryEvents.filter(event => {
+            const outcomeStatus = (event.outcome?.status as string)?.toUpperCase() || 'UNKNOWN';
+            const source = event.source || {};
+            const correlation = event.correlation || {};
+            const protocol = event.protocol || {};
+
+            const matchesStatus =
+                statusFilter === 'all' || outcomeStatus === statusFilter?.toUpperCase();
+            const matchesEnvironment =
+                environmentFilter === 'all' || source.environment === environmentFilter;
+
+            if (!matchesStatus || !matchesEnvironment) return false;
+            if (!query) return true;
+
+            return (
+                (correlation.requestId || '').toLowerCase().includes(query) ||
+                (correlation.messageId || '').toLowerCase().includes(query) ||
+                (source.channelId || '').toLowerCase().includes(query) ||
+                (protocol.interactionId || '').toLowerCase().includes(query) ||
+                (event.eventId || '').toLowerCase().includes(query)
+            );
+        });
+    }, [environmentFilter, search, statusFilter, telemetryEvents]);
 
     const sortedEvents = useMemo(() => {
         return [...telemetryEvents].sort((a, b) => {
@@ -167,6 +203,61 @@ const TelemetryPage: React.FC = () => {
                 <SummaryCard label="Success rate" value={`${metrics.successRate}%`} />
                 <SummaryCard label="Errors" value={metrics.errors} />
                 <SummaryCard label="Avg duration" value={`${metrics.averageDuration} ms`} />
+            </div>
+
+            <div className="bg-white rounded-lg shadow p-4 flex flex-wrap gap-3 items-center justify-between">
+                <div className="flex gap-2 items-center text-sm">
+                    <label htmlFor="telemetry-status" className="text-gray-700">
+                        Status
+                    </label>
+                    <select
+                        id="telemetry-status"
+                        value={statusFilter}
+                        onChange={event =>
+                            setStatusFilter(event.target.value as typeof statusFilter)
+                        }
+                        className="border rounded px-2 py-1"
+                    >
+                        <option value="all">All</option>
+                        <option value="SUCCESS">Success</option>
+                        <option value="NF">NF</option>
+                        <option value="NO_MATCH">No match</option>
+                        <option value="ERROR">Error</option>
+                    </select>
+                </div>
+
+                <div className="flex gap-2 items-center text-sm">
+                    <label htmlFor="telemetry-environment" className="text-gray-700">
+                        Environment
+                    </label>
+                    <select
+                        id="telemetry-environment"
+                        value={environmentFilter}
+                        onChange={event =>
+                            setEnvironmentFilter(event.target.value as typeof environmentFilter)
+                        }
+                        className="border rounded px-2 py-1"
+                    >
+                        <option value="all">All</option>
+                        <option value="PROD">Prod</option>
+                        <option value="TEST">Test</option>
+                    </select>
+                </div>
+
+                <input
+                    type="search"
+                    value={search}
+                    onChange={event => setSearch(event.target.value)}
+                    placeholder="Search request, message, channel, or interaction"
+                    className="border rounded px-3 py-2 w-full sm:w-80"
+                />
+
+                <button
+                    onClick={() => setSortDirection(prev => (prev === 'asc' ? 'desc' : 'asc'))}
+                    className="px-3 py-2 border rounded text-sm"
+                >
+                    Sort: {sortDirection === 'asc' ? 'Oldest first' : 'Newest first'}
+                </button>
             </div>
 
             <div className="bg-white rounded-lg shadow overflow-x-auto">
