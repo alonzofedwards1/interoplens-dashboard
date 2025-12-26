@@ -15,6 +15,7 @@ export const apiClient = {
     getFindings: () => request<Finding[]>('/findings'),
     getPdExecutions: () => request<PDExecution[]>('/pd-executions'),
     getCommitteeQueue: () => request<CommitteeQueueItem[]>('/committee/queue'),
+    getTelemetryEvents: () => request<TelemetryEvent[]>('/telemetry/events'),
 };
 
 export type ApiClient = typeof apiClient;
