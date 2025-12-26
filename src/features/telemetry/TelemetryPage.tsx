@@ -55,18 +55,19 @@ const formatTimestamp = (timestamp?: string) => {
           });
 };
 
+type TelemetryStatus = NonNullable<TelemetryEvent['outcome']>['status'];
+type TelemetryEnvironment = NonNullable<TelemetryEvent['source']>['environment'];
+
 const TelemetryPage: React.FC = () => {
     const navigate = useNavigate();
     const [telemetryEvents, setTelemetryEvents] = useState<TelemetryEvent[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string>();
 
-    const [statusFilter, setStatusFilter] = useState<TelemetryEvent['outcome']['status'] | 'all'>(
+    const [statusFilter, setStatusFilter] = useState<TelemetryStatus | 'all'>('all');
+    const [environmentFilter, setEnvironmentFilter] = useState<TelemetryEnvironment | 'all'>(
         'all'
     );
-    const [environmentFilter, setEnvironmentFilter] = useState<
-        TelemetryEvent['source']['environment'] | 'all'
-    >('all');
     const [search, setSearch] = useState('');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
