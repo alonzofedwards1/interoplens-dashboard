@@ -7,5 +7,15 @@ export async function fetchTelemetryEvents(): Promise<TelemetryEvent[]> {
     if (!res.ok) {
         throw new Error('Failed to fetch telemetry events');
     }
-    return res.json();
+    const data = await res.json();
+
+    if (Array.isArray(data)) {
+        return data as TelemetryEvent[];
+    }
+
+    if (Array.isArray((data as { events?: TelemetryEvent[] })?.events)) {
+        return (data as { events: TelemetryEvent[] }).events;
+    }
+
+    throw new Error('Unexpected telemetry events response format');
 }
