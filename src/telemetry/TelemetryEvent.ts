@@ -7,6 +7,9 @@ export interface TelemetryEvent {
         system?: string;
         channelId?: string;
         environment?: 'TEST' | 'PROD' | string;
+        organization?: string;
+        qhin?: string;
+        endpointType?: string;
     } | null;
     correlation: {
         requestId?: string;
@@ -14,10 +17,14 @@ export interface TelemetryEvent {
     } | null;
     execution: {
         durationMs?: number;
+        startTime?: string;
+        endTime?: string;
     } | null;
     outcome: {
         status?: string;
         resultCount?: number;
+        errorCode?: string | null;
+        errorMessage?: string | null;
     } | null;
     protocol: {
         standard?: string;
