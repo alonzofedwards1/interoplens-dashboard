@@ -8,7 +8,6 @@ import {
 } from '../features/committee/data/committeeQueue.data';
 import { findingsData as fixtureFindings } from '../features/findings/data/findings.data';
 import { pdExecutionsData as fixturePdExecutions } from '../features/pd-executions/data/pdExecutions.data';
-
 interface ServerDataContextValue {
     findings: Finding[];
     pdExecutions: PDExecution[];

@@ -5,7 +5,8 @@ import {
     FaFingerprint,
     FaFileAlt,
     FaCog,
-    FaBook
+    FaBook,
+    FaWaveSquare
 } from "react-icons/fa";
 
 const iconClass =
@@ -37,6 +38,17 @@ const Sidebar = () => {
                 title="Integration Health"
             >
                 <FaHeartbeat />
+            </NavLink>
+
+            {/* Telemetry */}
+            <NavLink
+                to="/telemetry"
+                className={({ isActive }) =>
+                    `${iconClass} ${isActive ? activeClass : inactiveClass}`
+                }
+                title="Telemetry"
+            >
+                <FaWaveSquare />
             </NavLink>
 
             {/* OID Registry */}
