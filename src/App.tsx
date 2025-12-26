@@ -5,6 +5,7 @@ import Login from './features/auth/LoginPage';
 import Dashboard from './features/dashboard/DashboardPage';
 import ViewAllFindings from './features/findings/ViewAllFindingsPage';
 import PDExecutions from './features/pd-executions/PDExecutionsPage';
+import TelemetryPage from './features/telemetry/TelemetryPage';
 import IntegrationIssuesPage from './features/integration-issues/IntegrationIssuesPage';
 import Reports from './features/reports/ReportsPage';
 import Settings from './features/settings/SettingsPage';
@@ -88,6 +89,7 @@ const App: React.FC = () => {
 
             <Route path="/findings" element={requireAuth(<ViewAllFindings />)} />
             <Route path="/pd-executions" element={requireAuth(<PDExecutions />)} />
+            <Route path="/telemetry" element={requireAuth(<TelemetryPage />)} />
 
             {/* Committee */}
             <Route path="/committee" element={requireAuth(<CommitteeQueue />)} />

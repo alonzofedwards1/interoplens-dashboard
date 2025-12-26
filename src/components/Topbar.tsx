@@ -7,7 +7,8 @@ import {
     FaChevronDown,
     FaRegLightbulb,
     FaSignOutAlt,
-    FaCircle
+    FaCircle,
+    FaWaveSquare
 } from "react-icons/fa";
 
 import { UserRole } from "../types/auth";
@@ -59,8 +60,14 @@ const Topbar: React.FC<TopbarProps> = ({ role, onLogout }) => {
             {
                 label: "PD executions",
                 description: "Check the latest execution outcomes and reruns",
-                icon: <FaRegLightbulb className="text-emerald-600" aria-hidden />, 
+                icon: <FaRegLightbulb className="text-emerald-600" aria-hidden />,
                 path: "/pd-executions",
+            },
+            {
+                label: "Telemetry",
+                description: "Inspect structured PD telemetry timing and outcomes",
+                icon: <FaWaveSquare className="text-indigo-600" aria-hidden />,
+                path: "/telemetry",
             },
         ],
         []

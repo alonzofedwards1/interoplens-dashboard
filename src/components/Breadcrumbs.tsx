@@ -14,6 +14,7 @@ const segmentLabels: Record<string, string> = {
     oids: "OID directory",
     committee: "Committee",
     "knowledge-base": "Knowledge base",
+    telemetry: "Telemetry",
     reports: "Reports",
     settings: "Settings",
     alerts: "Alerts",
