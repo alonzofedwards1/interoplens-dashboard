@@ -1,11 +1,26 @@
 export interface TelemetryEvent {
-  eventId: string;
-  eventType: "PD_EXECUTION";
-  timestamp: string;
+    eventId: string;
+    eventType: 'PD_EXECUTION' | string;
+    timestamp: string;
 
-  source: Record<string, any>;
-  correlation: Record<string, any>;
-  execution: Record<string, any>;
-  outcome: Record<string, any>;
-  protocol: Record<string, any>;
+    source: {
+        system?: string;
+        channelId?: string;
+        environment?: 'TEST' | 'PROD' | string;
+    } | null;
+    correlation: {
+        requestId?: string;
+        messageId?: string;
+    } | null;
+    execution: {
+        durationMs?: number;
+    } | null;
+    outcome: {
+        status?: string;
+        resultCount?: number;
+    } | null;
+    protocol: {
+        standard?: string;
+        interactionId?: string;
+    } | null;
 }
