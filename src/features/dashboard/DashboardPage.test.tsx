@@ -54,6 +54,6 @@ describe('DashboardPage', () => {
         const pdCard = screen.getByRole('button', { name: /total pd executions/i });
         await userEvent.click(pdCard);
 
-        expect(mockNavigate).toHaveBeenCalledWith('/pd-executions');
+        expect(mockNavigate).toHaveBeenCalledWith('/telemetry');
     });
 });

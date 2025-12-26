@@ -9,7 +9,6 @@ interface CrumbItem {
 const segmentLabels: Record<string, string> = {
     dashboard: "Dashboard",
     findings: "Findings",
-    "pd-executions": "PD executions",
     "integration-issues": "Integration issues",
     oids: "OID directory",
     committee: "Committee",
