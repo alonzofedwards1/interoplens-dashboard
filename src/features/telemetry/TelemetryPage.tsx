@@ -115,12 +115,12 @@ const TelemetryPage: React.FC = () => {
     }, [environmentFilter, search, statusFilter, telemetryEvents]);
 
     const sortedEvents = useMemo(() => {
-        return [...filteredEvents].sort((a, b) => {
+        return [...telemetryEvents].sort((a, b) => {
             const aTime = new Date(a.timestamp).getTime();
             const bTime = new Date(b.timestamp).getTime();
-            return sortDirection === 'asc' ? aTime - bTime : bTime - aTime;
+            return bTime - aTime;
         });
-    }, [filteredEvents, sortDirection]);
+    }, [telemetryEvents]);
 
     const metrics = useMemo(() => {
         const total = telemetryEvents.length;
@@ -309,7 +309,7 @@ const TelemetryPage: React.FC = () => {
                         {!sortedEvents.length && (
                             <tr>
                                 <td colSpan={8} className="p-4 text-center text-gray-500">
-                                    No telemetry events match the current filters.
+                                    No telemetry events available.
                                 </td>
                             </tr>
                         )}
