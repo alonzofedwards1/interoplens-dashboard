@@ -8,6 +8,7 @@ import {
 } from '../features/committee/data/committeeQueue.data';
 import { findingsData as fixtureFindings } from '../features/findings/data/findings.data';
 import { pdExecutionsData as fixturePdExecutions } from '../features/pd-executions/data/pdExecutions.data';
+import { TelemetryEvent } from '../telemetry/TelemetryEvent';
 interface ServerDataContextValue {
     findings: Finding[];
     pdExecutions: PDExecution[];
@@ -25,12 +26,13 @@ const ServerDataContext = React.createContext<ServerDataContextValue | undefined
 const shouldUseFixtures = process.env.NODE_ENV === 'test';
 
 const loadFromApi = async (client: ApiClient) => {
-    const [findings, pdExecutions, committeeQueue, telemetryEvents] = await Promise.all([
-        client.getFindings(),
-        client.getPdExecutions(),
-        client.getCommitteeQueue(),
-        client.getTelemetryEvents(),
-    ]);
+    const [findings, pdExecutions, committeeQueue, telemetryEvents] =
+        await Promise.all([
+            client.getFindings(),
+            client.getPdExecutions(),
+            client.getCommitteeQueue(),
+            client.getTelemetryEvents(),
+        ]);
 
     return { findings, pdExecutions, committeeQueue, telemetryEvents };
 };
