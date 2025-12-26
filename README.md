@@ -44,3 +44,13 @@ You don’t have to ever use `eject`. The curated feature set is suitable for sm
 You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
 
 To learn React, check out the [React documentation](https://reactjs.org/).
+
+## Telemetry backend configuration
+
+The dashboard reads telemetry directly from the InterOps telemetry API. Set `REACT_APP_API_BASE_URL` to your FastAPI server (default `http://localhost:8080/api`) so the UI can call `/telemetry/events` without relying on mocks or alternate hosts.
+
+```bash
+REACT_APP_API_BASE_URL=http://localhost:8080/api npm start
+```
+
+The telemetry page issues `GET /telemetry/events` to retrieve the in-memory PD execution events and displays them as-is. No additional setup is required beyond exposing that endpoint on the backend.

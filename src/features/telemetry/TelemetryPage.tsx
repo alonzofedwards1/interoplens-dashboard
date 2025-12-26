@@ -1,11 +1,11 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaArrowLeft, FaChartBar, FaClock, FaTimesCircle, FaCheckCircle } from 'react-icons/fa';
 
 import { TelemetryEvent } from '../../telemetry/TelemetryEvent';
-import { useServerData } from '../../lib/ServerDataContext';
+import { fetchTelemetryEvents } from '../../lib/telemetryClient';
 
-const formatStatus = (status: TelemetryEvent['outcome']['status']) => {
+const formatStatus = (status: string) => {
     switch (status) {
         case 'SUCCESS':
             return {
@@ -31,15 +31,23 @@ const formatStatus = (status: TelemetryEvent['outcome']['status']) => {
                 className: 'bg-yellow-100 text-yellow-800',
                 icon: <FaClock aria-hidden className="mr-1" />,
             };
+        default:
+            return {
+                label: 'Unknown',
+                className: 'bg-gray-100 text-gray-800',
+                icon: <FaChartBar aria-hidden className="mr-1" />,
+            };
     }
 };
 
-const formatEnvironment = (environment: TelemetryEvent['source']['environment']) =>
-    environment === 'PROD' ? 'Production' : 'Test';
+const formatEnvironment = (environment?: string) =>
+    environment === 'PROD' ? 'Production' : environment === 'TEST' ? 'Test' : '—';
 
 const TelemetryPage: React.FC = () => {
     const navigate = useNavigate();
-    const { telemetryEvents, loading } = useServerData();
+    const [telemetryEvents, setTelemetryEvents] = useState<TelemetryEvent[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string>();
 
     const [statusFilter, setStatusFilter] = useState<
         TelemetryEvent['outcome']['status'] | 'all'
@@ -54,9 +62,13 @@ const TelemetryPage: React.FC = () => {
         const query = search.trim().toLowerCase();
 
         return telemetryEvents.filter(event => {
-            const matchesStatus = statusFilter === 'all' || event.outcome.status === statusFilter;
+            const outcomeStatus = (event.outcome?.status as string) || 'UNKNOWN';
+            const source = event.source || {};
+            const correlation = event.correlation || {};
+
+            const matchesStatus = statusFilter === 'all' || outcomeStatus === statusFilter;
             const matchesEnvironment =
-                environmentFilter === 'all' || event.source.environment === environmentFilter;
+                environmentFilter === 'all' || source.environment === environmentFilter;
 
             if (!matchesStatus || !matchesEnvironment) {
                 return false;
@@ -65,10 +77,10 @@ const TelemetryPage: React.FC = () => {
             if (!query) return true;
 
             return (
-                event.source.organization.toLowerCase().includes(query) ||
-                event.source.qhin.toLowerCase().includes(query) ||
-                event.correlation.requestId.toLowerCase().includes(query) ||
-                event.correlation.messageId.toLowerCase().includes(query)
+                (source.organization || '').toLowerCase().includes(query) ||
+                (source.qhin || '').toLowerCase().includes(query) ||
+                (correlation.requestId || '').toLowerCase().includes(query) ||
+                (correlation.messageId || '').toLowerCase().includes(query)
             );
         });
     }, [environmentFilter, search, statusFilter, telemetryEvents]);
@@ -83,11 +95,17 @@ const TelemetryPage: React.FC = () => {
 
     const metrics = useMemo(() => {
         const total = telemetryEvents.length;
-        const successes = telemetryEvents.filter(e => e.outcome.status === 'SUCCESS').length;
-        const errors = telemetryEvents.filter(e => e.outcome.status === 'ERROR').length;
+        const successes = telemetryEvents.filter(
+            e => (e.outcome?.status as string) === 'SUCCESS'
+        ).length;
+        const errors = telemetryEvents.filter(
+            e => (e.outcome?.status as string) === 'ERROR'
+        ).length;
         const averageDuration = Math.round(
-            telemetryEvents.reduce((sum, event) => sum + event.execution.durationMs, 0) /
-                Math.max(total, 1)
+            telemetryEvents.reduce(
+                (sum, event) => sum + Number(event.execution?.durationMs ?? 0),
+                0
+            ) / Math.max(total, 1)
         );
 
         const successRate = total ? Math.round((successes / total) * 100) : 0;
@@ -101,10 +119,44 @@ const TelemetryPage: React.FC = () => {
         };
     }, [telemetryEvents]);
 
+    const loadTelemetry = React.useCallback(async () => {
+        setLoading(true);
+        setError(undefined);
+        try {
+            const events = await fetchTelemetryEvents();
+            setTelemetryEvents(events);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to load telemetry');
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        loadTelemetry();
+    }, [loadTelemetry]);
+
     if (loading) {
         return (
             <div className="flex min-h-screen items-center justify-center text-gray-700">
                 Loading telemetry...
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="flex min-h-screen items-center justify-center">
+                <div className="bg-white shadow rounded p-6 space-y-4 text-center">
+                    <div className="text-red-600 font-semibold">{error}</div>
+                    <p className="text-gray-600">Unable to load telemetry events.</p>
+                    <button
+                        onClick={loadTelemetry}
+                        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                    >
+                        Retry
+                    </button>
+                </div>
             </div>
         );
     }
@@ -200,27 +252,30 @@ const TelemetryPage: React.FC = () => {
                 <table className="min-w-full border-collapse">
                     <thead className="bg-gray-100 text-left text-sm text-gray-700">
                         <tr>
+                            <th className="p-3">Event ID</th>
                             <th className="p-3">Timestamp (UTC)</th>
-                            <th className="p-3">Organization</th>
-                            <th className="p-3">QHIN</th>
+                            <th className="p-3">Source</th>
                             <th className="p-3">Environment</th>
                             <th className="p-3">Status</th>
-                            <th className="p-3">Result count</th>
                             <th className="p-3">Duration</th>
-                            <th className="p-3">Request ID</th>
                         </tr>
                     </thead>
                     <tbody>
                         {sortedEvents.map(event => {
-                            const status = formatStatus(event.outcome.status);
+                            const source = event.source || {};
+                            const statusValue = (event.outcome?.status as string) || 'UNKNOWN';
+                            const status = formatStatus(statusValue);
                             return (
                                 <tr key={event.eventId} className="border-t text-sm">
+                                    <td className="p-3 font-mono break-all">{event.eventId}</td>
                                     <td className="p-3 font-mono">
                                         {new Date(event.timestamp).toUTCString()}
                                     </td>
-                                    <td className="p-3">{event.source.organization}</td>
-                                    <td className="p-3">{event.source.qhin}</td>
-                                    <td className="p-3">{formatEnvironment(event.source.environment)}</td>
+                                    <td className="p-3">
+                                        {source.organization || '—'}
+                                        {source.qhin ? ` (${source.qhin})` : ''}
+                                    </td>
+                                    <td className="p-3">{formatEnvironment(source.environment)}</td>
                                     <td className="p-3">
                                         <span
                                             className={`inline-flex items-center px-2 py-1 rounded text-xs ${status.className}`}
@@ -229,9 +284,7 @@ const TelemetryPage: React.FC = () => {
                                             {status.label}
                                         </span>
                                     </td>
-                                    <td className="p-3">{event.outcome.resultCount}</td>
-                                    <td className="p-3">{event.execution.durationMs} ms</td>
-                                    <td className="p-3 font-mono">{event.correlation.requestId}</td>
+                                    <td className="p-3">{Number(event.execution?.durationMs ?? 0)} ms</td>
                                 </tr>
                             );
                         })}
