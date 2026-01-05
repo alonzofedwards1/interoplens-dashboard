@@ -1,6 +1,5 @@
+import { API_BASE_URL } from '../config/api';
 import { UserRole } from '../types/auth';
-import { AppUser, getUsers } from '../features/settings/data/usersStore';
-import { hashPassword } from './password';
 
 const STORAGE_KEY = 'authSession';
 const SESSION_TTL_MS = 30 * 60 * 1000; // 30 minutes
@@ -15,6 +14,11 @@ export interface AuthenticatedUser {
 export interface AuthSession extends AuthenticatedUser {
     token: string;
     issuedAt: number;
+}
+
+export interface AuthResult {
+    user: AuthenticatedUser;
+    token: string;
 }
 
 const generateToken = () =>
@@ -39,10 +43,10 @@ const parseSession = (raw: string | null): AuthSession | null => {
 export const readSession = (): AuthSession | null =>
     parseSession(sessionStorage.getItem(STORAGE_KEY));
 
-export const persistSession = (user: AuthenticatedUser): AuthSession => {
+export const persistSession = (user: AuthenticatedUser, token?: string): AuthSession => {
     const session: AuthSession = {
         ...user,
-        token: generateToken(),
+        token: token ?? generateToken(),
         issuedAt: Date.now(),
     };
 
@@ -74,20 +78,66 @@ export const subscribeToSession = (callback: () => void) => {
     };
 };
 
-const toAuthenticatedUser = (user: AppUser): AuthenticatedUser => ({
-    id: user.id,
-    name: user.name,
-    email: user.email,
-    role: user.role,
-});
+const normalizeUser = (
+    user: Partial<AuthenticatedUser> | undefined,
+    fallbackEmail: string
+): AuthenticatedUser => {
+    if (!user?.email && !fallbackEmail) {
+        throw new Error('Login failed: missing user identity');
+    }
 
-export const authenticate = async (email: string, password: string) => {
-    const providedHash = await hashPassword(password);
-    const user = getUsers().find(
-        demo => demo.email === email.toLowerCase() && demo.passwordHash === providedHash
-    );
+    return {
+        id: user?.id ?? user?.email ?? fallbackEmail,
+        name: user?.name ?? user?.email ?? fallbackEmail,
+        email: (user?.email ?? fallbackEmail).toLowerCase(),
+        role: user?.role ?? UserRole.Analyst,
+    };
+};
 
-    if (!user) throw new Error('Invalid email or password');
+export const authenticate = async (email: string, password: string): Promise<AuthResult> => {
+    let response: Response;
+    try {
+        response = await fetch(`${API_BASE_URL}/api/auth/token`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ email, password }),
+        });
+    } catch (error) {
+        throw new Error('Login failed: unable to reach authentication service');
+    }
 
-    return toAuthenticatedUser(user);
+    if (!response.ok) {
+        const message = await safeErrorMessage(response);
+        throw new Error(message ?? `Login failed: ${response.status}`);
+    }
+
+    let data: unknown;
+    try {
+        data = await response.json();
+    } catch (error) {
+        throw new Error('Login failed: invalid response from server');
+    }
+
+    const { digest, user } = (data as { digest?: string; user?: Partial<AuthenticatedUser> }) ?? {};
+
+    if (!digest) {
+        throw new Error('Login failed: invalid response from server');
+    }
+
+    const normalizedUser = normalizeUser(user, email);
+
+    return { user: normalizedUser, token: digest };
+};
+
+const safeErrorMessage = async (response: Response) => {
+    try {
+        const body = await response.json();
+        if (typeof body?.message === 'string') return body.message;
+        if (typeof body?.detail === 'string') return body.detail;
+    } catch (error) {
+        // ignore JSON parse failures
+    }
+    return undefined;
 };

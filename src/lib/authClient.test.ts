@@ -2,6 +2,7 @@ import { webcrypto } from 'crypto';
 import { TextEncoder } from 'util';
 import {
     AuthenticatedUser,
+    AuthResult,
     authenticate,
     clearSession,
     persistSession,
@@ -9,13 +10,11 @@ import {
     subscribeToSession,
 } from './authClient';
 import { UserRole } from '../types/auth';
-import { addUser, resetUsers } from '../features/settings/data/usersStore';
+
+const mockFetch = global.fetch as jest.Mock | undefined;
 
 describe('authClient', () => {
-    const originalVisibility = Object.getOwnPropertyDescriptor(
-        document,
-        'visibilityState'
-    );
+    const originalVisibility = Object.getOwnPropertyDescriptor(document, 'visibilityState');
 
     beforeAll(() => {
         Object.defineProperty(global, 'TextEncoder', { value: TextEncoder });
@@ -25,55 +24,83 @@ describe('authClient', () => {
     beforeEach(() => {
         sessionStorage.clear();
         localStorage.clear();
-        resetUsers();
         jest.restoreAllMocks();
         if (originalVisibility) {
             Object.defineProperty(document, 'visibilityState', originalVisibility);
         }
+        global.fetch = jest.fn();
     });
 
-    test('authenticates a known demo user with the expected password', async () => {
-        const user = await authenticate('admin@interoplens.io', 'admin123');
+    afterAll(() => {
+        if (mockFetch) {
+            global.fetch = mockFetch;
+        }
+    });
 
-        expect(user).toMatchObject({
-            id: 'user-admin',
-            email: 'admin@interoplens.io',
-            role: 'admin',
+    test('authenticates with server response', async () => {
+        const authResponse: AuthResult = {
+            token: 'server-digest',
+            user: {
+                id: 'user-admin',
+                name: 'Admin User',
+                email: 'admin@interoplens.io',
+                role: UserRole.Admin,
+            },
+        };
+
+        (global.fetch as jest.Mock).mockResolvedValue({
+            ok: true,
+            json: jest.fn().mockResolvedValue(authResponse),
         });
+
+        const result = await authenticate('admin@interoplens.io', 'admin123');
+
+        expect(global.fetch).toHaveBeenCalledWith(
+            expect.stringContaining('/api/auth/token'),
+            expect.objectContaining({
+                method: 'POST',
+                headers: expect.objectContaining({ 'Content-Type': 'application/json' }),
+            })
+        );
+        expect(result).toEqual(authResponse);
     });
 
-    test('rejects invalid credentials', async () => {
+    test('throws a readable error when server rejects', async () => {
+        (global.fetch as jest.Mock).mockResolvedValue({
+            ok: false,
+            status: 401,
+            json: jest.fn().mockResolvedValue({ message: 'Invalid credentials' }),
+        });
+
         await expect(authenticate('admin@interoplens.io', 'wrong')).rejects.toThrow(
-            'Invalid email or password'
+            'Invalid credentials'
         );
     });
 
-    test('authenticates a newly added user', async () => {
-        await addUser({
-            name: 'Ops Owner',
-            email: 'ops@example.com',
-            role: 'analyst',
-            password: 'ops12345',
+    test('rejects invalid response payloads', async () => {
+        (global.fetch as jest.Mock).mockResolvedValue({
+            ok: true,
+            json: jest.fn().mockResolvedValue({}),
         });
 
-        const user = await authenticate('ops@example.com', 'ops12345');
-
-        expect(user.role).toBe('analyst');
+        await expect(authenticate('admin@interoplens.io', 'admin123')).rejects.toThrow(
+            'Login failed: invalid response from server'
+        );
     });
 
-    test('persists and reads a valid session', () => {
+    test('persists and reads a valid session with server token', () => {
         const demoUser: AuthenticatedUser = {
             id: 'user-analyst',
             name: 'Analyst User',
             email: 'analyst@interoplens.io',
             role: 'analyst',
         };
-        const session = persistSession(demoUser);
+        const session = persistSession(demoUser, 'server-token');
 
-        expect(session.token).toBeTruthy();
+        expect(session.token).toBe('server-token');
         expect(readSession()).toMatchObject({
             role: 'analyst',
-            token: session.token,
+            token: 'server-token',
             email: demoUser.email,
         });
     });
