@@ -90,8 +90,30 @@ const normalizeUser = (
         id: user?.id ?? user?.email ?? fallbackEmail,
         name: user?.name ?? user?.email ?? fallbackEmail,
         email: (user?.email ?? fallbackEmail).toLowerCase(),
-        role: user?.role ?? UserRole.Analyst,
+        role: user?.role ?? 'analyst',
     };
+};
+
+const extractToken = (data: unknown): string | undefined => {
+    if (!data || typeof data !== 'object') return undefined;
+
+    const candidate =
+        (data as { digest?: unknown }).digest ??
+        (data as { token?: unknown }).token ??
+        (data as { data?: { digest?: unknown; token?: unknown } }).data?.digest ??
+        (data as { data?: { digest?: unknown; token?: unknown } }).data?.token;
+
+    return typeof candidate === 'string' ? candidate : undefined;
+};
+
+const extractUser = (data: unknown): Partial<AuthenticatedUser> | undefined => {
+    if (!data || typeof data !== 'object') return undefined;
+
+    const user =
+        (data as { user?: Partial<AuthenticatedUser> }).user ??
+        (data as { data?: { user?: Partial<AuthenticatedUser> } }).data?.user;
+
+    return user;
 };
 
 export const authenticate = async (email: string, password: string): Promise<AuthResult> => {
@@ -120,7 +142,8 @@ export const authenticate = async (email: string, password: string): Promise<Aut
         throw new Error('Login failed: invalid response from server');
     }
 
-    const { digest, user } = (data as { digest?: string; user?: Partial<AuthenticatedUser> }) ?? {};
+    const digest = extractToken(data);
+    const user = extractUser(data);
 
     if (!digest) {
         throw new Error('Login failed: invalid response from server');

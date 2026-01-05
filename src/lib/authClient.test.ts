@@ -1,14 +1,6 @@
 import { webcrypto } from 'crypto';
 import { TextEncoder } from 'util';
-import {
-    AuthenticatedUser,
-    AuthResult,
-    authenticate,
-    clearSession,
-    persistSession,
-    readSession,
-    subscribeToSession,
-} from './authClient';
+import { authenticate, AuthenticatedUser, clearSession, persistSession, readSession, subscribeToSession } from './authClient';
 import { UserRole } from '../types/auth';
 
 const mockFetch = global.fetch as jest.Mock | undefined;
@@ -38,13 +30,13 @@ describe('authClient', () => {
     });
 
     test('authenticates with server response', async () => {
-        const authResponse: AuthResult = {
-            token: 'server-digest',
+        const authResponse = {
+            digest: 'server-digest',
             user: {
                 id: 'user-admin',
                 name: 'Admin User',
                 email: 'admin@interoplens.io',
-                role: UserRole.Admin,
+                role: 'admin',
             },
         };
 
@@ -62,7 +54,22 @@ describe('authClient', () => {
                 headers: expect.objectContaining({ 'Content-Type': 'application/json' }),
             })
         );
-        expect(result).toEqual(authResponse);
+        expect(result).toEqual({
+            token: authResponse.digest,
+            user: authResponse.user,
+        });
+    });
+
+    test('accepts alternate token shapes from server', async () => {
+        (global.fetch as jest.Mock).mockResolvedValue({
+            ok: true,
+            json: jest.fn().mockResolvedValue({ data: { token: 'session-token' } }),
+        });
+
+        const result = await authenticate('admin@interoplens.io', 'admin123');
+
+        expect(result.token).toBe('session-token');
+        expect(result.user.email).toBe('admin@interoplens.io');
     });
 
     test('throws a readable error when server rejects', async () => {
