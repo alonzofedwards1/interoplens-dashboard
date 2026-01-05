@@ -47,10 +47,11 @@ To learn React, check out the [React documentation](https://reactjs.org/).
 
 ## Telemetry backend configuration
 
-The dashboard reads telemetry directly from the InterOps telemetry API. Set `REACT_APP_API_BASE_URL` to your FastAPI server (default `http://localhost:8080/api`) so the UI can call `/telemetry/events` without relying on mocks or alternate hosts.
+The dashboard reads telemetry directly from the InterOps telemetry API. Set `REACT_APP_API_BASE_URL` and `REACT_APP_TELEMETRY_BASE_URL` to the Control and Telemetry API hosts (for example, `http://control.interop.100.48.218.100.nip.io` and `http://telemetry.interop.100.48.218.100.nip.io`) so the UI can call `/api/*` endpoints without relying on mocks.
 
 ```bash
-REACT_APP_API_BASE_URL=http://localhost:8080/api npm start
+REACT_APP_API_BASE_URL=http://control.interop.100.48.218.100.nip.io \
+REACT_APP_TELEMETRY_BASE_URL=http://telemetry.interop.100.48.218.100.nip.io npm start
 ```
 
-The telemetry page issues `GET /telemetry/events` to retrieve the in-memory PD execution events and displays them as-is. No additional setup is required beyond exposing that endpoint on the backend.
+The telemetry page issues `GET /api/telemetry/events` to retrieve telemetry events and displays them as-is. No additional setup is required beyond exposing that endpoint on the backend.
