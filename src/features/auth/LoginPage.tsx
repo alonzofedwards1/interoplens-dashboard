@@ -31,6 +31,13 @@ const Login: React.FC = () => {
         setPassword(devPassword);
     };
 
+    const prefillDevCredentials = () => {
+        setEmail(devEmail);
+        setPassword(devPassword);
+    };
+
+    if (!isAuthEnabled) return null;
+
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-100">
             <div className="w-full max-w-md bg-white rounded-lg shadow-md p-8 space-y-6">
