@@ -1,93 +1,51 @@
-import { UserRole } from '../types/auth';
-import { AppUser, getUsers } from '../features/settings/data/usersStore';
-import { hashPassword } from './password';
-
-const STORAGE_KEY = 'authSession';
-const SESSION_TTL_MS = 30 * 60 * 1000; // 30 minutes
-
 export interface AuthenticatedUser {
     id: string;
     name: string;
     email: string;
-    role: UserRole;
+    role: 'analyst';
 }
 
-export interface AuthSession extends AuthenticatedUser {
-    token: string;
-    issuedAt: number;
-}
+export interface AuthSession extends AuthenticatedUser {}
 
-const generateToken = () =>
-    typeof crypto.randomUUID === 'function'
-        ? crypto.randomUUID()
-        : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+const STORAGE_KEY = 'interoplens.auth';
 
-const isExpired = (issuedAt: number) => Date.now() - issuedAt > SESSION_TTL_MS;
+const createUserFromEmail = (email: string): AuthenticatedUser => {
+    const normalizedEmail = email.trim().toLowerCase();
+    return {
+        id: normalizedEmail,
+        name: normalizedEmail,
+        email: normalizedEmail,
+        role: 'analyst',
+    };
+};
 
-const parseSession = (raw: string | null): AuthSession | null => {
+export const authenticate = async (email: string, password: string) => {
+    if (!email.trim() || !password.trim()) {
+        throw new Error('Email and password are required.');
+    }
+
+    const user = createUserFromEmail(email);
+    // TODO: Swap this mocked login with backend authentication when available.
+    persistSession(user);
+    return { user };
+};
+
+export const readSession = (): AuthSession | null => {
+    const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
 
     try {
-        const session = JSON.parse(raw) as AuthSession;
-        return isExpired(session.issuedAt) ? null : session;
+        const parsed = JSON.parse(raw) as AuthSession;
+        return parsed?.email ? parsed : null;
     } catch (error) {
         console.error('Failed to parse auth session', error);
         return null;
     }
 };
 
-export const readSession = (): AuthSession | null =>
-    parseSession(sessionStorage.getItem(STORAGE_KEY));
-
 export const persistSession = (user: AuthenticatedUser): AuthSession => {
-    const session: AuthSession = {
-        ...user,
-        token: generateToken(),
-        issuedAt: Date.now(),
-    };
-
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(session));
-    return session;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+    return user;
 };
 
-export const clearSession = () => sessionStorage.removeItem(STORAGE_KEY);
-
-export const subscribeToSession = (callback: () => void) => {
-    const handleStorage = (event: StorageEvent) => {
-        if (event.storageArea === sessionStorage && event.key === STORAGE_KEY) {
-            callback();
-        }
-    };
-
-    const handleVisibility = () => {
-        if (document.visibilityState === 'visible') {
-            callback();
-        }
-    };
-
-    window.addEventListener('storage', handleStorage);
-    document.addEventListener('visibilitychange', handleVisibility);
-
-    return () => {
-        window.removeEventListener('storage', handleStorage);
-        document.removeEventListener('visibilitychange', handleVisibility);
-    };
-};
-
-const toAuthenticatedUser = (user: AppUser): AuthenticatedUser => ({
-    id: user.id,
-    name: user.name,
-    email: user.email,
-    role: user.role,
-});
-
-export const authenticate = async (email: string, password: string) => {
-    const providedHash = await hashPassword(password);
-    const user = getUsers().find(
-        demo => demo.email === email.toLowerCase() && demo.passwordHash === providedHash
-    );
-
-    if (!user) throw new Error('Invalid email or password');
-
-    return toAuthenticatedUser(user);
-};
+export const clearSession = () => localStorage.removeItem(STORAGE_KEY);

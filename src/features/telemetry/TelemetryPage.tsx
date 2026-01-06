@@ -116,12 +116,12 @@ const TelemetryPage: React.FC = () => {
     }, [environmentFilter, search, statusFilter, telemetryEvents]);
 
     const sortedEvents = useMemo(() => {
-        return [...telemetryEvents].sort((a, b) => {
+        return [...filteredEvents].sort((a, b) => {
             const aTime = new Date(a.timestamp).getTime();
             const bTime = new Date(b.timestamp).getTime();
-            return bTime - aTime;
+            return sortDirection === 'asc' ? aTime - bTime : bTime - aTime;
         });
-    }, [telemetryEvents]);
+    }, [filteredEvents, sortDirection]);
 
     const metrics = useMemo(() => {
         const total = telemetryEvents.length;

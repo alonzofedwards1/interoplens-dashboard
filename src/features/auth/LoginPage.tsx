@@ -1,38 +1,41 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { authenticate, AuthenticatedUser } from '../../lib/authClient';
+import { useAuth } from '../../lib/AuthContext';
 
-interface LoginProps {
-    onLogin: (user: AuthenticatedUser) => void;
-}
-
-const Login: React.FC<LoginProps> = ({ onLogin }) => {
+const Login: React.FC = () => {
     const navigate = useNavigate();
+    const { login } = useAuth();
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
 
+    const devEmail = 'admin@interoplens.io';
+    const devPassword = 'admin123';
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        try {
-            const user = await authenticate(email, password);
-            setError('');
-            onLogin(user);
-            navigate('/dashboard', { replace: true });
-        } catch (err) {
-            setError((err as Error).message);
+        if (!email.trim() || !password.trim()) {
+            setError('Email and password are required.');
+            return;
         }
+
+        setError('');
+        login(email);
+        navigate('/dashboard', { replace: true });
+    };
+
+    const handleDevCredentials = () => {
+        setEmail(devEmail);
+        setPassword(devPassword);
     };
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-100">
             <div className="w-full max-w-md bg-white rounded-lg shadow-md p-8 space-y-6">
                 <div className="text-center space-y-1">
-                    <h1 className="text-2xl font-semibold text-gray-800">
-                        Interoplens
-                    </h1>
+                    <h1 className="text-2xl font-semibold text-gray-800">Interoplens</h1>
                     <p className="text-sm text-gray-500">
                         Interoperability Behavior Analysis Dashboard
                     </p>
@@ -46,11 +49,15 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label
+                            htmlFor="login-email"
+                            className="block text-sm font-medium text-gray-700 mb-1"
+                        >
                             Email
                         </label>
                         <input
                             type="email"
+                            id="login-email"
                             value={email}
                             onChange={e => setEmail(e.target.value)}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
@@ -58,11 +65,15 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label
+                            htmlFor="login-password"
+                            className="block text-sm font-medium text-gray-700 mb-1"
+                        >
                             Password
                         </label>
                         <input
                             type="password"
+                            id="login-password"
                             value={password}
                             onChange={e => setPassword(e.target.value)}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
@@ -77,8 +88,25 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                     </button>
                 </form>
 
+                <div className="flex items-center justify-between text-sm text-blue-700">
+                    <button
+                        type="button"
+                        onClick={handleDevCredentials}
+                        className="underline hover:text-blue-800"
+                    >
+                        Use dev credentials
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => navigate('/forgot-password')}
+                        className="underline hover:text-blue-800"
+                    >
+                        Forgot password?
+                    </button>
+                </div>
+
                 <div className="text-center text-xs text-gray-400 pt-4 border-t">
-                    Demo Environment · Synthetic Data
+                    Demo Environment · Synthetic Data · Dev sign-in: {devEmail} / {devPassword}
                 </div>
             </div>
         </div>
