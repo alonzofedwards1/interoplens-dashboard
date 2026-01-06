@@ -58,18 +58,15 @@ The telemetry page issues `GET /api/telemetry/events` to retrieve telemetry even
 
 ## Authentication and password reset
 
-* Default dev credentials: `admin@interoplens.io` / `admin123` (seeded locally for offline testing).
-* The login screen supports password reset using `/api/auth/password/forgot` and `/api/auth/password/reset`. If the backend is unreachable,
-  the UI issues a time-limited local reset code so you can complete the flow during development.
-
-For environments that require OAuth-backed authentication, the dashboard expects the following variables to be present at build or runtime so the backend can issue tokens:
+Authentication is opt-in. By default, the dashboard runs in demo mode without a login screen. Set the auth mode explicitly:
 
 ```
-OAUTH_TOKEN_URL=https://auth.example.com/oauth/token
-OAUTH_CLIENT_ID=interop-dashboard-client
-OAUTH_CLIENT_SECRET=replace-me
-OAUTH_USERNAME=admin@example.com
-OAUTH_PASSWORD=replace-me
+REACT_APP_AUTH_MODE=none   # default, unauthenticated
+REACT_APP_AUTH_MODE=oauth  # enable OAuth login
 ```
 
-Copy `.env.example` to `.env.production` (or your environment-specific file) and replace the placeholders with your provider's values to avoid `Missing OAuth environment variables` errors.
+* Default dev credentials: `admin@interoplens.io` / `admin123` (seeded locally for offline testing when OAuth is enabled).
+* The login and password reset screens only render when `REACT_APP_AUTH_MODE=oauth`.
+* OAuth-specific environment variables (token URL, client credentials, resource owner credentials) should only be provided when enabling OAuth and are intentionally excluded from the default environment templates.
+
+Copy `.env.example` to `.env.development` (or your environment-specific file) and set the values needed for your environment. Leave `REACT_APP_AUTH_MODE=none` to run unauthenticated.

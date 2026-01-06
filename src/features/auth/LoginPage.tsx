@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authenticate, AuthResult } from '../../lib/authClient';
+import { isAuthEnabled } from '../../config/auth';
 
 interface LoginProps {
     onLogin: (result: AuthResult) => void;
@@ -33,6 +34,8 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         setEmail(devEmail);
         setPassword(devPassword);
     };
+
+    if (!isAuthEnabled) return null;
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-100">

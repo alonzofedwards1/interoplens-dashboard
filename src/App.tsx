@@ -26,12 +26,15 @@ import {
 } from './lib/authClient';
 import { SessionProvider } from './lib/SessionContext';
 import { ServerDataProvider } from './lib/ServerDataContext';
+import { isAuthEnabled } from './config/auth';
 
 const App: React.FC = () => {
     const [session, setSession] = useState<AuthSession | null>(null);
-    const [authChecked, setAuthChecked] = useState(false);
+    const [authChecked, setAuthChecked] = useState(!isAuthEnabled);
 
     useEffect(() => {
+        if (!isAuthEnabled) return;
+
         const syncSession = () => {
             setSession(readSession());
             setAuthChecked(true);
@@ -53,9 +56,9 @@ const App: React.FC = () => {
         );
 
     const requireAuth = (el: React.ReactElement) =>
-        session ? el : <Navigate to="/" replace />;
+        !isAuthEnabled || session ? el : <Navigate to="/" replace />;
 
-    const loginElement = (
+    const loginElement = !isAuthEnabled ? null : (
         <Login
             onLogin={({ user, token }) => {
                 const newSession = persistSession(user, token);
@@ -68,66 +71,74 @@ const App: React.FC = () => {
         <SessionProvider session={session}>
             <ServerDataProvider>
                 <Routes>
-            <Route
-                path="/"
-                element={session ? <Navigate to="/dashboard" replace /> : loginElement}
-            />
-            <Route path="/login" element={loginElement} />
-            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-
-            <Route
-                path="/dashboard"
-                element={requireAuth(
-                    <Dashboard
-                        role={session?.role ?? null}
-                        onLogout={() => {
-                            clearSession();
-                            setSession(null);
-                        }}
+                    <Route
+                        path="/"
+                        element={
+                            isAuthEnabled
+                                ? session
+                                    ? <Navigate to="/dashboard" replace />
+                                    : loginElement
+                                : <Navigate to="/dashboard" replace />
+                        }
                     />
-                )}
-            />
+                    {isAuthEnabled && <Route path="/login" element={loginElement} />}
+                    {isAuthEnabled && (
+                        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                    )}
 
-            <Route path="/findings" element={requireAuth(<ViewAllFindings />)} />
-            <Route path="/telemetry" element={requireAuth(<TelemetryPage />)} />
+                    <Route
+                        path="/dashboard"
+                        element={requireAuth(
+                            <Dashboard
+                                role={session?.role ?? null}
+                                onLogout={() => {
+                                    clearSession();
+                                    setSession(null);
+                                }}
+                            />
+                        )}
+                    />
 
-            {/* Committee */}
-            <Route path="/committee" element={requireAuth(<CommitteeQueue />)} />
-            <Route
-                path="/committee/:id"
-                element={requireAuth(<CommitteeCaseDetail />)}
-            />
+                    <Route path="/findings" element={requireAuth(<ViewAllFindings />)} />
+                    <Route path="/telemetry" element={requireAuth(<TelemetryPage />)} />
 
-            <Route
-                path="/knowledge-base"
-                element={requireAuth(<KnowledgeBasePage />)}
-            />
+                    {/* Committee */}
+                    <Route path="/committee" element={requireAuth(<CommitteeQueue />)} />
+                    <Route
+                        path="/committee/:id"
+                        element={requireAuth(<CommitteeCaseDetail />)}
+                    />
 
-            {/* OID Directory */}
-            <Route path="/oids" element={requireAuth(<OidQueue />)} />
-            <Route
-                path="/oids/:oid"
-                element={requireAuth(<OidDetail />)}
-            />
+                    <Route
+                        path="/knowledge-base"
+                        element={requireAuth(<KnowledgeBasePage />)}
+                    />
 
-            <Route
-                path="/integration-issues"
-                element={requireAuth(
-                    <IntegrationIssuesPage role={session?.role ?? null} />
-                )}
-            />
-            <Route
-                path="/IntegrationIssues"
-                element={<Navigate to="/integration-issues" replace />}
-            />
+                    {/* OID Directory */}
+                    <Route path="/oids" element={requireAuth(<OidQueue />)} />
+                    <Route
+                        path="/oids/:oid"
+                        element={requireAuth(<OidDetail />)}
+                    />
 
-            <Route path="/reports" element={requireAuth(<Reports />)} />
-            <Route
-                path="/settings"
-                element={requireAuth(<Settings role={session?.role ?? null} />)}
-            />
+                    <Route
+                        path="/integration-issues"
+                        element={requireAuth(
+                            <IntegrationIssuesPage role={session?.role ?? null} />
+                        )}
+                    />
+                    <Route
+                        path="/IntegrationIssues"
+                        element={<Navigate to="/integration-issues" replace />}
+                    />
 
-            <Route path="*" element={<Navigate to="/" replace />} />
+                    <Route path="/reports" element={requireAuth(<Reports />)} />
+                    <Route
+                        path="/settings"
+                        element={requireAuth(<Settings role={session?.role ?? null} />)}
+                    />
+
+                    <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
             </ServerDataProvider>
         </SessionProvider>

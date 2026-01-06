@@ -1,4 +1,5 @@
 import { API_BASE_URL } from '../config/api';
+import { isAuthEnabled } from '../config/auth';
 import { UserRole } from '../types/auth';
 import { getUsers, updateUserPassword } from '../features/settings/data/usersStore';
 import { consumeLocalResetToken, issueLocalResetToken } from './passwordReset';
@@ -59,6 +60,8 @@ const parseSession = (raw: string | null): AuthSession | null => {
 
 export const readSession = (): AuthSession | null =>
     parseSession(sessionStorage.getItem(STORAGE_KEY));
+
+export const getSessionToken = () => readSession()?.token ?? null;
 
 export const persistSession = (user: AuthenticatedUser, token?: string): AuthSession => {
     const session: AuthSession = {
@@ -134,6 +137,13 @@ const extractUser = (data: unknown): Partial<AuthenticatedUser> | undefined => {
 };
 
 export const authenticate = async (email: string, password: string): Promise<AuthResult> => {
+    if (!isAuthEnabled) {
+        return {
+            user: normalizeUser({ email }, email),
+            token: generateToken(),
+        };
+    }
+
     try {
         return await authenticateRemote(email, password);
     } catch (error) {
@@ -157,6 +167,14 @@ export const requestPasswordReset = async (
     email: string
 ): Promise<PasswordResetRequestResult> => {
     const normalizedEmail = email.trim().toLowerCase();
+
+    if (!isAuthEnabled) {
+        return {
+            email: normalizedEmail,
+            via: 'local',
+            message: 'Authentication is disabled; no reset is required.',
+        };
+    }
 
     try {
         const response = await fetch(`${API_BASE_URL}/api/auth/password/forgot`, {
@@ -210,6 +228,14 @@ export const resetPassword = async (
     newPassword: string
 ): Promise<PasswordResetResult> => {
     const normalizedEmail = email.trim().toLowerCase();
+
+    if (!isAuthEnabled) {
+        return {
+            email: normalizedEmail,
+            via: 'local',
+            message: 'Authentication is disabled; no reset is required.',
+        };
+    }
 
     try {
         const response = await fetch(`${API_BASE_URL}/api/auth/password/reset`, {

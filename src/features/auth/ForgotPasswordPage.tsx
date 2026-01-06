@@ -5,6 +5,7 @@ import {
     resetPassword,
     PasswordResetRequestResult,
 } from '../../lib/authClient';
+import { isAuthEnabled } from '../../config/auth';
 
 const ForgotPasswordPage: React.FC = () => {
     const navigate = useNavigate();
@@ -19,6 +20,8 @@ const ForgotPasswordPage: React.FC = () => {
     const [error, setError] = useState('');
     const [isRequesting, setIsRequesting] = useState(false);
     const [isResetting, setIsResetting] = useState(false);
+
+    if (!isAuthEnabled) return null;
 
     const handleRequest = async (e: React.FormEvent) => {
         e.preventDefault();

@@ -9,6 +9,7 @@ import {
 } from '../../lib/authClient';
 
 jest.mock('../../lib/authClient');
+jest.mock('../../config/auth', () => ({ AUTH_MODE: 'oauth', isAuthEnabled: true }));
 
 const mockNavigate = jest.fn();
 

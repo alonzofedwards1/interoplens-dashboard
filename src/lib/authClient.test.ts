@@ -13,6 +13,8 @@ import {
 import { UserRole } from '../types/auth';
 import { issueLocalResetToken, resetLocalTokens } from './passwordReset';
 
+jest.mock('../config/auth', () => ({ AUTH_MODE: 'oauth', isAuthEnabled: true }));
+
 const mockFetch = global.fetch as jest.Mock | undefined;
 
 describe('authClient', () => {

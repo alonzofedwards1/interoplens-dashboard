@@ -1,8 +1,26 @@
 import { TELEMETRY_BASE_URL } from '../config/api';
+import { isAuthEnabled } from '../config/auth';
+import { getSessionToken } from './authClient';
 import { TelemetryEvent } from '../telemetry/TelemetryEvent';
 
+const withAuthHeaders = (): RequestInit | undefined => {
+    if (!isAuthEnabled) return undefined;
+
+    const token = getSessionToken();
+    if (!token) return undefined;
+
+    return {
+        headers: {
+            Authorization: `Bearer ${token}`,
+        },
+    };
+};
+
 export async function fetchTelemetryEvents(): Promise<TelemetryEvent[]> {
-    const res = await fetch(`${TELEMETRY_BASE_URL}/api/telemetry/events`);
+    const res = await fetch(
+        `${TELEMETRY_BASE_URL}/api/telemetry/events`,
+        withAuthHeaders()
+    );
     if (!res.ok) {
         const message = await safeErrorMessage(res);
         throw new Error(message ?? 'Failed to fetch telemetry events');
