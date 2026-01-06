@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { authenticate, AuthenticatedUser } from '../../lib/authClient';
+import { authenticate, AuthResult } from '../../lib/authClient';
+import { isAuthEnabled } from '../../config/auth';
 
 interface LoginProps {
-    onLogin: (user: AuthenticatedUser) => void;
+    onLogin: (result: AuthResult) => void;
 }
 
 const Login: React.FC<LoginProps> = ({ onLogin }) => {
@@ -13,18 +14,28 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
 
+    const devEmail = 'admin@interoplens.io';
+    const devPassword = 'admin123';
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
         try {
-            const user = await authenticate(email, password);
+            const result = await authenticate(email, password);
             setError('');
-            onLogin(user);
+            onLogin(result);
             navigate('/dashboard', { replace: true });
         } catch (err) {
             setError((err as Error).message);
         }
     };
+
+    const handleDevCredentials = () => {
+        setEmail(devEmail);
+        setPassword(devPassword);
+    };
+
+    if (!isAuthEnabled) return null;
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-100">
@@ -46,11 +57,15 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label
+                            htmlFor="login-email"
+                            className="block text-sm font-medium text-gray-700 mb-1"
+                        >
                             Email
                         </label>
                         <input
                             type="email"
+                            id="login-email"
                             value={email}
                             onChange={e => setEmail(e.target.value)}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
@@ -58,11 +73,15 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label
+                            htmlFor="login-password"
+                            className="block text-sm font-medium text-gray-700 mb-1"
+                        >
                             Password
                         </label>
                         <input
                             type="password"
+                            id="login-password"
                             value={password}
                             onChange={e => setPassword(e.target.value)}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
@@ -77,8 +96,25 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                     </button>
                 </form>
 
+                <div className="flex items-center justify-between text-sm text-blue-700">
+                    <button
+                        type="button"
+                        onClick={handleDevCredentials}
+                        className="underline hover:text-blue-800"
+                    >
+                        Use dev credentials
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => navigate('/forgot-password')}
+                        className="underline hover:text-blue-800"
+                    >
+                        Forgot password?
+                    </button>
+                </div>
+
                 <div className="text-center text-xs text-gray-400 pt-4 border-t">
-                    Demo Environment · Synthetic Data
+                    Demo Environment · Synthetic Data · Dev sign-in: {devEmail} / {devPassword}
                 </div>
             </div>
         </div>
