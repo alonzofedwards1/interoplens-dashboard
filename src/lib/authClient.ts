@@ -1,5 +1,7 @@
 import { API_BASE_URL } from '../config/api';
 import { UserRole } from '../types/auth';
+import { getUsers } from '../features/settings/data/usersStore';
+import { hashPassword } from './password';
 
 const STORAGE_KEY = 'authSession';
 const SESSION_TTL_MS = 30 * 60 * 1000; // 30 minutes
@@ -117,6 +119,26 @@ const extractUser = (data: unknown): Partial<AuthenticatedUser> | undefined => {
 };
 
 export const authenticate = async (email: string, password: string): Promise<AuthResult> => {
+    try {
+        return await authenticateRemote(email, password);
+    } catch (error) {
+        const fallback = shouldAttemptLocalFallback(error)
+            ? await authenticateLocally(email, password)
+            : null;
+
+        if (fallback) {
+            return fallback;
+        }
+
+        throw error instanceof Error && shouldAddOAuthHint(error)
+            ? new Error(
+                  `${error.message} (or configure OAuth credentials via OAUTH_TOKEN_URL, OAUTH_CLIENT_ID, OAUTH_CLIENT_SECRET, OAUTH_USERNAME, OAUTH_PASSWORD)`
+              )
+            : error;
+    }
+};
+
+const authenticateRemote = async (email: string, password: string): Promise<AuthResult> => {
     let response: Response;
     try {
         response = await fetch(`${API_BASE_URL}/api/auth/token`, {
@@ -153,6 +175,31 @@ export const authenticate = async (email: string, password: string): Promise<Aut
 
     return { user: normalizedUser, token: digest };
 };
+
+const authenticateLocally = async (email: string, password: string): Promise<AuthResult | null> => {
+    const normalizedEmail = email.trim().toLowerCase();
+    const users = getUsers();
+    const user = users.find(candidate => candidate.email === normalizedEmail);
+
+    if (!user) return null;
+
+    const passwordHash = await hashPassword(password);
+    if (passwordHash !== user.passwordHash) return null;
+
+    const normalizedUser: AuthenticatedUser = {
+        id: user.id,
+        name: user.name,
+        email: normalizedEmail,
+        role: user.role,
+    };
+
+    return { user: normalizedUser, token: generateToken() };
+};
+
+const shouldAttemptLocalFallback = (error: unknown) =>
+    error instanceof Error && /oauth|unable to reach authentication service/i.test(error.message);
+
+const shouldAddOAuthHint = (error: Error) => /oauth/i.test(error.message);
 
 const safeErrorMessage = async (response: Response) => {
     try {

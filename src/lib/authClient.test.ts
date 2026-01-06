@@ -58,6 +58,28 @@ describe('authClient', () => {
             token: authResponse.digest,
             user: authResponse.user,
         });
+
+        const result = await authenticate('admin@interoplens.io', 'admin123');
+
+        expect(result.token).toBe('session-token');
+        expect(result.user.email).toBe('admin@interoplens.io');
+    });
+
+    test('falls back to seeded users when server is missing OAuth env vars', async () => {
+        (global.fetch as jest.Mock).mockResolvedValue({
+            ok: false,
+            status: 500,
+            json: jest.fn().mockResolvedValue({
+                message:
+                    'Missing OAuth environment variables: OAUTH_TOKEN_URL, OAUTH_CLIENT_ID, OAUTH_CLIENT_SECRET, OAUTH_USERNAME, OAUTH_PASSWORD',
+            }),
+        });
+
+        const result = await authenticate('admin@interoplens.io', 'admin123');
+
+        expect(result.user.email).toBe('admin@interoplens.io');
+        expect(result.user.role).toBe('admin');
+        expect(result.token).toBeTruthy();
     });
 
     test('accepts alternate token shapes from server', async () => {
