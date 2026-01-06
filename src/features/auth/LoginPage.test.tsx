@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import Login from './LoginPage';
-import { authenticate, AuthenticatedUser } from '../../lib/authClient';
+import { authenticate, AuthResult } from '../../lib/authClient';
 
 jest.mock('../../lib/authClient');
 
@@ -21,29 +21,28 @@ describe('LoginPage', () => {
     });
 
     test('authenticates and redirects on success', async () => {
-        const authenticatedUser: AuthenticatedUser = {
-            id: 'user-admin',
-            email: 'admin@interoplens.io',
-            name: 'Interoplens Admin',
-            role: 'admin',
+        const authResult: AuthResult = {
+            user: {
+                id: 'user-admin',
+                email: 'admin@interoplens.io',
+                name: 'Interoplens Admin',
+                role: 'admin',
+            },
+            token: 'secure-token',
         };
-        (authenticate as jest.Mock).mockResolvedValue(authenticatedUser);
+        (authenticate as jest.Mock).mockResolvedValue(authResult);
         const onLogin = jest.fn();
 
         render(<Login onLogin={onLogin} />);
 
-        const emailInput = screen
-            .getByText(/email/i)
-            .nextElementSibling as HTMLInputElement;
-        const passwordInput = screen
-            .getByText(/password/i)
-            .nextElementSibling as HTMLInputElement;
+        const emailInput = screen.getByLabelText(/email/i) as HTMLInputElement;
+        const passwordInput = screen.getByLabelText(/password/i) as HTMLInputElement;
 
         await userEvent.type(emailInput, 'admin@interoplens.io');
         await userEvent.type(passwordInput, 'admin123');
         await userEvent.click(screen.getByRole('button', { name: /sign in/i }));
 
-        await waitFor(() => expect(onLogin).toHaveBeenCalledWith(authenticatedUser));
+        await waitFor(() => expect(onLogin).toHaveBeenCalledWith(authResult));
 
         expect(authenticate).toHaveBeenCalledWith(
             'admin@interoplens.io',
@@ -60,12 +59,8 @@ describe('LoginPage', () => {
 
         render(<Login onLogin={onLogin} />);
 
-        const emailInput = screen
-            .getByText(/email/i)
-            .nextElementSibling as HTMLInputElement;
-        const passwordInput = screen
-            .getByText(/password/i)
-            .nextElementSibling as HTMLInputElement;
+        const emailInput = screen.getByLabelText(/email/i) as HTMLInputElement;
+        const passwordInput = screen.getByLabelText(/password/i) as HTMLInputElement;
 
         await userEvent.type(emailInput, 'admin@interoplens.io');
         await userEvent.type(passwordInput, 'wrong');

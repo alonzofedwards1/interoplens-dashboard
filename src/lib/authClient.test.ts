@@ -1,21 +1,22 @@
 import { webcrypto } from 'crypto';
 import { TextEncoder } from 'util';
 import {
-    AuthenticatedUser,
     authenticate,
+    AuthenticatedUser,
     clearSession,
     persistSession,
     readSession,
+    resetPassword,
+    requestPasswordReset,
     subscribeToSession,
 } from './authClient';
 import { UserRole } from '../types/auth';
-import { addUser, resetUsers } from '../features/settings/data/usersStore';
+import { issueLocalResetToken, resetLocalTokens } from './passwordReset';
+
+const mockFetch = global.fetch as jest.Mock | undefined;
 
 describe('authClient', () => {
-    const originalVisibility = Object.getOwnPropertyDescriptor(
-        document,
-        'visibilityState'
-    );
+    const originalVisibility = Object.getOwnPropertyDescriptor(document, 'visibilityState');
 
     beforeAll(() => {
         Object.defineProperty(global, 'TextEncoder', { value: TextEncoder });
@@ -25,55 +26,178 @@ describe('authClient', () => {
     beforeEach(() => {
         sessionStorage.clear();
         localStorage.clear();
-        resetUsers();
+        resetLocalTokens();
         jest.restoreAllMocks();
         if (originalVisibility) {
             Object.defineProperty(document, 'visibilityState', originalVisibility);
         }
+        global.fetch = jest.fn();
     });
 
-    test('authenticates a known demo user with the expected password', async () => {
-        const user = await authenticate('admin@interoplens.io', 'admin123');
+    afterAll(() => {
+        if (mockFetch) {
+            global.fetch = mockFetch;
+        }
+    });
 
-        expect(user).toMatchObject({
-            id: 'user-admin',
-            email: 'admin@interoplens.io',
-            role: 'admin',
+    test('authenticates with server response', async () => {
+        const authResponse = {
+            digest: 'server-digest',
+            user: {
+                id: 'user-admin',
+                name: 'Admin User',
+                email: 'admin@interoplens.io',
+                role: 'admin',
+            },
+        };
+
+        (global.fetch as jest.Mock).mockResolvedValue({
+            ok: true,
+            json: jest.fn().mockResolvedValue(authResponse),
+        });
+
+        const serverAuthResult = await authenticate('admin@interoplens.io', 'admin123');
+
+        expect(global.fetch).toHaveBeenCalledWith(
+            expect.stringContaining('/api/auth/token'),
+            expect.objectContaining({
+                method: 'POST',
+                headers: expect.objectContaining({ 'Content-Type': 'application/json' }),
+            })
+        );
+        expect(serverAuthResult).toEqual({
+            token: authResponse.digest,
+            user: authResponse.user,
         });
     });
 
-    test('rejects invalid credentials', async () => {
+    test('falls back to seeded users when server is missing OAuth env vars', async () => {
+        (global.fetch as jest.Mock).mockResolvedValue({
+            ok: false,
+            status: 500,
+            json: jest.fn().mockResolvedValue({
+                message:
+                    'Missing OAuth environment variables: OAUTH_TOKEN_URL, OAUTH_CLIENT_ID, OAUTH_CLIENT_SECRET, OAUTH_USERNAME, OAUTH_PASSWORD',
+            }),
+        });
+
+        const fallbackResult = await authenticate('admin@interoplens.io', 'admin123');
+
+        expect(fallbackResult.user.email).toBe('admin@interoplens.io');
+        expect(fallbackResult.user.role).toBe('admin');
+        expect(fallbackResult.token).toBeTruthy();
+    });
+
+    test('accepts alternate token shapes from server', async () => {
+        (global.fetch as jest.Mock).mockResolvedValue({
+            ok: true,
+            json: jest.fn().mockResolvedValue({ data: { token: 'session-token' } }),
+        });
+
+        const alternateTokenResult = await authenticate('admin@interoplens.io', 'admin123');
+
+        expect(alternateTokenResult.token).toBe('session-token');
+        expect(alternateTokenResult.user.email).toBe('admin@interoplens.io');
+    });
+
+    test('throws a readable error when server rejects', async () => {
+        (global.fetch as jest.Mock).mockResolvedValue({
+            ok: false,
+            status: 401,
+            json: jest.fn().mockResolvedValue({ message: 'Invalid credentials' }),
+        });
+
         await expect(authenticate('admin@interoplens.io', 'wrong')).rejects.toThrow(
-            'Invalid email or password'
+            'Invalid credentials'
         );
     });
 
-    test('authenticates a newly added user', async () => {
-        await addUser({
-            name: 'Ops Owner',
-            email: 'ops@example.com',
-            role: 'analyst',
-            password: 'ops12345',
+    test('rejects invalid response payloads', async () => {
+        (global.fetch as jest.Mock).mockResolvedValue({
+            ok: true,
+            json: jest.fn().mockResolvedValue({}),
         });
 
-        const user = await authenticate('ops@example.com', 'ops12345');
-
-        expect(user.role).toBe('analyst');
+        await expect(authenticate('admin@interoplens.io', 'admin123')).rejects.toThrow(
+            'Login failed: invalid response from server'
+        );
     });
 
-    test('persists and reads a valid session', () => {
+    test('sends password reset via remote API when available', async () => {
+        (global.fetch as jest.Mock).mockResolvedValue({
+            ok: true,
+            json: jest.fn().mockResolvedValue({ message: 'Email sent' }),
+        });
+
+        const remoteResetResult = await requestPasswordReset('admin@interoplens.io');
+
+        expect(global.fetch).toHaveBeenCalledWith(
+            expect.stringContaining('/api/auth/password/forgot'),
+            expect.objectContaining({ method: 'POST' })
+        );
+        expect(remoteResetResult).toMatchObject({
+            via: 'remote',
+            email: 'admin@interoplens.io',
+        });
+    });
+
+    test('generates a local reset token when the remote reset endpoint fails', async () => {
+        (global.fetch as jest.Mock).mockRejectedValue(new Error('Network error'));
+
+        const localResetResult = await requestPasswordReset('admin@interoplens.io');
+
+        expect(localResetResult.via).toBe('local');
+        expect(localResetResult.token).toBeTruthy();
+    });
+
+    test('resets password through remote API when available', async () => {
+        (global.fetch as jest.Mock).mockResolvedValueOnce({
+            ok: true,
+            json: jest.fn().mockResolvedValue({ message: 'Code sent' }),
+        });
+
+        await requestPasswordReset('admin@interoplens.io');
+
+        (global.fetch as jest.Mock).mockResolvedValueOnce({
+            ok: true,
+            json: jest.fn().mockResolvedValue({ message: 'Password updated' }),
+        });
+
+        const remoteUpdateResult = await resetPassword('admin@interoplens.io', '1234', 'new-pass');
+
+        expect(remoteUpdateResult.via).toBe('remote');
+    });
+
+    test('resets password locally when remote reset fails and token is valid', async () => {
+        const record = issueLocalResetToken('admin@interoplens.io');
+
+        (global.fetch as jest.Mock).mockRejectedValue(new Error('Network error'));
+
+        const localUpdateResult = await resetPassword(
+            'admin@interoplens.io',
+            record.token,
+            'new-local-pass'
+        );
+
+        expect(localUpdateResult.via).toBe('local');
+
+        const login = await authenticate('admin@interoplens.io', 'new-local-pass');
+        expect(login.user.email).toBe('admin@interoplens.io');
+    });
+
+    test('persists and reads a valid session with server token', () => {
         const demoUser: AuthenticatedUser = {
             id: 'user-analyst',
             name: 'Analyst User',
             email: 'analyst@interoplens.io',
             role: 'analyst',
         };
-        const session = persistSession(demoUser);
+        const session = persistSession(demoUser, 'server-token');
 
-        expect(session.token).toBeTruthy();
+        expect(session.token).toBe('server-token');
         expect(readSession()).toMatchObject({
             role: 'analyst',
-            token: session.token,
+            token: 'server-token',
             email: demoUser.email,
         });
     });
