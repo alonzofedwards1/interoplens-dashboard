@@ -61,3 +61,15 @@ The telemetry page issues `GET /api/telemetry/events` to retrieve telemetry even
 * Default dev credentials: `admin@interoplens.io` / `admin123` (seeded locally for offline testing).
 * The login screen supports password reset using `/api/auth/password/forgot` and `/api/auth/password/reset`. If the backend is unreachable,
   the UI issues a time-limited local reset code so you can complete the flow during development.
+
+For environments that require OAuth-backed authentication, the dashboard expects the following variables to be present at build or runtime so the backend can issue tokens:
+
+```
+OAUTH_TOKEN_URL=https://auth.example.com/oauth/token
+OAUTH_CLIENT_ID=interop-dashboard-client
+OAUTH_CLIENT_SECRET=replace-me
+OAUTH_USERNAME=admin@example.com
+OAUTH_PASSWORD=replace-me
+```
+
+Copy `.env.example` to `.env.production` (or your environment-specific file) and replace the placeholders with your provider's values to avoid `Missing OAuth environment variables` errors.
