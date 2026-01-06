@@ -69,6 +69,11 @@ describe('authClient', () => {
             token: authResponse.digest,
             user: authResponse.user,
         });
+
+        const alternateTokenResult = await authenticate('admin@interoplens.io', 'admin123');
+
+        expect(alternateTokenResult.token).toBe('session-token');
+        expect(alternateTokenResult.user.email).toBe('admin@interoplens.io');
     });
 
     test('falls back to seeded users when server is missing OAuth env vars', async () => {
