@@ -112,3 +112,23 @@ export const resetUsers = () => {
     localStorage.removeItem(STORAGE_KEY);
     return getUsers();
 };
+
+export const updateUserPassword = async (
+    email: string,
+    password: string
+): Promise<AppUser | null> => {
+    const normalizedEmail = email.trim().toLowerCase();
+    const users = getUsers();
+    const target = users.find(user => user.email === normalizedEmail);
+
+    if (!target) return null;
+
+    const passwordHash = await hashPassword(password);
+    const updatedUser: AppUser = { ...target, passwordHash, status: 'active' };
+    const updatedUsers = users.map(user =>
+        user.email === normalizedEmail ? updatedUser : user
+    );
+
+    writeUsers(updatedUsers);
+    return updatedUser;
+};
