@@ -86,11 +86,11 @@ describe('authClient', () => {
             }),
         });
 
-        const result = await authenticate('admin@interoplens.io', 'admin123');
+        const fallbackResult = await authenticate('admin@interoplens.io', 'admin123');
 
-        expect(result.user.email).toBe('admin@interoplens.io');
-        expect(result.user.role).toBe('admin');
-        expect(result.token).toBeTruthy();
+        expect(fallbackResult.user.email).toBe('admin@interoplens.io');
+        expect(fallbackResult.user.role).toBe('admin');
+        expect(fallbackResult.token).toBeTruthy();
     });
 
     test('accepts alternate token shapes from server', async () => {
