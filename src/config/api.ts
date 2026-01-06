@@ -1,0 +1,6 @@
+export const API_BASE_URL =
+    process.env.REACT_APP_API_BASE_URL ?? 'http://control.interop.100.48.218.100.nip.io';
+
+export const TELEMETRY_BASE_URL =
+    process.env.REACT_APP_TELEMETRY_BASE_URL ??
+    'http://telemetry.interop.100.48.218.100.nip.io';

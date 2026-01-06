@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
-import { useSession } from './SessionContext';
+import { useAuth } from './AuthContext';
 
 type PreferenceStore = Record<string, Record<string, unknown>>;
 
@@ -44,8 +44,8 @@ const setUserPreference = <T,>(userId: string, key: string, value: T) => {
  * to in-memory state when no authenticated session is present.
  */
 export const useUserPreference = <T,>(key: string, defaultValue: T) => {
-    const session = useSession();
-    const userId = session?.id;
+    const { user } = useAuth();
+    const userId = user?.email;
 
     const defaultRef = useRef(defaultValue);
     defaultRef.current = defaultValue;
@@ -100,4 +100,3 @@ export const useUserPreference = <T,>(key: string, defaultValue: T) => {
 };
 
 export const clearUserPreferences = () => localStorage.removeItem(STORAGE_KEY);
-
