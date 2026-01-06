@@ -22,8 +22,13 @@ const Login: React.FC = () => {
         }
 
         setError('');
-        login(email);
+        login({ email, name: email, role: 'admin' });
         navigate('/dashboard', { replace: true });
+    };
+
+    const prefillDevCredentials = () => {
+        setEmail(devEmail);
+        setPassword(devPassword);
     };
 
     const prefillDevCredentials = () => {

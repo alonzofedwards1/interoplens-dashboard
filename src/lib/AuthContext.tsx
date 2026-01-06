@@ -2,33 +2,41 @@ import React, { createContext, useContext, useEffect, useMemo, useState } from '
 
 const STORAGE_KEY = 'interoplens.auth';
 
-type AuthState = {
+export type AuthUser = {
     email: string;
+    name: string;
+    role: 'admin' | 'analyst' | 'committee';
 };
 
 type AuthContextValue = {
     isAuthenticated: boolean;
-    user: AuthState | null;
-    login: (email: string) => void;
+    user: AuthUser | null;
+    login: (user: Partial<AuthUser> & { email: string }) => void;
     logout: () => void;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-const readStoredAuth = (): AuthState | null => {
+const readStoredAuth = (): AuthUser | null => {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
 
     try {
-        const parsed = JSON.parse(raw) as { email?: string };
-        return parsed.email ? { email: parsed.email } : null;
+        const parsed = JSON.parse(raw) as Partial<AuthUser>;
+        if (!parsed.email) return null;
+
+        return {
+            email: parsed.email,
+            name: parsed.name ?? parsed.email,
+            role: parsed.role ?? 'admin',
+        };
     } catch (error) {
         console.error('Failed to parse auth state', error);
         return null;
     }
 };
 
-const persistAuth = (state: AuthState | null) => {
+const persistAuth = (state: AuthUser | null) => {
     if (!state) {
         localStorage.removeItem(STORAGE_KEY);
         return;
@@ -38,17 +46,21 @@ const persistAuth = (state: AuthState | null) => {
 };
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const [user, setUser] = useState<AuthState | null>(() => readStoredAuth());
+    const [user, setUser] = useState<AuthUser | null>(() => readStoredAuth());
 
     useEffect(() => {
         const stored = readStoredAuth();
         setUser(stored);
     }, []);
 
-    const login = (email: string) => {
-        const normalizedEmail = email.trim().toLowerCase();
+    const login = (userInput: Partial<AuthUser> & { email: string }) => {
+        const normalizedEmail = userInput.email.trim().toLowerCase();
         // TODO: Replace this mocked login with real backend authentication when available.
-        const nextUser = { email: normalizedEmail };
+        const nextUser: AuthUser = {
+            email: normalizedEmail,
+            name: userInput.name?.trim() || normalizedEmail,
+            role: userInput.role || 'admin',
+        };
         setUser(nextUser);
         persistAuth(nextUser);
     };

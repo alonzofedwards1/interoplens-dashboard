@@ -33,7 +33,13 @@ describe('LoginPage', () => {
         await userEvent.type(passwordInput, 'admin123');
         await userEvent.click(screen.getByRole('button', { name: /sign in/i }));
 
-        await waitFor(() => expect(mockLogin).toHaveBeenCalledWith('admin@interoplens.io'));
+        await waitFor(() =>
+            expect(mockLogin).toHaveBeenCalledWith({
+                email: 'admin@interoplens.io',
+                name: 'admin@interoplens.io',
+                role: 'admin',
+            })
+        );
         expect(mockNavigate).toHaveBeenCalledWith('/dashboard', { replace: true });
     });
 

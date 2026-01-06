@@ -46,10 +46,7 @@ const AppRoutes: React.FC = () => {
                 path="/dashboard"
                 element={
                     <ProtectedRoute>
-                        <Dashboard
-                            role={user ? 'analyst' : null}
-                            onLogout={logout}
-                        />
+                        <Dashboard role={user?.role ?? null} onLogout={logout} />
                     </ProtectedRoute>
                 }
             />
@@ -89,7 +86,7 @@ const AppRoutes: React.FC = () => {
                 path="/integration-issues"
                 element={
                     <ProtectedRoute>
-                        <IntegrationIssuesPage role={user ? 'analyst' : null} />
+                        <IntegrationIssuesPage role={user?.role ?? null} />
                     </ProtectedRoute>
                 }
             />
@@ -100,7 +97,7 @@ const AppRoutes: React.FC = () => {
                 path="/settings"
                 element={
                     <ProtectedRoute>
-                        <Settings role={user ? 'analyst' : null} />
+                        <Settings role={user?.role ?? null} />
                     </ProtectedRoute>
                 }
             />
