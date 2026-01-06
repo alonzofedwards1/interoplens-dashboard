@@ -1,6 +1,7 @@
 import { API_BASE_URL } from '../config/api';
 import { UserRole } from '../types/auth';
-import { getUsers } from '../features/settings/data/usersStore';
+import { getUsers, updateUserPassword } from '../features/settings/data/usersStore';
+import { consumeLocalResetToken, issueLocalResetToken } from './passwordReset';
 import { hashPassword } from './password';
 
 const STORAGE_KEY = 'authSession';
@@ -21,6 +22,20 @@ export interface AuthSession extends AuthenticatedUser {
 export interface AuthResult {
     user: AuthenticatedUser;
     token: string;
+}
+
+export interface PasswordResetRequestResult {
+    email: string;
+    via: 'remote' | 'local';
+    message: string;
+    token?: string;
+    expiresAt?: number;
+}
+
+export interface PasswordResetResult {
+    email: string;
+    via: 'remote' | 'local';
+    message: string;
 }
 
 const generateToken = () =>
@@ -138,6 +153,109 @@ export const authenticate = async (email: string, password: string): Promise<Aut
     }
 };
 
+export const requestPasswordReset = async (
+    email: string
+): Promise<PasswordResetRequestResult> => {
+    const normalizedEmail = email.trim().toLowerCase();
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/auth/password/forgot`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: normalizedEmail }),
+        });
+
+        if (response.ok) {
+            const body = await safeJson(response);
+            return {
+                email: normalizedEmail,
+                via: 'remote',
+                message:
+                    (typeof body?.message === 'string' && body.message) ||
+                    'If that account exists, a reset link has been sent to your email.',
+            };
+        }
+
+        const message = await safeErrorMessage(response);
+        if (!shouldAttemptLocalFallback(message ?? response.status.toString())) {
+            throw new Error(message ?? 'Unable to send reset email');
+        }
+    } catch (error) {
+        if (!shouldAttemptLocalFallback(error)) {
+            throw new Error('Unable to send reset email');
+        }
+    }
+
+    const users = getUsers();
+    const user = users.find(candidate => candidate.email === normalizedEmail);
+
+    if (!user) {
+        throw new Error('No account found for that email');
+    }
+
+    const record = issueLocalResetToken(normalizedEmail);
+    return {
+        email: normalizedEmail,
+        via: 'local',
+        token: record.token,
+        expiresAt: record.expiresAt,
+        message:
+            'Development reset code generated. Use the verification code to set a new password.',
+    };
+};
+
+export const resetPassword = async (
+    email: string,
+    token: string,
+    newPassword: string
+): Promise<PasswordResetResult> => {
+    const normalizedEmail = email.trim().toLowerCase();
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/auth/password/reset`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: normalizedEmail, token, password: newPassword }),
+        });
+
+        if (response.ok) {
+            const body = await safeJson(response);
+            return {
+                email: normalizedEmail,
+                via: 'remote',
+                message:
+                    (typeof body?.message === 'string' && body.message) ||
+                    'Password updated successfully. You can now sign in.',
+            };
+        }
+
+        const message = await safeErrorMessage(response);
+        if (!shouldAttemptLocalFallback(message ?? response.status.toString())) {
+            throw new Error(message ?? 'Unable to reset password');
+        }
+    } catch (error) {
+        if (!shouldAttemptLocalFallback(error)) {
+            throw new Error('Unable to reset password');
+        }
+    }
+
+    const record = consumeLocalResetToken(normalizedEmail, token);
+    if (!record) {
+        throw new Error('Invalid or expired reset code');
+    }
+
+    const updatedUser = await updateUserPassword(normalizedEmail, newPassword);
+    if (!updatedUser) {
+        throw new Error('No account found for that email');
+    }
+
+    return {
+        email: normalizedEmail,
+        via: 'local',
+        message: 'Password updated for development account. You can now sign in.',
+    };
+};
+
 const authenticateRemote = async (email: string, password: string): Promise<AuthResult> => {
     let response: Response;
     try {
@@ -196,8 +314,25 @@ const authenticateLocally = async (email: string, password: string): Promise<Aut
     return { user: normalizedUser, token: generateToken() };
 };
 
-const shouldAttemptLocalFallback = (error: unknown) =>
-    error instanceof Error && /oauth|unable to reach authentication service/i.test(error.message);
+const shouldAttemptLocalFallback = (reason: unknown) => {
+    if (reason instanceof Error) {
+        return /oauth|unable to reach authentication service|network/i.test(
+            reason.message
+        );
+    }
+
+    if (typeof reason === 'string') {
+        return /oauth|unable to reach authentication service|404|5\d{2}|network/i.test(
+            reason
+        );
+    }
+
+    if (typeof reason === 'number') {
+        return reason === 404 || reason >= 500;
+    }
+
+    return false;
+};
 
 const shouldAddOAuthHint = (error: Error) => /oauth/i.test(error.message);
 
@@ -210,4 +345,12 @@ const safeErrorMessage = async (response: Response) => {
         // ignore JSON parse failures
     }
     return undefined;
+};
+
+const safeJson = async (response: Response) => {
+    try {
+        return await response.json();
+    } catch (error) {
+        return null;
+    }
 };

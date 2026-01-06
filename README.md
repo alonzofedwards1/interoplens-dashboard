@@ -55,3 +55,9 @@ REACT_APP_TELEMETRY_BASE_URL=http://telemetry.interop.100.48.218.100.nip.io npm 
 ```
 
 The telemetry page issues `GET /api/telemetry/events` to retrieve telemetry events and displays them as-is. No additional setup is required beyond exposing that endpoint on the backend.
+
+## Authentication and password reset
+
+* Default dev credentials: `admin@interoplens.io` / `admin123` (seeded locally for offline testing).
+* The login screen supports password reset using `/api/auth/password/forgot` and `/api/auth/password/reset`. If the backend is unreachable,
+  the UI issues a time-limited local reset code so you can complete the flow during development.

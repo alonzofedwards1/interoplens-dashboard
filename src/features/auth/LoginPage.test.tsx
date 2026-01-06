@@ -35,12 +35,8 @@ describe('LoginPage', () => {
 
         render(<Login onLogin={onLogin} />);
 
-        const emailInput = screen
-            .getByText(/email/i)
-            .nextElementSibling as HTMLInputElement;
-        const passwordInput = screen
-            .getByText(/password/i)
-            .nextElementSibling as HTMLInputElement;
+        const emailInput = screen.getByLabelText(/email/i) as HTMLInputElement;
+        const passwordInput = screen.getByLabelText(/password/i) as HTMLInputElement;
 
         await userEvent.type(emailInput, 'admin@interoplens.io');
         await userEvent.type(passwordInput, 'admin123');
@@ -63,12 +59,8 @@ describe('LoginPage', () => {
 
         render(<Login onLogin={onLogin} />);
 
-        const emailInput = screen
-            .getByText(/email/i)
-            .nextElementSibling as HTMLInputElement;
-        const passwordInput = screen
-            .getByText(/password/i)
-            .nextElementSibling as HTMLInputElement;
+        const emailInput = screen.getByLabelText(/email/i) as HTMLInputElement;
+        const passwordInput = screen.getByLabelText(/password/i) as HTMLInputElement;
 
         await userEvent.type(emailInput, 'admin@interoplens.io');
         await userEvent.type(passwordInput, 'wrong');

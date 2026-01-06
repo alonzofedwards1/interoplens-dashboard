@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 
 import Login from './features/auth/LoginPage';
+import ForgotPasswordPage from './features/auth/ForgotPasswordPage';
 import Dashboard from './features/dashboard/DashboardPage';
 import ViewAllFindings from './features/findings/ViewAllFindingsPage';
 import TelemetryPage from './features/telemetry/TelemetryPage';
@@ -72,6 +73,7 @@ const App: React.FC = () => {
                 element={session ? <Navigate to="/dashboard" replace /> : loginElement}
             />
             <Route path="/login" element={loginElement} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
             <Route
                 path="/dashboard"
