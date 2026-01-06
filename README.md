@@ -58,15 +58,15 @@ The telemetry page issues `GET /api/telemetry/events` to retrieve telemetry even
 
 ## Authentication and password reset
 
-Authentication is opt-in. By default, the dashboard runs in demo mode without a login screen. Set the auth mode explicitly:
+Authentication is opt-in. By default, the dashboard requires login. Set the auth mode explicitly:
 
 ```
-REACT_APP_AUTH_MODE=none   # default, unauthenticated
-REACT_APP_AUTH_MODE=oauth  # enable OAuth login
+REACT_APP_AUTH_MODE=oauth  # default, login required
+REACT_APP_AUTH_MODE=none   # run unauthenticated
 ```
 
 * Default dev credentials: `admin@interoplens.io` / `admin123` (seeded locally for offline testing when OAuth is enabled).
-* The login and password reset screens only render when `REACT_APP_AUTH_MODE=oauth`.
+* The login and password reset screens only render when `REACT_APP_AUTH_MODE=oauth` (the default). Set `REACT_APP_AUTH_MODE=none` if you need a login-free demo mode.
 * OAuth-specific environment variables (token URL, client credentials, resource owner credentials) should only be provided when enabling OAuth and are intentionally excluded from the default environment templates.
 
-Copy `.env.example` to `.env.development` (or your environment-specific file) and set the values needed for your environment. Leave `REACT_APP_AUTH_MODE=none` to run unauthenticated.
+Copy `.env.example` to `.env.development` (or your environment-specific file) and set the values needed for your environment.

@@ -1,44 +1,80 @@
-# Codex Prompt — Align Interoplens Backend with Dashboard Auth & Telemetry
+# Codex Prompt — FastAPI Backend Contract for Interoplens Dashboard
 
-You are updating the Interoplens backend services so the existing React dashboard can authenticate, reset passwords, and fetch data without falling back to local dev logic. Implement the following behavior in the Control API (base URL `REACT_APP_API_BASE_URL`) and Telemetry API (base URL `REACT_APP_TELEMETRY_BASE_URL`).
+You are building a FastAPI backend that must exactly match the existing Interoplens React dashboard. The frontend code is fixed and MUST NOT be changed. Implement the backend so every dashboard call succeeds without local-dev fallbacks, mock logic, or silent failures.
 
-## Environment alignment
-- Ensure the Control API is reachable at `http://control.interop.100.48.218.100.nip.io` (or the value provided in `REACT_APP_API_BASE_URL`).
-- Ensure the Telemetry API is reachable at `http://telemetry.interop.100.48.218.100.nip.io` (or the value provided in `REACT_APP_TELEMETRY_BASE_URL`).
-- All endpoints below must be exposed without trailing slashes.
+## Environment and hosts
+- Control API base: `http://control.interop.100.48.218.100.nip.io` (or `REACT_APP_API_BASE_URL`).
+- Telemetry API base: `http://telemetry.interop.100.48.218.100.nip.io` (or `REACT_APP_TELEMETRY_BASE_URL`).
+- Endpoints MUST NOT include trailing slashes.
+- All responses (success or error) MUST be JSON; never return empty bodies or HTML errors. Errors must be `{ "message": "<human readable>" }`.
 
-## Authentication
-- **POST /api/auth/token**
-  - Request: JSON `{ "email": string, "password": string }`.
-  - Success response: status 200 with JSON containing **either** `digest` **or** `token` plus `user`:
-    ```json
-    {"digest":"<jwt-or-session-token>","user":{"id":"<uuid>","name":"<display>","email":"user@example.com","role":"admin|analyst|committee"}}
-    ```
-  - Failure response: non-200 with JSON `{ "message": "<human-readable reason>" }` (include the word "oauth" if OAuth configuration is missing, so the frontend can surface the hint).
-  - Do not return empty bodies; the frontend throws on missing `digest`/`token`.
+## CORS and networking
+- Allow origins: `http://dashboard.interop.100.48.218.100.nip.io` and `http://localhost:3000`.
+- Allow headers: `Authorization`, `Content-Type`.
+- Allow methods: `GET`, `POST`, `OPTIONS`.
+- The frontend does NOT send cookies; authentication is via `Authorization: Bearer <token>`.
 
-## Password reset
-- **POST /api/auth/password/forgot**
-  - Request: JSON `{ "email": string }`.
-  - Success response: 200 with JSON `{ "message": "Reset email sent" }`.
-  - Failure response: non-200 with JSON `{ "message": "<reason>" }`.
-- **POST /api/auth/password/reset**
-  - Request: JSON `{ "email": string, "token": string, "password": string }`.
-  - Success response: 200 with JSON `{ "message": "Password updated successfully" }`.
-  - Failure response: non-200 with JSON `{ "message": "<reason>" }`.
+## Authentication — Control API
+**POST /api/auth/token**
+Request body:
+```json
+{ "email": "string", "password": "string" }
+```
+Success (200): JSON containing `digest` **or** `token` AND `user`:
+```json
+{
+  "digest": "<jwt>",
+  "user": {
+    "id": "<uuid>",
+    "name": "<display name>",
+    "email": "user@example.com",
+    "role": "admin" | "analyst" | "committee"
+  }
+}
+```
+- Never return 200 without `digest` or `token` (the frontend will throw).
+- If OAuth/auth config is missing, return non-200 with a JSON error that includes the word `oauth`.
+Failure (non-200): `{ "message": "<reason>" }`.
 
-## Data endpoints
-Implement the data routes consumed by the dashboard with JSON payloads the UI can render directly:
-- **GET /api/findings** → array of findings objects.
-- **GET /api/pd-executions** → array of PD execution objects.
-- **GET /api/committee/queue** → array of committee queue items.
-- **GET /api/telemetry/events** (served by the Telemetry API host) → array of telemetry events.
-- On errors, respond with non-200 and JSON `{ "message": "<reason>" }`.
+### Password reset — Control API
+**POST /api/auth/password/forgot**
+- Request: `{ "email": "string" }`
+- Success 200: `{ "message": "Reset email sent" }`
+- Failure: non-200 `{ "message": "<reason>" }`
 
-## Response guarantees
-- Every successful response above must be valid JSON; the frontend treats JSON parse failures as errors.
-- Populate `message` on error responses to avoid unhelpful fallbacks.
-- Preserve CORS/access controls as needed; the dashboard does not send cookies by default.
+**POST /api/auth/password/reset**
+- Request: `{ "email": "string", "token": "string", "password": "string" }`
+- Success 200: `{ "message": "Password updated successfully" }`
+- Failure: non-200 `{ "message": "<reason>" }`
 
-## Development credential (for local smoke tests)
-- Seed a dev account `admin@interoplens.io` with password `admin123` (role `admin`). This mirrors the dashboard's local seed user so backend and frontend behave consistently.
+## Data endpoints — Control API
+These must return arrays directly (no wrapping objects). On errors, respond with non-200 `{ "message": "<reason>" }`.
+- **GET /api/findings** → returns `[]` when no data.
+- **GET /api/pd-executions** → returns `[]` when no data.
+- **GET /api/committee/queue** → returns `[]` when no data.
+
+## Telemetry API
+- **GET /api/telemetry/events** → returns an array of telemetry events (`[]` when empty).
+
+## Dev seed user (required)
+- Seed on startup if missing:
+  - Email: `admin@interoplens.io`
+  - Password: `admin123`
+  - Role: `admin`
+  - Name: `Interoplens Admin`
+
+## Implementation rules
+- Use FastAPI with Pydantic models.
+- Use JWT for auth (SECRET_KEY from env; a dev fallback is allowed).
+- Hash passwords (bcrypt or argon2).
+- No trailing slashes on routes.
+- No HTML error pages and no empty responses.
+- Keep unauthenticated data endpoints returning JSON arrays even if backing storage is empty.
+
+## Final verification commands
+Ensure these succeed with correct JSON shapes:
+- `curl -X POST /api/auth/token` → returns token/digest + user.
+- `curl /api/findings` → `[]`
+- `curl /api/pd-executions` → `[]`
+- `curl /api/committee/queue` → `[]`
+- `curl /api/telemetry/events` → `[]`
