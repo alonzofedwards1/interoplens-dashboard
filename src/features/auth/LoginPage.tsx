@@ -22,8 +22,6 @@ const Login: React.FC = () => {
         }
 
         setError('');
-
-        // TEMP: local auth bypass (backend will replace this)
         login({ email, name: email, role: 'admin' });
         navigate('/dashboard', { replace: true });
     };
