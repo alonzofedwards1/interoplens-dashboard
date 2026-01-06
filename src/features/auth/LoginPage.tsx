@@ -22,6 +22,8 @@ const Login: React.FC = () => {
         }
 
         setError('');
+
+        // TEMP: local auth bypass (backend will replace this)
         login({ email, name: email, role: 'admin' });
         navigate('/dashboard', { replace: true });
     };
@@ -30,13 +32,6 @@ const Login: React.FC = () => {
         setEmail(devEmail);
         setPassword(devPassword);
     };
-
-    const prefillDevCredentials = () => {
-        setEmail(devEmail);
-        setPassword(devPassword);
-    };
-
-    if (!isAuthEnabled) return null;
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-100">
