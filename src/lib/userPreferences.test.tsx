@@ -1,22 +1,25 @@
 import React from 'react';
 import { act, render, waitFor } from '@testing-library/react';
 
-import { SessionProvider } from './SessionContext';
+import { AuthProvider } from './AuthContext';
 import { useUserPreference } from './userPreferences';
-import type { AuthSession } from './authClient';
+
+jest.mock('./AuthContext', () => {
+    const actual = jest.requireActual('./AuthContext');
+    return {
+        ...actual,
+        useAuth: () => ({
+            isAuthenticated: true,
+            user: { email: 'demo@example.com' },
+            login: jest.fn(),
+            logout: jest.fn(),
+        }),
+        AuthProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+    };
+});
 
 describe('useUserPreference', () => {
-    const session: AuthSession = {
-        id: 'user-123',
-        name: 'Demo User',
-        email: 'demo@example.com',
-        role: 'admin',
-        token: 'token',
-        issuedAt: Date.now(),
-    };
-
-    const renderWithSession = (ui: React.ReactElement) =>
-        render(<SessionProvider session={session}>{ui}</SessionProvider>);
+    const renderWithAuth = (ui: React.ReactElement) => render(<AuthProvider>{ui}</AuthProvider>);
 
     beforeEach(() => {
         localStorage.clear();
@@ -28,7 +31,7 @@ describe('useUserPreference', () => {
         localStorage.setItem(
             'userPreferences',
             JSON.stringify({
-                [session.id]: {
+                'demo@example.com': {
                     'findings.dashboard.table': {
                         query: '',
                         sortKey: 'detectedAt',
@@ -52,12 +55,12 @@ describe('useUserPreference', () => {
             return null;
         };
 
-        renderWithSession(<TestComponent />);
+        renderWithAuth(<TestComponent />);
 
         await waitFor(() => expect(onValue).toHaveBeenCalledWith('desc'));
 
         const updatedStore = {
-            [session.id]: {
+            'demo@example.com': {
                 'findings.dashboard.table': {
                     query: 'acme',
                     sortKey: 'severity',
