@@ -26,12 +26,7 @@ const Login: React.FC = () => {
         navigate('/dashboard', { replace: true });
     };
 
-    const handleDevCredentials = () => {
-        setEmail(devEmail);
-        setPassword(devPassword);
-    };
-
-    const handleDevCredentials = () => {
+    const prefillDevCredentials = () => {
         setEmail(devEmail);
         setPassword(devPassword);
     };
@@ -98,7 +93,7 @@ const Login: React.FC = () => {
                 <div className="flex items-center justify-between text-sm text-blue-700">
                     <button
                         type="button"
-                        onClick={handleDevCredentials}
+                        onClick={prefillDevCredentials}
                         className="underline hover:text-blue-800"
                     >
                         Use dev credentials
