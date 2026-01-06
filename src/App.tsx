@@ -19,6 +19,7 @@ import OidDetail from './features/oid-directory/OidDetail';
 
 import { AuthProvider, useAuth } from './lib/AuthContext';
 import { ServerDataProvider } from './lib/ServerDataContext';
+import { isAuthEnabled } from './config/auth';
 
 const ProtectedRoute: React.FC<{ children: React.ReactElement }> = ({ children }) => {
     const { isAuthenticated } = useAuth();
