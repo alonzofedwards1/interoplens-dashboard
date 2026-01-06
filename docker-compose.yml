@@ -1,0 +1,14 @@
+version: "3.9"
+
+services:
+  app:
+    container_name: interoplens-dashboard
+    build:
+      context: .
+    networks:
+      - interop-net
+
+networks:
+  interop-net:
+    external: true
+    name: interop-net

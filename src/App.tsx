@@ -56,8 +56,8 @@ const App: React.FC = () => {
 
     const loginElement = (
         <Login
-            onLogin={user => {
-                const newSession = persistSession(user);
+            onLogin={({ user, token }) => {
+                const newSession = persistSession(user, token);
                 setSession(newSession);
             }}
         />
