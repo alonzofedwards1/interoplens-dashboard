@@ -56,7 +56,7 @@ describe('authClient', () => {
             json: jest.fn().mockResolvedValue(authResponse),
         });
 
-        const result = await authenticate('admin@interoplens.io', 'admin123');
+        const serverAuthResult = await authenticate('admin@interoplens.io', 'admin123');
 
         expect(global.fetch).toHaveBeenCalledWith(
             expect.stringContaining('/api/auth/token'),
@@ -65,7 +65,7 @@ describe('authClient', () => {
                 headers: expect.objectContaining({ 'Content-Type': 'application/json' }),
             })
         );
-        expect(result).toEqual({
+        expect(serverAuthResult).toEqual({
             token: authResponse.digest,
             user: authResponse.user,
         });
@@ -99,10 +99,10 @@ describe('authClient', () => {
             json: jest.fn().mockResolvedValue({ data: { token: 'session-token' } }),
         });
 
-        const result = await authenticate('admin@interoplens.io', 'admin123');
+        const alternateTokenResult = await authenticate('admin@interoplens.io', 'admin123');
 
-        expect(result.token).toBe('session-token');
-        expect(result.user.email).toBe('admin@interoplens.io');
+        expect(alternateTokenResult.token).toBe('session-token');
+        expect(alternateTokenResult.user.email).toBe('admin@interoplens.io');
     });
 
     test('throws a readable error when server rejects', async () => {
@@ -134,13 +134,13 @@ describe('authClient', () => {
             json: jest.fn().mockResolvedValue({ message: 'Email sent' }),
         });
 
-        const result = await requestPasswordReset('admin@interoplens.io');
+        const remoteResetResult = await requestPasswordReset('admin@interoplens.io');
 
         expect(global.fetch).toHaveBeenCalledWith(
             expect.stringContaining('/api/auth/password/forgot'),
             expect.objectContaining({ method: 'POST' })
         );
-        expect(result).toMatchObject({
+        expect(remoteResetResult).toMatchObject({
             via: 'remote',
             email: 'admin@interoplens.io',
         });
@@ -149,10 +149,10 @@ describe('authClient', () => {
     test('generates a local reset token when the remote reset endpoint fails', async () => {
         (global.fetch as jest.Mock).mockRejectedValue(new Error('Network error'));
 
-        const result = await requestPasswordReset('admin@interoplens.io');
+        const localResetResult = await requestPasswordReset('admin@interoplens.io');
 
-        expect(result.via).toBe('local');
-        expect(result.token).toBeTruthy();
+        expect(localResetResult.via).toBe('local');
+        expect(localResetResult.token).toBeTruthy();
     });
 
     test('resets password through remote API when available', async () => {
@@ -168,9 +168,9 @@ describe('authClient', () => {
             json: jest.fn().mockResolvedValue({ message: 'Password updated' }),
         });
 
-        const result = await resetPassword('admin@interoplens.io', '1234', 'new-pass');
+        const remoteUpdateResult = await resetPassword('admin@interoplens.io', '1234', 'new-pass');
 
-        expect(result.via).toBe('remote');
+        expect(remoteUpdateResult.via).toBe('remote');
     });
 
     test('resets password locally when remote reset fails and token is valid', async () => {
@@ -178,13 +178,13 @@ describe('authClient', () => {
 
         (global.fetch as jest.Mock).mockRejectedValue(new Error('Network error'));
 
-        const result = await resetPassword(
+        const localUpdateResult = await resetPassword(
             'admin@interoplens.io',
             record.token,
             'new-local-pass'
         );
 
-        expect(result.via).toBe('local');
+        expect(localUpdateResult.via).toBe('local');
 
         const login = await authenticate('admin@interoplens.io', 'new-local-pass');
         expect(login.user.email).toBe('admin@interoplens.io');
