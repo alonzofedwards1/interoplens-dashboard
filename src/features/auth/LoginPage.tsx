@@ -1,14 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { authenticate, AuthResult } from '../../lib/authClient';
-import { isAuthEnabled } from '../../config/auth';
+import { useAuth } from '../../lib/AuthContext';
 
-interface LoginProps {
-    onLogin: (result: AuthResult) => void;
-}
-
-const Login: React.FC<LoginProps> = ({ onLogin }) => {
+const Login: React.FC = () => {
     const navigate = useNavigate();
+    const { login } = useAuth();
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -20,14 +16,19 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        try {
-            const result = await authenticate(email, password);
-            setError('');
-            onLogin(result);
-            navigate('/dashboard', { replace: true });
-        } catch (err) {
-            setError((err as Error).message);
+        if (!email.trim() || !password.trim()) {
+            setError('Email and password are required.');
+            return;
         }
+
+        setError('');
+        login(email);
+        navigate('/dashboard', { replace: true });
+    };
+
+    const handleDevCredentials = () => {
+        setEmail(devEmail);
+        setPassword(devPassword);
     };
 
     const handleDevCredentials = () => {
@@ -41,9 +42,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         <div className="min-h-screen flex items-center justify-center bg-gray-100">
             <div className="w-full max-w-md bg-white rounded-lg shadow-md p-8 space-y-6">
                 <div className="text-center space-y-1">
-                    <h1 className="text-2xl font-semibold text-gray-800">
-                        Interoplens
-                    </h1>
+                    <h1 className="text-2xl font-semibold text-gray-800">Interoplens</h1>
                     <p className="text-sm text-gray-500">
                         Interoperability Behavior Analysis Dashboard
                     </p>

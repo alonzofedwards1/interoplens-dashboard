@@ -1,53 +1,30 @@
-# Getting Started with Create React App
+# Interoplens Dashboard
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+The Interoplens Dashboard is a Create React App project that visualizes interoperability telemetry, findings, committee queues, and PD execution data.
 
-## Available Scripts
+## Getting Started
 
-In the project directory, you can run:
+Install dependencies:
 
-### `npm start`
+```bash
+npm install
+```
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+Run the development server:
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+```bash
+npm start
+```
 
-### `npm test`
+Build for production:
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+```bash
+npm run build
+```
 
-### `npm run build`
+## Environment Variables
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
-
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
-
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
-
-### `npm run eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
-
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
-
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-## Telemetry backend configuration
-
-The dashboard reads telemetry directly from the InterOps telemetry API. Set `REACT_APP_API_BASE_URL` and `REACT_APP_TELEMETRY_BASE_URL` to the Control and Telemetry API hosts (for example, `http://control.interop.100.48.218.100.nip.io` and `http://telemetry.interop.100.48.218.100.nip.io`) so the UI can call `/api/*` endpoints without relying on mocks.
+Copy `.env.example` to `.env.development` (or your preferred env file) and set hosts for the APIs the dashboard should call. These variables are read at build time.
 
 ```bash
 REACT_APP_API_BASE_URL=http://control.interop.100.48.218.100.nip.io \
@@ -58,15 +35,9 @@ The telemetry page issues `GET /api/telemetry/events` to retrieve telemetry even
 
 ## Authentication and password reset
 
-Authentication is opt-in. By default, the dashboard requires login. Set the auth mode explicitly:
+Authentication is currently mocked entirely on the frontend. The login form accepts any non-empty email and password, stores a lightweight auth flag in `localStorage`, and immediately redirects to the dashboard. Use the "Use dev credentials" shortcut on the login page for quick access (`admin@interoplens.io` / `admin123`).
 
-```
-REACT_APP_AUTH_MODE=oauth  # default, login required
-REACT_APP_AUTH_MODE=none   # run unauthenticated
-```
-
-* Default dev credentials: `admin@interoplens.io` / `admin123` (seeded locally for offline testing when OAuth is enabled).
-* The login and password reset screens only render when `REACT_APP_AUTH_MODE=oauth` (the default). Set `REACT_APP_AUTH_MODE=none` if you need a login-free demo mode.
-* OAuth-specific environment variables (token URL, client credentials, resource owner credentials) should only be provided when enabling OAuth and are intentionally excluded from the default environment templates.
-
-Copy `.env.example` to `.env.development` (or your environment-specific file) and set the values needed for your environment.
+* There are no backend authentication calls or token checks.
+* All dashboard routes are protected by the frontend auth flag and will redirect to `/login` when unauthenticated.
+* The forgot-password screen is informational only until backend integration is added.
+* TODO: Replace the mocked login with real backend authentication when available.

@@ -1,10 +1,9 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import Login from './LoginPage';
-import { authenticate, AuthResult } from '../../lib/authClient';
+import { useAuth } from '../../lib/AuthContext';
 
-jest.mock('../../lib/authClient');
-jest.mock('../../config/auth', () => ({ AUTH_MODE: 'oauth', isAuthEnabled: true }));
+jest.mock('../../lib/AuthContext');
 
 const mockNavigate = jest.fn();
 
@@ -17,24 +16,15 @@ jest.mock(
 );
 
 describe('LoginPage', () => {
+    const mockLogin = jest.fn();
+
     beforeEach(() => {
         jest.clearAllMocks();
+        (useAuth as jest.Mock).mockReturnValue({ login: mockLogin });
     });
 
-    test('authenticates and redirects on success', async () => {
-        const authResult: AuthResult = {
-            user: {
-                id: 'user-admin',
-                email: 'admin@interoplens.io',
-                name: 'Interoplens Admin',
-                role: 'admin',
-            },
-            token: 'secure-token',
-        };
-        (authenticate as jest.Mock).mockResolvedValue(authResult);
-        const onLogin = jest.fn();
-
-        render(<Login onLogin={onLogin} />);
+    test('authenticates locally and redirects on success', async () => {
+        render(<Login />);
 
         const emailInput = screen.getByLabelText(/email/i) as HTMLInputElement;
         const passwordInput = screen.getByLabelText(/password/i) as HTMLInputElement;
@@ -43,36 +33,19 @@ describe('LoginPage', () => {
         await userEvent.type(passwordInput, 'admin123');
         await userEvent.click(screen.getByRole('button', { name: /sign in/i }));
 
-        await waitFor(() => expect(onLogin).toHaveBeenCalledWith(authResult));
-
-        expect(authenticate).toHaveBeenCalledWith(
-            'admin@interoplens.io',
-            'admin123'
-        );
+        await waitFor(() => expect(mockLogin).toHaveBeenCalledWith('admin@interoplens.io'));
         expect(mockNavigate).toHaveBeenCalledWith('/dashboard', { replace: true });
     });
 
-    test('shows an error message when authentication fails', async () => {
-        (authenticate as jest.Mock).mockRejectedValue(
-            new Error('Invalid email or password')
-        );
-        const onLogin = jest.fn();
+    test('shows an error message when validation fails', async () => {
+        render(<Login />);
 
-        render(<Login onLogin={onLogin} />);
-
-        const emailInput = screen.getByLabelText(/email/i) as HTMLInputElement;
-        const passwordInput = screen.getByLabelText(/password/i) as HTMLInputElement;
-
-        await userEvent.type(emailInput, 'admin@interoplens.io');
-        await userEvent.type(passwordInput, 'wrong');
         await userEvent.click(screen.getByRole('button', { name: /sign in/i }));
 
         await waitFor(() =>
-            expect(
-                screen.getByText(/invalid email or password/i)
-            ).toBeInTheDocument()
+            expect(screen.getByText(/email and password are required/i)).toBeInTheDocument()
         );
 
-        expect(onLogin).not.toHaveBeenCalled();
+        expect(mockLogin).not.toHaveBeenCalled();
     });
 });

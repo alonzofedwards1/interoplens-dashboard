@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 
 import Login from './features/auth/LoginPage';
@@ -17,131 +17,106 @@ import KnowledgeBasePage from './features/knowledge-base/KnowledgeBasePage';
 import OidQueue from './features/oid-directory/OidQueue';
 import OidDetail from './features/oid-directory/OidDetail';
 
-import {
-    AuthSession,
-    clearSession,
-    persistSession,
-    readSession,
-    subscribeToSession,
-} from './lib/authClient';
-import { SessionProvider } from './lib/SessionContext';
+import { AuthProvider, useAuth } from './lib/AuthContext';
 import { ServerDataProvider } from './lib/ServerDataContext';
 import { isAuthEnabled } from './config/auth';
 
-const App: React.FC = () => {
-    const [session, setSession] = useState<AuthSession | null>(null);
-    const [authChecked, setAuthChecked] = useState(!isAuthEnabled);
+const ProtectedRoute: React.FC<{ children: React.ReactElement }> = ({ children }) => {
+    const { isAuthenticated } = useAuth();
+    if (!isAuthenticated) {
+        return <Navigate to="/login" replace />;
+    }
 
-    useEffect(() => {
-        if (!isAuthEnabled) return;
+    return children;
+};
 
-        const syncSession = () => {
-            setSession(readSession());
-            setAuthChecked(true);
-        };
-
-        syncSession();
-        const unsubscribe = subscribeToSession(syncSession);
-
-        return () => {
-            unsubscribe();
-        };
-    }, []);
-
-    if (!authChecked)
-        return (
-            <div className="min-h-screen flex items-center justify-center">
-                Checking session...
-            </div>
-        );
-
-    const requireAuth = (el: React.ReactElement) =>
-        !isAuthEnabled || session ? el : <Navigate to="/" replace />;
-
-    const loginElement = !isAuthEnabled ? null : (
-        <Login
-            onLogin={({ user, token }) => {
-                const newSession = persistSession(user, token);
-                setSession(newSession);
-            }}
-        />
-    );
+const AppRoutes: React.FC = () => {
+    const { isAuthenticated, user, logout } = useAuth();
 
     return (
-        <SessionProvider session={session}>
+        <Routes>
+            <Route
+                path="/"
+                element={<Navigate to={isAuthenticated ? '/dashboard' : '/login'} replace />}
+            />
+            <Route path="/login" element={<Login />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+
+            <Route
+                path="/dashboard"
+                element={
+                    <ProtectedRoute>
+                        <Dashboard
+                            role={user ? 'analyst' : null}
+                            onLogout={logout}
+                        />
+                    </ProtectedRoute>
+                }
+            />
+
+            <Route
+                path="/findings"
+                element={<ProtectedRoute>{<ViewAllFindings />}</ProtectedRoute>}
+            />
+            <Route
+                path="/telemetry"
+                element={<ProtectedRoute>{<TelemetryPage />}</ProtectedRoute>}
+            />
+
+            {/* Committee */}
+            <Route
+                path="/committee"
+                element={<ProtectedRoute>{<CommitteeQueue />}</ProtectedRoute>}
+            />
+            <Route
+                path="/committee/:id"
+                element={<ProtectedRoute>{<CommitteeCaseDetail />}</ProtectedRoute>}
+            />
+
+            <Route
+                path="/knowledge-base"
+                element={<ProtectedRoute>{<KnowledgeBasePage />}</ProtectedRoute>}
+            />
+
+            {/* OID Directory */}
+            <Route path="/oids" element={<ProtectedRoute>{<OidQueue />}</ProtectedRoute>} />
+            <Route
+                path="/oids/:oid"
+                element={<ProtectedRoute>{<OidDetail />}</ProtectedRoute>}
+            />
+
+            <Route
+                path="/integration-issues"
+                element={
+                    <ProtectedRoute>
+                        <IntegrationIssuesPage role={user ? 'analyst' : null} />
+                    </ProtectedRoute>
+                }
+            />
+            <Route path="/IntegrationIssues" element={<Navigate to="/integration-issues" replace />} />
+
+            <Route path="/reports" element={<ProtectedRoute>{<Reports />}</ProtectedRoute>} />
+            <Route
+                path="/settings"
+                element={
+                    <ProtectedRoute>
+                        <Settings role={user ? 'analyst' : null} />
+                    </ProtectedRoute>
+                }
+            />
+
+            <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+    );
+};
+
+const App: React.FC = () => {
+    return (
+        <AuthProvider>
             <ServerDataProvider>
-                <Routes>
-                    <Route
-                        path="/"
-                        element={
-                            isAuthEnabled
-                                ? session
-                                    ? <Navigate to="/dashboard" replace />
-                                    : loginElement
-                                : <Navigate to="/dashboard" replace />
-                        }
-                    />
-                    {isAuthEnabled && <Route path="/login" element={loginElement} />}
-                    {isAuthEnabled && (
-                        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-                    )}
-
-                    <Route
-                        path="/dashboard"
-                        element={requireAuth(
-                            <Dashboard
-                                role={session?.role ?? null}
-                                onLogout={() => {
-                                    clearSession();
-                                    setSession(null);
-                                }}
-                            />
-                        )}
-                    />
-
-                    <Route path="/findings" element={requireAuth(<ViewAllFindings />)} />
-                    <Route path="/telemetry" element={requireAuth(<TelemetryPage />)} />
-
-                    {/* Committee */}
-                    <Route path="/committee" element={requireAuth(<CommitteeQueue />)} />
-                    <Route
-                        path="/committee/:id"
-                        element={requireAuth(<CommitteeCaseDetail />)}
-                    />
-
-                    <Route
-                        path="/knowledge-base"
-                        element={requireAuth(<KnowledgeBasePage />)}
-                    />
-
-                    {/* OID Directory */}
-                    <Route path="/oids" element={requireAuth(<OidQueue />)} />
-                    <Route
-                        path="/oids/:oid"
-                        element={requireAuth(<OidDetail />)}
-                    />
-
-                    <Route
-                        path="/integration-issues"
-                        element={requireAuth(
-                            <IntegrationIssuesPage role={session?.role ?? null} />
-                        )}
-                    />
-                    <Route
-                        path="/IntegrationIssues"
-                        element={<Navigate to="/integration-issues" replace />}
-                    />
-
-                    <Route path="/reports" element={requireAuth(<Reports />)} />
-                    <Route
-                        path="/settings"
-                        element={requireAuth(<Settings role={session?.role ?? null} />)}
-                    />
-
-                    <Route path="*" element={<Navigate to="/" replace />} />
-                </Routes>
+                <AppRoutes />
             </ServerDataProvider>
-        </SessionProvider>
+        </AuthProvider>
     );
 };
 
