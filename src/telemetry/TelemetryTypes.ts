@@ -1,6 +1,34 @@
 export type TelemetryEnvironment = 'TEST' | 'PROD';
 export type TelemetryStatus = 'SUCCESS' | 'NO_MATCH' | 'ERROR' | 'PARTIAL';
 
+export interface TelemetryEvent {
+  eventId?: string;
+  eventType?: string;
+  timestamp: string;
+
+  source?: {
+    environment?: string;
+    channelId?: string;
+  };
+
+  outcome?: {
+    status?: string;
+  };
+
+  execution?: {
+    durationMs?: number;
+  };
+
+  correlation?: {
+    requestId?: string;
+    messageId?: string;
+  };
+
+  protocol?: {
+    interactionId?: string;
+  };
+}
+
 export const TELEMETRY_EVENT_TYPE = 'PD_EXECUTION' as const;
 export const TELEMETRY_STANDARD = 'HL7v3' as const;
 export const TELEMETRY_INTERACTION_ID = 'PRPA_IN201306UV02' as const;

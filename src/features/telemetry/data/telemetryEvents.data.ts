@@ -10,22 +10,16 @@ export const telemetryEventsData: TelemetryEvent[] = [
             messageId: 'MSG-1001',
         },
         source: {
-            organization: 'VA',
-            qhin: 'CommonWell',
             environment: 'PROD',
-            endpointType: 'PD_RESPONDER',
+            channelId: 'mirth-pd-01',
         },
         execution: {
-            startTime: '2025-12-18T14:05:00Z',
-            endTime: '2025-12-18T14:05:02Z',
             durationMs: 412,
         },
         outcome: {
             status: 'SUCCESS',
-            resultCount: 1,
         },
         protocol: {
-            standard: 'HL7v3',
             interactionId: 'PRPA_IN201306UV02',
         },
     },
@@ -38,23 +32,16 @@ export const telemetryEventsData: TelemetryEvent[] = [
             messageId: 'MSG-1002',
         },
         source: {
-            organization: 'VA',
-            qhin: 'CommonWell',
             environment: 'PROD',
-            endpointType: 'PD_RESPONDER',
+            channelId: 'mirth-pd-02',
         },
         execution: {
-            startTime: '2025-12-18T14:06:00Z',
-            endTime: '2025-12-18T14:06:01Z',
             durationMs: 980,
         },
         outcome: {
             status: 'PARTIAL',
-            resultCount: 2,
-            errorMessage: 'Multiple candidate matches returned',
         },
         protocol: {
-            standard: 'HL7v3',
             interactionId: 'PRPA_IN201306UV02',
         },
     },
@@ -67,24 +54,16 @@ export const telemetryEventsData: TelemetryEvent[] = [
             messageId: 'MSG-1003',
         },
         source: {
-            organization: 'VA',
-            qhin: 'CommonWell',
             environment: 'PROD',
-            endpointType: 'PD_RESPONDER',
+            channelId: 'mirth-pd-03',
         },
         execution: {
-            startTime: '2025-12-18T14:07:00Z',
-            endTime: '2025-12-18T14:07:03Z',
             durationMs: 0,
         },
         outcome: {
             status: 'ERROR',
-            resultCount: 0,
-            errorCode: 'PRPA-102',
-            errorMessage: 'Timeout communicating with QHIN',
         },
         protocol: {
-            standard: 'HL7v3',
             interactionId: 'PRPA_IN201306UV02',
         },
     },
@@ -97,22 +76,16 @@ export const telemetryEventsData: TelemetryEvent[] = [
             messageId: 'MSG-1004',
         },
         source: {
-            organization: 'DoD',
-            qhin: 'Carequality',
             environment: 'PROD',
-            endpointType: 'PD_RESPONDER',
+            channelId: 'mirth-pd-04',
         },
         execution: {
-            startTime: '2025-12-18T13:42:00Z',
-            endTime: '2025-12-18T13:42:01Z',
             durationMs: 365,
         },
         outcome: {
             status: 'SUCCESS',
-            resultCount: 1,
         },
         protocol: {
-            standard: 'HL7v3',
             interactionId: 'PRPA_IN201306UV02',
         },
     },
@@ -125,22 +98,16 @@ export const telemetryEventsData: TelemetryEvent[] = [
             messageId: 'MSG-1005',
         },
         source: {
-            organization: 'DoD',
-            qhin: 'Carequality',
             environment: 'PROD',
-            endpointType: 'PD_RESPONDER',
+            channelId: 'mirth-pd-05',
         },
         execution: {
-            startTime: '2025-12-18T13:43:00Z',
-            endTime: '2025-12-18T13:43:01Z',
             durationMs: 510,
         },
         outcome: {
             status: 'NO_MATCH',
-            resultCount: 0,
         },
         protocol: {
-            standard: 'HL7v3',
             interactionId: 'PRPA_IN201306UV02',
         },
     },
@@ -153,24 +120,16 @@ export const telemetryEventsData: TelemetryEvent[] = [
             messageId: 'MSG-1006',
         },
         source: {
-            organization: 'DoD',
-            qhin: 'Carequality',
             environment: 'PROD',
-            endpointType: 'PD_RESPONDER',
+            channelId: 'mirth-pd-06',
         },
         execution: {
-            startTime: '2025-12-18T13:44:00Z',
-            endTime: '2025-12-18T13:44:04Z',
             durationMs: 0,
         },
         outcome: {
             status: 'ERROR',
-            resultCount: 0,
-            errorCode: 'PRPA-201',
-            errorMessage: 'SOAP Fault: Receiver unavailable',
         },
         protocol: {
-            standard: 'HL7v3',
             interactionId: 'PRPA_IN201306UV02',
         },
     },
@@ -183,22 +142,16 @@ export const telemetryEventsData: TelemetryEvent[] = [
             messageId: 'MSG-1007',
         },
         source: {
-            organization: 'Mayo Clinic',
-            qhin: 'CommonWell',
             environment: 'TEST',
-            endpointType: 'PD_RESPONDER',
+            channelId: 'mirth-pd-07',
         },
         execution: {
-            startTime: '2025-12-18T12:21:00Z',
-            endTime: '2025-12-18T12:21:00Z',
             durationMs: 288,
         },
         outcome: {
             status: 'SUCCESS',
-            resultCount: 1,
         },
         protocol: {
-            standard: 'HL7v3',
             interactionId: 'PRPA_IN201306UV02',
         },
     },
@@ -211,23 +164,16 @@ export const telemetryEventsData: TelemetryEvent[] = [
             messageId: 'MSG-1008',
         },
         source: {
-            organization: 'Mayo Clinic',
-            qhin: 'CommonWell',
             environment: 'TEST',
-            endpointType: 'PD_RESPONDER',
+            channelId: 'mirth-pd-08',
         },
         execution: {
-            startTime: '2025-12-18T12:22:00Z',
-            endTime: '2025-12-18T12:22:02Z',
             durationMs: 745,
         },
         outcome: {
             status: 'PARTIAL',
-            resultCount: 2,
-            errorMessage: 'Two demographics-qualified matches',
         },
         protocol: {
-            standard: 'HL7v3',
             interactionId: 'PRPA_IN201306UV02',
         },
     },
@@ -240,22 +186,16 @@ export const telemetryEventsData: TelemetryEvent[] = [
             messageId: 'MSG-1009',
         },
         source: {
-            organization: 'Kaiser Permanente',
-            qhin: 'Carequality',
             environment: 'PROD',
-            endpointType: 'PD_RESPONDER',
+            channelId: 'mirth-pd-09',
         },
         execution: {
-            startTime: '2025-12-18T11:10:00Z',
-            endTime: '2025-12-18T11:10:00Z',
             durationMs: 398,
         },
         outcome: {
             status: 'SUCCESS',
-            resultCount: 1,
         },
         protocol: {
-            standard: 'HL7v3',
             interactionId: 'PRPA_IN201306UV02',
         },
     },
@@ -268,22 +208,16 @@ export const telemetryEventsData: TelemetryEvent[] = [
             messageId: 'MSG-1010',
         },
         source: {
-            organization: 'Kaiser Permanente',
-            qhin: 'Carequality',
             environment: 'PROD',
-            endpointType: 'PD_RESPONDER',
+            channelId: 'mirth-pd-10',
         },
         execution: {
-            startTime: '2025-12-18T11:11:00Z',
-            endTime: '2025-12-18T11:11:02Z',
             durationMs: 880,
         },
         outcome: {
             status: 'NO_MATCH',
-            resultCount: 0,
         },
         protocol: {
-            standard: 'HL7v3',
             interactionId: 'PRPA_IN201306UV02',
         },
     },
