@@ -27,71 +27,30 @@ type RawTelemetryEvent = {
     };
 };
 
-const normalizeTelemetryEvent = (event: RawTelemetryEvent): TelemetryEvent => {
-    return {
-        eventId: event.eventId,
-        eventType: event.eventType,
-        timestamp: event.timestamp,
+const normalizeTelemetryEvent = (event: RawTelemetryEvent): TelemetryEvent => ({
+    eventId: event.eventId,
+    eventType: event.eventType,
+    timestamp: event.timestamp,
+    status: event.outcome?.status ?? 'UNKNOWN',
+    durationMs: event.execution?.durationMs ?? 0,
+    channelId: event.source?.channelId ?? '',
+    environment: event.source?.environment ?? '',
+    requestId: event.correlation?.requestId ?? '',
+    interactionId: event.protocol?.interactionId ?? '',
+});
 
-        status: event.outcome?.status ?? 'UNKNOWN',
-        durationMs: event.execution?.durationMs ?? 0,
-
-        channelId: event.source?.channelId ?? '',
-        environment: event.source?.environment ?? '',
-
-        requestId: event.correlation?.requestId ?? '',
-        interactionId: event.protocol?.interactionId ?? '',
-    };
-};
-
-export const normalizeTelemetryEvents = (data: unknown): TelemetryEvent[] => {
-    if (Array.isArray(data)) {
-        return data.map(item =>
-            normalizeTelemetryEvent(item as RawTelemetryEvent)
-        );
-    }
-
-    if (
-        typeof data === 'object' &&
-        data !== null &&
-        Array.isArray((data as { events?: unknown[] }).events)
-    ) {
-        return (data as { events: unknown[] }).events.map(item =>
-            normalizeTelemetryEvent(item as RawTelemetryEvent)
-        );
-    }
-
-    throw new Error('Unexpected telemetry events response format');
-};
-
-export type TelemetryQueryParams = {
-    page?: number;
-    pageSize?: number;
-    status?: string;
-    environment?: string;
-    search?: string;
-};
-
-export async function fetchTelemetryEvents(
-    _params?: TelemetryQueryParams
-): Promise<TelemetryEvent[]> {
+export async function fetchTelemetryEvents(): Promise<TelemetryEvent[]> {
     const res = await fetch(`${TELEMETRY_BASE_URL}/api/telemetry/events`);
 
     if (!res.ok) {
-        const message = await safeErrorMessage(res);
-        throw new Error(message ?? 'Failed to fetch telemetry events');
+        throw new Error(`Failed to fetch telemetry events (${res.status})`);
     }
 
     const data = await res.json();
-    return normalizeTelemetryEvents(data);
-}
 
-const safeErrorMessage = async (response: Response) => {
-    try {
-        const body = await response.json();
-        if (typeof body?.message === 'string') return body.message;
-    } catch {
-        // ignore JSON parse failures
+    if (!Array.isArray(data)) {
+        throw new Error('Unexpected telemetry response format');
     }
-    return undefined;
-};
+
+    return data.map(normalizeTelemetryEvent);
+}
