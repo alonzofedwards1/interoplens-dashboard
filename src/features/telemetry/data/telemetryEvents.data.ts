@@ -1,6 +1,6 @@
 import { TelemetryEvent } from '../../../telemetry/TelemetryEvent';
 
-export const telemetryEventsData: TelemetryEvent[] = [
+const telemetryEventsRaw = [
     {
         eventId: 'evt-1001',
         eventType: 'PD_EXECUTION',
@@ -112,3 +112,36 @@ export const telemetryEventsData: TelemetryEvent[] = [
         interactionId: 'PRPA_IN201306UV02',
     },
 ];
+
+export const telemetryEventsData: TelemetryEvent[] = telemetryEventsRaw.map(event => ({
+    eventId: event.eventId,
+    eventType: event.eventType,
+    timestamp: event.timestamp,
+    correlation: event.correlation
+        ? {
+              requestId: event.correlation.requestId,
+              messageId: event.correlation.messageId,
+          }
+        : undefined,
+    source: event.source
+        ? {
+              environment: event.source.environment,
+              channelId: event.source.channelId,
+          }
+        : undefined,
+    execution: event.execution
+        ? {
+              durationMs: event.execution.durationMs,
+          }
+        : undefined,
+    outcome: event.outcome
+        ? {
+              status: event.outcome.status,
+          }
+        : undefined,
+    protocol: event.protocol
+        ? {
+              interactionId: event.protocol.interactionId,
+          }
+        : undefined,
+}));
