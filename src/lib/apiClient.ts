@@ -2,6 +2,7 @@ import { Finding } from '../features/findings/data/findings.data';
 import { PDExecution } from '../features/pd-executions/data/pdExecutions.data';
 import { CommitteeQueueItem } from '../features/committee/data/committeeQueue.data';
 import { TelemetryEvent } from '../telemetry/TelemetryEvent';
+import { normalizeTelemetryEvents } from './telemetryClient';
 import { API_BASE_URL, TELEMETRY_BASE_URL } from '../config/api';
 
 const buildUrl = (base: string, path: string) => `${base}${path}`;
@@ -35,7 +36,13 @@ export const apiClient = {
     getFindings: () => request<Finding[]>('/api/findings'),
     getPdExecutions: () => request<PDExecution[]>('/api/pd-executions'),
     getCommitteeQueue: () => request<CommitteeQueueItem[]>('/api/committee/queue'),
-    getTelemetryEvents: () => request<TelemetryEvent[]>('/api/telemetry/events', TELEMETRY_BASE_URL),
+    getTelemetryEvents: async () => {
+        const data = await request<unknown>(
+            '/api/telemetry/events',
+            TELEMETRY_BASE_URL
+        );
+        return normalizeTelemetryEvents(data);
+    },
 };
 
 export type ApiClient = typeof apiClient;

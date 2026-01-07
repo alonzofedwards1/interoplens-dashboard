@@ -5,8 +5,13 @@ import { FaArrowLeft, FaChartBar, FaClock, FaTimesCircle, FaCheckCircle } from '
 import { TelemetryEvent } from '../../telemetry/TelemetryEvent';
 import { fetchTelemetryEvents } from '../../lib/telemetryClient';
 
-const formatStatus = (status?: string) => {
+const normalizeStatus = (status?: string) => {
     const normalized = (status || 'UNKNOWN').toUpperCase();
+    return normalized === 'FAILURE' ? 'ERROR' : normalized;
+};
+
+const formatStatus = (status?: string) => {
+    const normalized = normalizeStatus(status);
     switch (normalized) {
         case 'SUCCESS':
             return {
@@ -55,8 +60,8 @@ const formatTimestamp = (timestamp?: string) => {
           });
 };
 
-type TelemetryStatus = NonNullable<TelemetryEvent['outcome']>['status'];
-type TelemetryEnvironment = NonNullable<TelemetryEvent['source']>['environment'];
+type TelemetryStatus = TelemetryEvent['status'];
+type TelemetryEnvironment = TelemetryEvent['environment'];
 
 const TelemetryPage: React.FC = () => {
     const navigate = useNavigate();
@@ -92,24 +97,20 @@ const TelemetryPage: React.FC = () => {
         const query = search.trim().toLowerCase();
 
         return telemetryEvents.filter(event => {
-            const outcomeStatus = (event.outcome?.status as string)?.toUpperCase() || 'UNKNOWN';
-            const source = event.source || {};
-            const correlation = event.correlation || {};
-            const protocol = event.protocol || {};
+            const outcomeStatus = normalizeStatus(event.status);
 
             const matchesStatus =
                 statusFilter === 'all' || outcomeStatus === statusFilter?.toUpperCase();
             const matchesEnvironment =
-                environmentFilter === 'all' || source.environment === environmentFilter;
+                environmentFilter === 'all' || event.environment === environmentFilter;
 
             if (!matchesStatus || !matchesEnvironment) return false;
             if (!query) return true;
 
             return (
-                (correlation.requestId || '').toLowerCase().includes(query) ||
-                (correlation.messageId || '').toLowerCase().includes(query) ||
-                (source.channelId || '').toLowerCase().includes(query) ||
-                (protocol.interactionId || '').toLowerCase().includes(query) ||
+                (event.requestId || '').toLowerCase().includes(query) ||
+                (event.channelId || '').toLowerCase().includes(query) ||
+                (event.interactionId || '').toLowerCase().includes(query) ||
                 (event.eventId || '').toLowerCase().includes(query)
             );
         });
@@ -126,14 +127,14 @@ const TelemetryPage: React.FC = () => {
     const metrics = useMemo(() => {
         const total = telemetryEvents.length;
         const successes = telemetryEvents.filter(
-            e => (e.outcome?.status as string)?.toUpperCase() === 'SUCCESS'
+            e => normalizeStatus(e.status) === 'SUCCESS'
         ).length;
         const errors = telemetryEvents.filter(
-            e => (e.outcome?.status as string)?.toUpperCase() === 'ERROR'
+            e => normalizeStatus(e.status) === 'ERROR'
         ).length;
         const averageDuration = Math.round(
             telemetryEvents.reduce(
-                (sum, event) => sum + Number(event.execution?.durationMs ?? 0),
+                (sum, event) => sum + Number(event.durationMs ?? 0),
                 0
             ) / Math.max(total, 1)
         );
@@ -277,7 +278,7 @@ const TelemetryPage: React.FC = () => {
                     </thead>
                     <tbody>
                         {sortedEvents.map(event => {
-                            const statusValue = (event.outcome?.status as string) || 'UNKNOWN';
+                            const statusValue = event.status || 'UNKNOWN';
                             const status = formatStatus(statusValue);
                             return (
                                 <tr key={event.eventId} className="border-t text-sm">
@@ -294,16 +295,16 @@ const TelemetryPage: React.FC = () => {
                                         </span>
                                     </td>
                                     <td className="p-3 font-mono break-all">
-                                        {event.correlation?.requestId || '—'}
+                                        {event.requestId || '—'}
                                     </td>
                                     <td className="p-3 font-mono break-all">
-                                        {event.source?.channelId || '—'}
+                                        {event.channelId || '—'}
                                     </td>
                                     <td className="p-3 font-mono break-all">
-                                        {event.protocol?.interactionId || '—'}
+                                        {event.interactionId || '—'}
                                     </td>
-                                    <td className="p-3">{Number(event.execution?.durationMs ?? 0)}</td>
-                                    <td className="p-3">{formatEnvironment(event.source?.environment)}</td>
+                                    <td className="p-3">{Number(event.durationMs ?? 0)}</td>
+                                    <td className="p-3">{formatEnvironment(event.environment)}</td>
                                 </tr>
                             );
                         })}
