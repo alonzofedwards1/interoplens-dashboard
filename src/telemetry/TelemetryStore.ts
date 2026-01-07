@@ -7,7 +7,15 @@ export class TelemetryStore {
     this.events.push(event);
   }
 
-  getAll(): TelemetryEvent[] {
+  getAll(
+    _params?: {
+      page?: number;
+      pageSize?: number;
+      status?: string;
+      environment?: string;
+      search?: string;
+    },
+  ): TelemetryEvent[] {
     return [...this.events];
   }
 
