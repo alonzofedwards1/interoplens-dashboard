@@ -2,31 +2,18 @@ export type TelemetryEnvironment = 'TEST' | 'PROD';
 export type TelemetryStatus = 'SUCCESS' | 'NO_MATCH' | 'ERROR' | 'PARTIAL';
 
 export interface TelemetryEvent {
-  eventId?: string;
-  eventType?: string;
+  eventId: string;
+  eventType: string;
   timestamp: string;
 
-  source?: {
-    environment?: string;
-    channelId?: string;
-  };
+  status: string;
+  durationMs: number;
 
-  outcome?: {
-    status?: string;
-  };
+  channelId: string;
+  environment: string;
 
-  execution?: {
-    durationMs?: number;
-  };
-
-  correlation?: {
-    requestId?: string;
-    messageId?: string;
-  };
-
-  protocol?: {
-    interactionId?: string;
-  };
+  requestId: string;
+  interactionId: string;
 }
 
 export const TELEMETRY_EVENT_TYPE = 'PD_EXECUTION' as const;

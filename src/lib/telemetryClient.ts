@@ -3,68 +3,42 @@ import { telemetryEventsData } from '../features/telemetry/data/telemetryEvents.
 import { TelemetryEvent } from '../telemetry/TelemetryEvent';
 
 type RawTelemetryEvent = {
-    event_type?: string | null;
-    timestamp_utc?: string | null;
-    received_at?: string | null;
-    status?: string | null;
-    duration_ms?: number | null;
-    environment?: string | null;
-    source_channel_id?: string | null;
-    correlation_request_id?: string | null;
-    correlation_message_id?: string | null;
-    protocol_interaction_id?: string | null;
-    event_id?: string | null;
-};
-
-const toOptionalString = (value: unknown): string | undefined => {
-    if (typeof value === 'string') {
-        const trimmed = value.trim();
-        return trimmed.length > 0 ? trimmed : undefined;
-    }
-
-    if (typeof value === 'number' && Number.isFinite(value)) {
-        return String(value);
-    }
-
-    return undefined;
-};
-
-const toOptionalNumber = (value: unknown): number | undefined => {
-    if (typeof value === 'number' && Number.isFinite(value)) {
-        return value;
-    }
-    return undefined;
+    eventId: string;
+    eventType: string;
+    timestamp: string;
+    source?: {
+        system?: string | null;
+        channelId?: string;
+        environment?: string;
+    };
+    correlation?: {
+        requestId?: string;
+        messageId?: string;
+    };
+    execution?: {
+        durationMs?: number;
+    };
+    outcome?: {
+        status?: string;
+        resultCount?: number | null;
+    };
+    protocol?: {
+        interactionId?: string;
+        standard?: string | null;
+    };
 };
 
 const normalizeTelemetryEvent = (event: RawTelemetryEvent): TelemetryEvent => {
-    const timestamp =
-        toOptionalString(event.timestamp_utc) ??
-        toOptionalString(event.received_at) ??
-        new Date(0).toISOString();
-
-    const status = toOptionalString(event.status) ?? 'UNKNOWN';
-
     return {
-        eventId: toOptionalString(event.event_id),
-        eventType: toOptionalString(event.event_type),
-        timestamp,
-        source: {
-            environment: toOptionalString(event.environment),
-            channelId: toOptionalString(event.source_channel_id),
-        },
-        outcome: {
-            status,
-        },
-        execution: {
-            durationMs: toOptionalNumber(event.duration_ms),
-        },
-        correlation: {
-            requestId: toOptionalString(event.correlation_request_id),
-            messageId: toOptionalString(event.correlation_message_id),
-        },
-        protocol: {
-            interactionId: toOptionalString(event.protocol_interaction_id),
-        },
+        eventId: event.eventId,
+        eventType: event.eventType,
+        timestamp: event.timestamp,
+        status: event.outcome?.status ?? 'UNKNOWN',
+        durationMs: event.execution?.durationMs ?? 0,
+        channelId: event.source?.channelId ?? '',
+        environment: event.source?.environment ?? '',
+        requestId: event.correlation?.requestId ?? '',
+        interactionId: event.protocol?.interactionId ?? '',
     };
 };
 
