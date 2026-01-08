@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { type ReactNode } from 'react';
 
 import {
     FaUsers,
@@ -15,7 +15,7 @@ import { CommitteeQueueItem } from '../../committee/data/committeeQueue.data';
 interface AlertCard {
     title: string;
     value: string;
-    icon: React.ReactNode;
+    icon: ReactNode;
     bgColor: string;
     textColor: string;
     route: string;
