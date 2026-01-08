@@ -34,7 +34,7 @@ const safeErrorMessage = async (response: Response) => {
 
 export const apiClient = {
     getFindings: () => request<Finding[]>('/api/findings'),
-    getPdExecutions: () => request<PDExecution[]>('/api/pd-executions'),
+    getPdExecutions: () => request<PDExecution[]>('/api/pd-executions', API_BASE_URL),
     getCommitteeQueue: () => request<CommitteeQueueItem[]>('/api/committee/queue'),
     getTelemetryEvents: async () => {
         const data = await request<unknown>(
