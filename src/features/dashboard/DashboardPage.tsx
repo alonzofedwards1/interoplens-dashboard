@@ -39,6 +39,12 @@ const Dashboard: React.FC<DashboardProps> = ({ role, onLogout }) => {
         committeeQueue
     );
     const { cards: alertSummaryCards } = useDashboardCards(alertCards);
+    console.log('[DashboardPage] pdExecutions', {
+        length: pdExecutions.length,
+        sample: pdExecutions[0],
+        loading,
+        error,
+    });
 
     if (loading) {
         return (
