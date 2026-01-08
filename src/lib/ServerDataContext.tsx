@@ -19,15 +19,56 @@ const ServerDataContext = React.createContext<ServerDataContextValue | undefined
 );
 
 const loadFromApi = async (client: ApiClient) => {
-    const [findings, pdExecutions, committeeQueue, telemetryEvents] =
-        await Promise.all([
+    const [findingsResult, pdExecutionsResult, committeeQueueResult, telemetryResult] =
+        await Promise.allSettled([
             client.getFindings(),
             client.getPdExecutions(),
             client.getCommitteeQueue(),
             client.getTelemetryEvents(),
         ]);
 
-    return { findings, pdExecutions, committeeQueue, telemetryEvents };
+    const findings =
+        findingsResult.status === 'fulfilled' ? findingsResult.value : [];
+    const pdExecutions =
+        pdExecutionsResult.status === 'fulfilled'
+            ? pdExecutionsResult.value
+            : [];
+    const committeeQueue =
+        committeeQueueResult.status === 'fulfilled'
+            ? committeeQueueResult.value
+            : [];
+    const telemetryEvents =
+        telemetryResult.status === 'fulfilled' ? telemetryResult.value : [];
+
+    const errors = [
+        findingsResult,
+        pdExecutionsResult,
+        committeeQueueResult,
+        telemetryResult,
+    ].filter(result => result.status === 'rejected') as PromiseRejectedResult[];
+
+    console.log('[ServerDataContext.loadFromApi] pdExecutions', {
+        length: pdExecutions.length,
+        sample: pdExecutions[0],
+        errors: errors.map(err => err.reason),
+    });
+
+    return {
+        findings,
+        pdExecutions,
+        committeeQueue,
+        telemetryEvents,
+        error:
+            errors.length > 0
+                ? errors
+                      .map(err =>
+                          err.reason instanceof Error
+                              ? err.reason.message
+                              : String(err.reason)
+                      )
+                      .join(' | ')
+                : undefined,
+    };
 };
 
 export const ServerDataProvider: React.FC<{ children: React.ReactNode }> = ({
@@ -43,19 +84,8 @@ export const ServerDataProvider: React.FC<{ children: React.ReactNode }> = ({
     });
 
     const refresh = React.useCallback(async () => {
-        try {
-            const data = await loadFromApi(apiClient);
-            setState({ ...data, loading: false, error: undefined });
-        } catch (err) {
-            setState(prev => ({
-                ...prev,
-                loading: false,
-                error:
-                    err instanceof Error
-                        ? err.message
-                        : 'Unable to load data from API',
-            }));
-        }
+        const data = await loadFromApi(apiClient);
+        setState({ ...data, loading: false });
     }, []);
 
     React.useEffect(() => {

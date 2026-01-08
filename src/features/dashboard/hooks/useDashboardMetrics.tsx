@@ -152,6 +152,10 @@ const useDashboardMetrics = (
     pdExecutions: PDExecution[],
     committeeQueue: CommitteeQueueItem[]
 ) => {
+    console.log('[useDashboardMetrics] pdExecutions', {
+        length: pdExecutions.length,
+        sample: pdExecutions[0],
+    });
     const findingsMetrics = React.useMemo(
         () => deriveFindingsMetrics(findings),
         [findings]
