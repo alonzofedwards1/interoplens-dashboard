@@ -13,6 +13,7 @@ import { useServerData } from '../../lib/ServerDataContext';
 import AlertSummaryCards from './components/AlertSummaryCards';
 import OperationalInsights from './components/OperationalInsights';
 import useDashboardMetrics from './hooks/useDashboardMetrics';
+import useDashboardCards from './hooks/useDashboardCards';
 
 /* ============================
    Types
@@ -37,6 +38,7 @@ const Dashboard: React.FC<DashboardProps> = ({ role, onLogout }) => {
         pdExecutions,
         committeeQueue
     );
+    const { cards: alertSummaryCards } = useDashboardCards(alertCards);
 
     if (loading) {
         return (
@@ -69,7 +71,7 @@ const Dashboard: React.FC<DashboardProps> = ({ role, onLogout }) => {
                     )}
 
                     <AlertSummaryCards
-                        cards={alertCards}
+                        cards={alertSummaryCards}
                         onNavigate={route => navigate(route)}
                     />
 

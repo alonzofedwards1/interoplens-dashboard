@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { AlertCard } from '../hooks/useDashboardMetrics';
+import { AlertCard } from '../hooks/useDashboardCards';
 
 interface AlertSummaryCardsProps {
     cards: AlertCard[];

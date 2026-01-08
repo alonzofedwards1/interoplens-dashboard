@@ -1,9 +1,9 @@
 import React from 'react';
 
-import { InsightCard } from '../hooks/useDashboardMetrics';
+import { InsightCardData } from '../hooks/useDashboardMetrics';
 
 interface OperationalInsightsProps {
-    cards: InsightCard[];
+    cards: InsightCardData[];
 }
 
 const OperationalInsights: React.FC<OperationalInsightsProps> = ({ cards }) => (

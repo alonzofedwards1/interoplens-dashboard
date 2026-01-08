@@ -1,27 +1,26 @@
 import React from 'react';
 
-import {
-    FaUsers,
-    FaExclamationTriangle,
-    FaBell,
-    FaExclamationCircle,
-    FaGavel,
-} from 'react-icons/fa';
-
 import { Finding } from '../../findings/data/findings.data';
 import { PDExecution } from '../../pd-executions/data/pdExecutions.data';
 import { CommitteeQueueItem } from '../../committee/data/committeeQueue.data';
 
-interface AlertCard {
+type AlertIconKey =
+    | 'users'
+    | 'findings'
+    | 'warning'
+    | 'critical'
+    | 'committee';
+
+interface AlertCardData {
     title: string;
     value: string;
-    icon: React.ReactNode;
+    iconKey: AlertIconKey;
     bgColor: string;
     textColor: string;
     route: string;
 }
 
-interface InsightCard {
+interface InsightCardData {
     title: string;
     summary: string;
     detail: string;
@@ -59,11 +58,11 @@ const buildAlertCards = (
     pdMetrics: ReturnType<typeof derivePdMetrics>,
     findingsMetrics: ReturnType<typeof deriveFindingsMetrics>,
     committeeMetrics: ReturnType<typeof deriveCommitteeMetrics>
-): AlertCard[] => [
+): AlertCardData[] => [
     {
         title: 'Total PD Executions',
         value: pdMetrics.totalPDExecutions.toString(),
-        icon: <FaUsers className="text-blue-500 text-2xl" />,
+        iconKey: 'users',
         bgColor: 'bg-blue-100',
         textColor: 'text-blue-800',
         route: '/telemetry',
@@ -71,7 +70,7 @@ const buildAlertCards = (
     {
         title: 'Findings Detected',
         value: findingsMetrics.totalFindings.toString(),
-        icon: <FaExclamationTriangle className="text-red-500 text-2xl" />,
+        iconKey: 'findings',
         bgColor: 'bg-red-100',
         textColor: 'text-red-800',
         route: '/findings',
@@ -79,7 +78,7 @@ const buildAlertCards = (
     {
         title: 'Warnings',
         value: findingsMetrics.warningCount.toString(),
-        icon: <FaBell className="text-yellow-500 text-2xl" />,
+        iconKey: 'warning',
         bgColor: 'bg-yellow-100',
         textColor: 'text-yellow-800',
         route: '/findings?severity=warning',
@@ -87,7 +86,7 @@ const buildAlertCards = (
     {
         title: 'Critical Issues',
         value: findingsMetrics.criticalCount.toString(),
-        icon: <FaExclamationCircle className="text-orange-600 text-2xl" />,
+        iconKey: 'critical',
         bgColor: 'bg-orange-100',
         textColor: 'text-orange-800',
         route: '/findings?severity=critical',
@@ -95,7 +94,7 @@ const buildAlertCards = (
     {
         title: 'CommitteeQueue',
         value: committeeMetrics.committeeCount.toString(),
-        icon: <FaGavel className="text-red-600 text-2xl" />,
+        iconKey: 'committee',
         bgColor: 'bg-red-200',
         textColor: 'text-red-900',
         route: '/committee',
@@ -106,7 +105,7 @@ const buildInsightCards = (
     findings: Finding[],
     findingsMetrics: ReturnType<typeof deriveFindingsMetrics>,
     pdMetrics: ReturnType<typeof derivePdMetrics>
-): InsightCard[] => {
+): InsightCardData[] => {
     const compliant = findings.filter(
         finding => finding.status === 'compliant'
     ).length;
@@ -172,5 +171,5 @@ const useDashboardMetrics = (
     };
 };
 
-export type { AlertCard, InsightCard };
+export type { AlertCardData, AlertIconKey, InsightCardData };
 export default useDashboardMetrics;
