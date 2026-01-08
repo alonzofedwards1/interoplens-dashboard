@@ -2,47 +2,36 @@ import { Finding } from '../features/findings/data/findings.data';
 import { PDExecution } from '../features/pd-executions/data/pdExecutions.data';
 import { CommitteeQueueItem } from '../features/committee/data/committeeQueue.data';
 import { TelemetryEvent } from '../telemetry/TelemetryEvent';
-import { normalizeTelemetryEvents } from './telemetryClient';
-import { API_BASE_URL, TELEMETRY_BASE_URL } from '../config/api';
+import { API_BASE_URL } from '../config/api';
+import { fetchTelemetryEvents } from './telemetryClient';
 
 const buildUrl = (base: string, path: string) => `${base}${path}`;
 
-const request = async <T>(path: string, baseUrl: string = API_BASE_URL): Promise<T> => {
-    const response = await fetch(buildUrl(baseUrl, path));
-
-    if (!response.ok) {
-        const message = await safeErrorMessage(response);
-        throw new Error(message ?? `API request failed for ${path}: ${response.status}`);
+export class ApiClient {
+    async getFindings(): Promise<Finding[]> {
+        const res = await fetch(buildUrl(API_BASE_URL, '/api/findings'));
+        if (!res.ok) throw new Error(`Failed to load findings (${res.status})`);
+        return res.json();
     }
 
-    try {
-        return (await response.json()) as T;
-    } catch (error) {
-        throw new Error(`Invalid response from API for ${path}`);
+    async getPdExecutions(): Promise<PDExecution[]> {
+        const res = await fetch(buildUrl(API_BASE_URL, '/api/pd-executions'));
+        if (!res.ok)
+            throw new Error(`Failed to load PD executions (${res.status})`);
+        return res.json();
     }
-};
 
-const safeErrorMessage = async (response: Response) => {
-    try {
-        const body = await response.json();
-        if (typeof body?.message === 'string') return body.message;
-    } catch (error) {
-        // ignore JSON parse failures
+    async getCommitteeQueue(): Promise<CommitteeQueueItem[]> {
+        const res = await fetch(buildUrl(API_BASE_URL, '/api/committee-queue'));
+        if (!res.ok)
+            throw new Error(`Failed to load committee queue (${res.status})`);
+        return res.json();
     }
-    return undefined;
-};
 
-export const apiClient = {
-    getFindings: () => request<Finding[]>('/api/findings'),
-    getPdExecutions: () => request<PDExecution[]>('/api/pd-executions', API_BASE_URL),
-    getCommitteeQueue: () => request<CommitteeQueueItem[]>('/api/committee/queue'),
-    getTelemetryEvents: async () => {
-        const data = await request<unknown>(
-            '/api/telemetry/events',
-            TELEMETRY_BASE_URL
-        );
-        return normalizeTelemetryEvents(data);
-    },
-};
+    async getTelemetryEvents(): Promise<TelemetryEvent[]> {
+        // Normalization already handled in telemetryClient.ts
+        return fetchTelemetryEvents();
+    }
+}
 
-export type ApiClient = typeof apiClient;
+export const apiClient = new ApiClient();

@@ -1,9 +1,9 @@
 import React from 'react';
 
-import { InsightCardData } from '../hooks/useDashboardMetrics';
+import { InsightCard } from '../hooks/useDashboardMetrics';
 
 interface OperationalInsightsProps {
-    cards: InsightCardData[];
+    cards: InsightCard[];
 }
 
 const OperationalInsights: React.FC<OperationalInsightsProps> = ({ cards }) => (
@@ -19,6 +19,7 @@ const OperationalInsights: React.FC<OperationalInsightsProps> = ({ cards }) => (
                 Derived from current findings and PD execution telemetry
             </span>
         </div>
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             {cards.map(card => (
                 <article

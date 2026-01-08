@@ -1,5 +1,4 @@
 import React, { type ReactNode } from 'react';
-
 import {
     FaUsers,
     FaExclamationTriangle,
@@ -12,7 +11,11 @@ import { Finding } from '../../findings/data/findings.data';
 import { PDExecution } from '../../pd-executions/data/pdExecutions.data';
 import { CommitteeQueueItem } from '../../committee/data/committeeQueue.data';
 
-interface AlertCard {
+/* ============================
+   Types
+============================ */
+
+export interface AlertCard {
     title: string;
     value: string;
     icon: ReactNode;
@@ -21,19 +24,21 @@ interface AlertCard {
     route: string;
 }
 
-interface InsightCard {
+export interface InsightCard {
     title: string;
     summary: string;
     detail: string;
 }
 
-const deriveFindingsMetrics = (findings: Finding[]) => {
-    const totalFindings = findings.length;
-    const warningCount = findings.filter(f => f.severity === 'warning').length;
-    const criticalCount = findings.filter(f => f.severity === 'critical').length;
+/* ============================
+   Metric Derivers
+============================ */
 
-    return { totalFindings, warningCount, criticalCount };
-};
+const deriveFindingsMetrics = (findings: Finding[]) => ({
+    totalFindings: findings.length,
+    warningCount: findings.filter(f => f.severity === 'warning').length,
+    criticalCount: findings.filter(f => f.severity === 'critical').length,
+});
 
 const deriveCommitteeMetrics = (queue: CommitteeQueueItem[]) => ({
     committeeCount: queue.length,
@@ -41,19 +46,28 @@ const deriveCommitteeMetrics = (queue: CommitteeQueueItem[]) => ({
 
 const derivePdMetrics = (executions: PDExecution[]) => {
     const totalPDExecutions = executions.length;
-    const pdSuccessCount = executions.filter(
-        execution => execution.outcome === 'success'
-    ).length;
-    const pdErrorCount = executions.filter(
-        execution => execution.outcome === 'error'
-    ).length;
+
+    const pdSuccessCount = executions.filter(e => e.outcome === 'success').length;
+    const pdErrorCount = executions.filter(e => e.outcome === 'error').length;
+
     const averagePdLatencyMs = Math.round(
-        executions.reduce((sum, execution) => sum + execution.executionTimeMs, 0) /
-            Math.max(totalPDExecutions, 1)
+        executions.reduce(
+            (sum, e) => sum + (e.executionTimeMs ?? 0),
+            0
+        ) / Math.max(totalPDExecutions, 1)
     );
 
-    return { totalPDExecutions, pdSuccessCount, pdErrorCount, averagePdLatencyMs };
+    return {
+        totalPDExecutions,
+        pdSuccessCount,
+        pdErrorCount,
+        averagePdLatencyMs,
+    };
 };
+
+/* ============================
+   Card Builders
+============================ */
 
 const buildAlertCards = (
     pdMetrics: ReturnType<typeof derivePdMetrics>,
@@ -66,7 +80,7 @@ const buildAlertCards = (
         icon: <FaUsers className="text-blue-500 text-2xl" />,
         bgColor: 'bg-blue-100',
         textColor: 'text-blue-800',
-        route: '/telemetry',
+        route: '/pd-executions',
     },
     {
         title: 'Findings Detected',
@@ -93,7 +107,7 @@ const buildAlertCards = (
         route: '/findings?severity=critical',
     },
     {
-        title: 'CommitteeQueue',
+        title: 'Committee Queue',
         value: committeeMetrics.committeeCount.toString(),
         icon: <FaGavel className="text-red-600 text-2xl" />,
         bgColor: 'bg-red-200',
@@ -107,34 +121,31 @@ const buildInsightCards = (
     findingsMetrics: ReturnType<typeof deriveFindingsMetrics>,
     pdMetrics: ReturnType<typeof derivePdMetrics>
 ): InsightCard[] => {
-    const compliant = findings.filter(
-        finding => finding.status === 'compliant'
-    ).length;
-    const complianceRate = Math.round(
-        (compliant / Math.max(findingsMetrics.totalFindings, 1)) * 100
-    );
-    const prodFindings = findings.filter(
-        finding => finding.environment === 'prod'
-    ).length;
+    const compliant = findings.filter(f => f.status === 'compliant').length;
 
     return [
         {
             title: 'Compliance coverage',
-            summary: `${complianceRate}% compliant (${compliant}/${findingsMetrics.totalFindings})`,
-            detail: 'Most findings are compliant; review non-compliant items to close remaining gaps.',
-        },
-        {
-            title: 'Production focus',
-            summary: `${prodFindings}/${findingsMetrics.totalFindings} findings in production`,
-            detail: `${findingsMetrics.criticalCount} critical issues remain open, including committee-queued cases that need decisions.`,
+            summary: `${Math.round(
+                (compliant / Math.max(findingsMetrics.totalFindings, 1)) * 100
+            )}% compliant`,
+            detail: 'Review non-compliant findings to close gaps.',
         },
         {
             title: 'PD execution health',
-            summary: `${Math.round((pdMetrics.pdSuccessCount / Math.max(pdMetrics.totalPDExecutions, 1)) * 100)}% success rate`,
-            detail: `${pdMetrics.pdErrorCount} errors observed; average latency ${pdMetrics.averagePdLatencyMs} ms. Track retries tied to critical findings.`,
+            summary: `${Math.round(
+                (pdMetrics.pdSuccessCount /
+                    Math.max(pdMetrics.totalPDExecutions, 1)) *
+                100
+            )}% success rate`,
+            detail: `${pdMetrics.pdErrorCount} errors observed; avg latency ${pdMetrics.averagePdLatencyMs} ms.`,
         },
     ];
 };
+
+/* ============================
+   Hook
+============================ */
 
 const useDashboardMetrics = (
     findings: Finding[],
@@ -156,21 +167,18 @@ const useDashboardMetrics = (
         [pdExecutions]
     );
 
-    const alertCards = React.useMemo(
-        () => buildAlertCards(pdMetrics, findingsMetrics, committeeMetrics),
-        [committeeMetrics, findingsMetrics, pdMetrics]
-    );
-
-    const insightCards = React.useMemo(
-        () => buildInsightCards(findings, findingsMetrics, pdMetrics),
-        [findings, findingsMetrics, pdMetrics]
-    );
-
     return {
-        alertCards,
-        insightCards,
+        alertCards: buildAlertCards(
+            pdMetrics,
+            findingsMetrics,
+            committeeMetrics
+        ),
+        insightCards: buildInsightCards(
+            findings,
+            findingsMetrics,
+            pdMetrics
+        ),
     };
 };
 
-export type { AlertCard, InsightCard };
 export default useDashboardMetrics;
