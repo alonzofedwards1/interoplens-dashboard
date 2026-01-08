@@ -3,11 +3,6 @@ import { Finding } from '../features/findings/data/findings.data';
 import { PDExecution } from '../features/pd-executions/data/pdExecutions.data';
 import { CommitteeQueueItem } from '../features/committee/data/committeeQueue.data';
 import { apiClient, ApiClient } from './apiClient';
-import {
-    committeeQueueData as fixtureCommitteeQueue,
-} from '../features/committee/data/committeeQueue.data';
-import { findingsData as fixtureFindings } from '../features/findings/data/findings.data';
-import { pdExecutionsData as fixturePdExecutions } from '../features/pd-executions/data/pdExecutions.data';
 import { TelemetryEvent } from '../telemetry/TelemetryEvent';
 interface ServerDataContextValue {
     findings: Finding[];
@@ -23,8 +18,6 @@ const ServerDataContext = React.createContext<ServerDataContextValue | undefined
     undefined
 );
 
-const shouldUseFixtures = process.env.NODE_ENV === 'test';
-
 const loadFromApi = async (client: ApiClient) => {
     const [findings, pdExecutions, committeeQueue, telemetryEvents] =
         await Promise.all([
@@ -36,13 +29,6 @@ const loadFromApi = async (client: ApiClient) => {
 
     return { findings, pdExecutions, committeeQueue, telemetryEvents };
 };
-
-const loadFromFixtures = () => ({
-    findings: fixtureFindings,
-    pdExecutions: fixturePdExecutions,
-    committeeQueue: fixtureCommitteeQueue,
-    telemetryEvents: [] as TelemetryEvent[],
-});
 
 export const ServerDataProvider: React.FC<{ children: React.ReactNode }> = ({
     children,
@@ -58,20 +44,17 @@ export const ServerDataProvider: React.FC<{ children: React.ReactNode }> = ({
 
     const refresh = React.useCallback(async () => {
         try {
-            const data = shouldUseFixtures
-                ? loadFromFixtures()
-                : await loadFromApi(apiClient);
+            const data = await loadFromApi(apiClient);
             setState({ ...data, loading: false, error: undefined });
         } catch (err) {
-            const fallback = loadFromFixtures();
-            setState({
-                ...fallback,
+            setState(prev => ({
+                ...prev,
                 loading: false,
                 error:
                     err instanceof Error
                         ? err.message
                         : 'Unable to load data from API',
-            });
+            }));
         }
     }, []);
 
