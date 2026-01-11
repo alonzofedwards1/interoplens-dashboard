@@ -31,53 +31,16 @@ interface DashboardProps {
 
 const Dashboard: React.FC<DashboardProps> = ({ role, onLogout }) => {
     const navigate = useNavigate();
-    const { findings, pdExecutions, committeeQueue, loading, error, refresh } =
+    const { findings, pdExecutions, telemetryEvents, loading, error, refresh } =
         useServerData();
-    const [findingsCount, setFindingsCount] =
-        React.useState<FindingsCountResponse | null>(null);
-    const [isLoadingFindings, setIsLoadingFindings] = React.useState(true);
-    const [findingsError, setFindingsError] = React.useState<string | null>(null);
-
-    React.useEffect(() => {
-        let isMounted = true;
-
-        const loadFindingsCount = async () => {
-            setIsLoadingFindings(true);
-            try {
-                const data = await apiClient.getFindingsCount();
-                if (!isMounted) return;
-                setFindingsCount(data);
-                setFindingsError(null);
-            } catch (err) {
-                console.error('[DashboardPage] Failed to load findings count', err);
-                if (!isMounted) return;
-                setFindingsError(
-                    err instanceof Error ? err.message : 'Failed to fetch findings count'
-                );
-                setFindingsCount(null);
-            } finally {
-                if (isMounted) {
-                    setIsLoadingFindings(false);
-                }
-            }
-        };
-
-        loadFindingsCount();
-
-        return () => {
-            isMounted = false;
-        };
-    }, []);
+    const [complianceStandard, setComplianceStandard] =
+        React.useState<'TEFCA' | 'IHE' | 'HL7'>('TEFCA');
 
     const { alertCards, insightCards } = useDashboardMetrics(
         findings,
         pdExecutions,
-        committeeQueue,
-        {
-            total: findingsCount?.total,
-            isLoading: isLoadingFindings,
-            error: findingsError,
-        }
+        telemetryEvents,
+        complianceStandard
     );
     const { cards: alertSummaryCards } = useDashboardCards(alertCards);
     console.log('[DashboardPage] pdExecutions', {
@@ -123,7 +86,11 @@ const Dashboard: React.FC<DashboardProps> = ({ role, onLogout }) => {
                     />
 
                     {/* Operational Insights */}
-                    <OperationalInsights cards={insightCards} />
+                    <OperationalInsights
+                        cards={insightCards}
+                        complianceStandard={complianceStandard}
+                        onComplianceStandardChange={setComplianceStandard}
+                    />
 
                     {/* Charts */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
