@@ -23,7 +23,7 @@ const buildRecentFindings = (findings: Finding[]) =>
    Helpers
 ============================ */
 
-const getSeverityLabel = (severity: Finding['severity']) => {
+const getSeverityLabel = (severity?: Finding['severity']) => {
     switch (severity) {
         case 'critical':
             return (
@@ -37,6 +37,12 @@ const getSeverityLabel = (severity: Finding['severity']) => {
                     Warning
                 </span>
             );
+        case undefined:
+            return (
+                <span className="px-2 py-0.5 rounded text-xs font-semibold bg-gray-100 text-gray-500">
+                    —
+                </span>
+            );
         default:
             return (
                 <span className="px-2 py-0.5 rounded text-xs font-semibold bg-green-100 text-green-700">
@@ -46,17 +52,23 @@ const getSeverityLabel = (severity: Finding['severity']) => {
     }
 };
 
-const getStatusLabel = (status: Finding['status']) => (
-    <span
-        className={`font-semibold ${
-            status === 'compliant'
-                ? 'text-green-600'
-                : 'text-red-600'
-        }`}
-    >
-        {status === 'compliant' ? 'Compliant' : 'Non-Compliant'}
-    </span>
-);
+const getStatusLabel = (status?: Finding['status']) => {
+    if (!status) {
+        return <span className="text-gray-500 font-semibold">—</span>;
+    }
+
+    return (
+        <span
+            className={`font-semibold ${
+                status === 'compliant'
+                    ? 'text-green-600'
+                    : 'text-red-600'
+            }`}
+        >
+            {status === 'compliant' ? 'Compliant' : 'Non-Compliant'}
+        </span>
+    );
+};
 
 type FindingsSortKey = 'detectedAt' | 'severity' | 'organization';
 
