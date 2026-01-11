@@ -48,7 +48,7 @@ const derivePdMetrics = (executions: PDExecution[]) => {
     const totalPDExecutions = executions.length;
 
     const pdSuccessCount = executions.filter(e => e.outcome === 'success').length;
-    const pdErrorCount = executions.filter(e => e.outcome === 'error').length;
+    const pdErrorCount = executions.filter(e => e.outcome === 'failure').length;
 
     const averagePdLatencyMs = Math.round(
         executions.reduce(
