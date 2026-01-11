@@ -18,7 +18,13 @@ export class ApiClient {
         const res = await fetch(buildUrl(API_BASE_URL, '/api/pd-executions'));
         if (!res.ok)
             throw new Error(`Failed to load PD executions (${res.status})`);
-        return res.json();
+        const data = await res.json();
+        console.log('[apiClient.getPdExecutions] response', {
+            isArray: Array.isArray(data),
+            length: Array.isArray(data) ? data.length : 'n/a',
+            sample: Array.isArray(data) ? data[0] : data,
+        });
+        return data;
     }
 
     async getCommitteeQueue(): Promise<CommitteeQueueItem[]> {
