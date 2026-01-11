@@ -12,11 +12,6 @@ const AlertSummaryCards: React.FC<AlertSummaryCardsProps> = ({
     cards,
     onNavigate,
 }) => {
-    console.log('[AlertSummaryCards] cards', {
-        total: cards.find(card => card.title === 'Total PD Executions')?.value,
-        cardCount: cards.length,
-    });
-
     return (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
             {cards.map(card => (

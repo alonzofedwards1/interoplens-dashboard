@@ -14,11 +14,7 @@ const formatOutcome = (outcome: PDExecution['outcome']) => {
     switch (outcome) {
         case 'success':
             return { label: 'Success', color: 'bg-green-100 text-green-800' };
-        case 'multiple-matches':
-            return { label: 'Multiple Matches', color: 'bg-yellow-100 text-yellow-800' };
-        case 'no-match':
-            return { label: 'No Match', color: 'bg-gray-100 text-gray-800' };
-        case 'error':
+        case 'failure':
             return { label: 'Failure', color: 'bg-red-100 text-red-800' };
     }
 };
@@ -27,7 +23,11 @@ const formatOutcome = (outcome: PDExecution['outcome']) => {
    Component
 ============================ */
 
-type ExecutionSortKey = 'requestTimestamp' | 'organization' | 'outcome' | 'executionTimeMs';
+type ExecutionSortKey =
+    | 'completedAt'
+    | 'requestId'
+    | 'outcome'
+    | 'executionTimeMs';
 
 type ExecutionPreferences = {
     search: string;
@@ -39,7 +39,7 @@ type ExecutionPreferences = {
 const defaultExecutionPreferences: ExecutionPreferences = {
     search: '',
     outcomeFilter: 'all',
-    sortKey: 'requestTimestamp',
+    sortKey: 'completedAt',
     sortDirection: 'desc',
 };
 
@@ -61,8 +61,8 @@ const PDExecutions: React.FC = () => {
 
             const query = search.toLowerCase();
             const matchesText =
-                exec.organization.toLowerCase().includes(query) ||
-                exec.qhin.toLowerCase().includes(query);
+                exec.requestId.toLowerCase().includes(query) ||
+                exec.channelId.toLowerCase().includes(query);
 
             return matchesOutcome && matchesText;
         });
@@ -70,9 +70,9 @@ const PDExecutions: React.FC = () => {
 
     const sortedExecutions = useMemo(() => {
         return [...filteredExecutions].sort((a, b) => {
-            if (sortKey === 'requestTimestamp') {
-                const aTs = new Date(a.requestTimestamp).getTime();
-                const bTs = new Date(b.requestTimestamp).getTime();
+            if (sortKey === 'completedAt') {
+                const aTs = new Date(a.completedAt).getTime();
+                const bTs = new Date(b.completedAt).getTime();
                 return sortDirection === 'asc' ? aTs - bTs : bTs - aTs;
             }
 
@@ -88,14 +88,14 @@ const PDExecutions: React.FC = () => {
 
     const summaryStats = useMemo(() => {
         const totalExecutions = pdExecutions.length;
-        const failures = pdExecutions.filter(e => e.outcome === 'error').length;
+        const failures = pdExecutions.filter(e => e.outcome === 'failure').length;
         const failureRate = totalExecutions
             ? ((failures / totalExecutions) * 100).toFixed(1)
             : '0.0';
 
         const hourCounts: Record<string, number> = {};
         pdExecutions.forEach(e => {
-            const hour = new Date(e.requestTimestamp)
+            const hour = new Date(e.completedAt)
                 .getUTCHours()
                 .toString()
                 .padStart(2, '0');
@@ -194,9 +194,7 @@ const PDExecutions: React.FC = () => {
                         >
                             <option value="all">All</option>
                             <option value="success">Success</option>
-                            <option value="multiple-matches">Multiple Matches</option>
-                            <option value="no-match">No Match</option>
-                            <option value="error">Failure</option>
+                            <option value="failure">Failure</option>
                         </select>
                     </div>
 
@@ -209,7 +207,7 @@ const PDExecutions: React.FC = () => {
                                 search: event.target.value,
                             }))
                         }
-                        placeholder="Filter by org or QHIN"
+                        placeholder="Filter by request ID or channel"
                         className="border rounded px-3 py-2 w-full sm:w-72"
                     />
 
@@ -228,8 +226,8 @@ const PDExecutions: React.FC = () => {
                             }
                             className="border rounded px-2 py-1"
                         >
-                            <option value="requestTimestamp">Timestamp</option>
-                            <option value="organization">Organization</option>
+                            <option value="completedAt">Completed At</option>
+                            <option value="requestId">Request ID</option>
                             <option value="outcome">Outcome</option>
                             <option value="executionTimeMs">Response Time</option>
                         </select>
@@ -246,9 +244,10 @@ const PDExecutions: React.FC = () => {
                 <table className="min-w-full border-collapse">
                     <thead className="bg-gray-100">
                     <tr className="text-left text-sm text-gray-700">
-                        <th className="p-3 cursor-pointer" onClick={() => toggleSort('requestTimestamp')}>Timestamp</th>
-                        <th className="p-3 cursor-pointer" onClick={() => toggleSort('organization')}>Organization</th>
-                        <th className="p-3">QHIN</th>
+                        <th className="p-3 cursor-pointer" onClick={() => toggleSort('completedAt')}>Completed At</th>
+                        <th className="p-3 cursor-pointer" onClick={() => toggleSort('requestId')}>Request ID</th>
+                        <th className="p-3">Channel ID</th>
+                        <th className="p-3">Environment</th>
                         <th className="p-3 cursor-pointer" onClick={() => toggleSort('outcome')}>Outcome</th>
                         <th className="p-3 cursor-pointer" onClick={() => toggleSort('executionTimeMs')}>Response Time</th>
                     </tr>
@@ -258,22 +257,25 @@ const PDExecutions: React.FC = () => {
                         const outcome = formatOutcome(exec.outcome);
 
                         return (
-                            <tr key={exec.id} className="border-t text-sm">
+                            <tr key={exec.requestId} className="border-t text-sm">
                                 <td className="p-3 font-mono">
-                                    {new Date(exec.requestTimestamp).toUTCString()}
+                                    {new Date(exec.completedAt).toUTCString()}
                                 </td>
                                 <td className="p-3">
-                                    {exec.organization}
+                                    {exec.requestId}
                                 </td>
                                 <td className="p-3">
-                                    {exec.qhin}
+                                    {exec.channelId}
                                 </td>
                                 <td className="p-3">
-                                        <span
-                                            className={`px-2 py-1 rounded text-xs ${outcome.color}`}
-                                        >
-                                            {outcome.label}
-                                        </span>
+                                    {exec.environment}
+                                </td>
+                                <td className="p-3">
+                                    <span
+                                        className={`px-2 py-1 rounded text-xs ${outcome.color}`}
+                                    >
+                                        {outcome.label}
+                                    </span>
                                 </td>
                                 <td className="p-3">
                                     {exec.executionTimeMs
@@ -285,7 +287,7 @@ const PDExecutions: React.FC = () => {
                     })}
                     {!sortedExecutions.length && (
                         <tr>
-                            <td colSpan={5} className="p-4 text-center text-gray-500">
+                            <td colSpan={6} className="p-4 text-center text-gray-500">
                                 No executions match the current filters.
                             </td>
                         </tr>
