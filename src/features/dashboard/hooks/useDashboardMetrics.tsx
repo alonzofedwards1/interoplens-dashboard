@@ -30,6 +30,12 @@ export interface InsightCard {
     detail: string;
 }
 
+interface FindingsCountState {
+    total?: number | null;
+    isLoading?: boolean;
+    error?: string | null;
+}
+
 /* ============================
    Metric Derivers
 ============================ */
@@ -72,49 +78,83 @@ const derivePdMetrics = (executions: PDExecution[]) => {
 const buildAlertCards = (
     pdMetrics: ReturnType<typeof derivePdMetrics>,
     findingsMetrics: ReturnType<typeof deriveFindingsMetrics>,
-    committeeMetrics: ReturnType<typeof deriveCommitteeMetrics>
-): AlertCard[] => [
-    {
-        title: 'Total PD Executions',
-        value: pdMetrics.totalPDExecutions.toString(),
-        icon: <FaUsers className="text-blue-500 text-2xl" />,
-        bgColor: 'bg-blue-100',
-        textColor: 'text-blue-800',
-        route: '/telemetry',
-    },
-    {
-        title: 'Findings Detected',
-        value: findingsMetrics.totalFindings.toString(),
-        icon: <FaExclamationTriangle className="text-red-500 text-2xl" />,
-        bgColor: 'bg-red-100',
-        textColor: 'text-red-800',
-        route: '/findings',
-    },
-    {
-        title: 'Warnings',
-        value: findingsMetrics.warningCount.toString(),
-        icon: <FaBell className="text-yellow-500 text-2xl" />,
-        bgColor: 'bg-yellow-100',
-        textColor: 'text-yellow-800',
-        route: '/findings?severity=warning',
-    },
-    {
-        title: 'Critical Issues',
-        value: findingsMetrics.criticalCount.toString(),
-        icon: <FaExclamationCircle className="text-orange-600 text-2xl" />,
-        bgColor: 'bg-orange-100',
-        textColor: 'text-orange-800',
-        route: '/findings?severity=critical',
-    },
-    {
-        title: 'Committee Queue',
-        value: committeeMetrics.committeeCount.toString(),
-        icon: <FaGavel className="text-red-600 text-2xl" />,
-        bgColor: 'bg-red-200',
-        textColor: 'text-red-900',
-        route: '/committee',
-    },
-];
+    committeeMetrics: ReturnType<typeof deriveCommitteeMetrics>,
+    findingsCountState?: FindingsCountState
+) => {
+    const totalFindings =
+        typeof findingsCountState?.total === 'number'
+            ? findingsCountState.total
+            : findingsMetrics.totalFindings;
+    const findingsStatus = findingsCountState?.isLoading
+        ? 'loading'
+        : findingsCountState?.error
+          ? 'error'
+          : totalFindings > 0
+            ? 'active'
+            : 'clear';
+    const findingsValue =
+        findingsStatus === 'loading'
+            ? '—'
+            : findingsStatus === 'error'
+              ? 'Unavailable'
+              : totalFindings.toString();
+    const findingsHighlight = findingsStatus === 'active';
+    const findingsMuted =
+        findingsStatus === 'loading' || findingsStatus === 'error';
+
+    return [
+        {
+            title: 'Total PD Executions',
+            value: pdMetrics.totalPDExecutions.toString(),
+            icon: <FaUsers className="text-blue-500 text-2xl" />,
+            bgColor: 'bg-blue-100',
+            textColor: 'text-blue-800',
+            route: '/pd-executions',
+        },
+        {
+            title: 'Total Findings',
+            value: findingsValue,
+            icon: (
+                <FaExclamationTriangle
+                    className={`${
+                        findingsHighlight ? 'text-red-500' : 'text-gray-500'
+                    } text-2xl`}
+                />
+            ),
+            bgColor: findingsHighlight ? 'bg-red-100' : 'bg-gray-100',
+            textColor: findingsMuted
+                ? 'text-gray-600'
+                : findingsHighlight
+                  ? 'text-red-800'
+                  : 'text-gray-700',
+            route: '/findings',
+        },
+        {
+            title: 'Warnings',
+            value: findingsMetrics.warningCount.toString(),
+            icon: <FaBell className="text-yellow-500 text-2xl" />,
+            bgColor: 'bg-yellow-100',
+            textColor: 'text-yellow-800',
+            route: '/findings?severity=warning',
+        },
+        {
+            title: 'Critical Issues',
+            value: findingsMetrics.criticalCount.toString(),
+            icon: <FaExclamationCircle className="text-orange-600 text-2xl" />,
+            bgColor: 'bg-orange-100',
+            textColor: 'text-orange-800',
+            route: '/findings?severity=critical',
+        },
+        {
+            title: 'Committee Queue',
+            value: committeeMetrics.committeeCount.toString(),
+            icon: <FaGavel className="text-red-600 text-2xl" />,
+            bgColor: 'bg-red-200',
+            textColor: 'text-red-900',
+            route: '/committee',
+        },
+    ];
+};
 
 const buildInsightCards = (
     findings: Finding[],
@@ -150,7 +190,8 @@ const buildInsightCards = (
 const useDashboardMetrics = (
     findings: Finding[],
     pdExecutions: PDExecution[],
-    committeeQueue: CommitteeQueueItem[]
+    committeeQueue: CommitteeQueueItem[],
+    findingsCountState?: FindingsCountState
 ) => {
     console.log('[useDashboardMetrics] pdExecutions', {
         length: pdExecutions.length,
@@ -175,7 +216,8 @@ const useDashboardMetrics = (
         alertCards: buildAlertCards(
             pdMetrics,
             findingsMetrics,
-            committeeMetrics
+            committeeMetrics,
+            findingsCountState
         ),
         insightCards: buildInsightCards(
             findings,

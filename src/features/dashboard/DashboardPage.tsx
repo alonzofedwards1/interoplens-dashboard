@@ -14,6 +14,7 @@ import AlertSummaryCards from './components/AlertSummaryCards';
 import OperationalInsights from './components/OperationalInsights';
 import useDashboardMetrics from './hooks/useDashboardMetrics';
 import useDashboardCards from './hooks/useDashboardCards';
+import { apiClient, FindingsCountResponse } from '../../lib/apiClient';
 
 /* ============================
    Types
@@ -32,11 +33,51 @@ const Dashboard: React.FC<DashboardProps> = ({ role, onLogout }) => {
     const navigate = useNavigate();
     const { findings, pdExecutions, committeeQueue, loading, error, refresh } =
         useServerData();
+    const [findingsCount, setFindingsCount] =
+        React.useState<FindingsCountResponse | null>(null);
+    const [isLoadingFindings, setIsLoadingFindings] = React.useState(true);
+    const [findingsError, setFindingsError] = React.useState<string | null>(null);
+
+    React.useEffect(() => {
+        let isMounted = true;
+
+        const loadFindingsCount = async () => {
+            setIsLoadingFindings(true);
+            try {
+                const data = await apiClient.getFindingsCount();
+                if (!isMounted) return;
+                setFindingsCount(data);
+                setFindingsError(null);
+            } catch (err) {
+                console.error('[DashboardPage] Failed to load findings count', err);
+                if (!isMounted) return;
+                setFindingsError(
+                    err instanceof Error ? err.message : 'Failed to fetch findings count'
+                );
+                setFindingsCount(null);
+            } finally {
+                if (isMounted) {
+                    setIsLoadingFindings(false);
+                }
+            }
+        };
+
+        loadFindingsCount();
+
+        return () => {
+            isMounted = false;
+        };
+    }, []);
 
     const { alertCards, insightCards } = useDashboardMetrics(
         findings,
         pdExecutions,
-        committeeQueue
+        committeeQueue,
+        {
+            total: findingsCount?.total,
+            isLoading: isLoadingFindings,
+            error: findingsError,
+        }
     );
     const { cards: alertSummaryCards } = useDashboardCards(alertCards);
     console.log('[DashboardPage] pdExecutions', {
