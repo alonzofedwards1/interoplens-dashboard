@@ -7,10 +7,23 @@ import { fetchTelemetryEvents } from './telemetryClient';
 
 const buildUrl = (base: string, path: string) => `${base}${path}`;
 
+export interface FindingsCountResponse {
+    total: number;
+    warnings: number;
+    critical: number;
+}
+
 export class ApiClient {
     async getFindings(): Promise<Finding[]> {
         const res = await fetch(buildUrl(API_BASE_URL, '/api/findings'));
         if (!res.ok) throw new Error(`Failed to load findings (${res.status})`);
+        return res.json();
+    }
+
+    async getFindingsCount(): Promise<FindingsCountResponse> {
+        const res = await fetch(buildUrl(API_BASE_URL, '/api/findings/count'));
+        if (!res.ok)
+            throw new Error(`Failed to load findings count (${res.status})`);
         return res.json();
     }
 

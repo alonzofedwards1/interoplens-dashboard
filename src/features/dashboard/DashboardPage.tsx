@@ -14,6 +14,7 @@ import AlertSummaryCards from './components/AlertSummaryCards';
 import OperationalInsights from './components/OperationalInsights';
 import useDashboardMetrics from './hooks/useDashboardMetrics';
 import useDashboardCards from './hooks/useDashboardCards';
+import { apiClient, FindingsCountResponse } from '../../lib/apiClient';
 
 /* ============================
    Types
