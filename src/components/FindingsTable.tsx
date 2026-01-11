@@ -1,7 +1,8 @@
 import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { Finding } from '../features/findings/data/findings.data';
+import { Finding } from '../types/findings';
+import { TransactionLink } from './TransactionLink';
 import { useUserPreference } from '../lib/userPreferences';
 
 /* ============================
@@ -13,8 +14,8 @@ const buildRecentFindings = (findings: Finding[]) =>
         .slice()
         .sort(
             (a, b) =>
-                new Date(b.detectedAt).getTime() -
-                new Date(a.detectedAt).getTime()
+                new Date(b.detectedAt ?? 0).getTime() -
+                new Date(a.detectedAt ?? 0).getTime()
         )
         .slice(0, 5);
 
@@ -22,7 +23,7 @@ const buildRecentFindings = (findings: Finding[]) =>
    Helpers
 ============================ */
 
-const getSeverityLabel = (severity: Finding['severity']) => {
+const getSeverityLabel = (severity?: Finding['severity']) => {
     switch (severity) {
         case 'critical':
             return (
@@ -36,6 +37,12 @@ const getSeverityLabel = (severity: Finding['severity']) => {
                     Warning
                 </span>
             );
+        case undefined:
+            return (
+                <span className="px-2 py-0.5 rounded text-xs font-semibold bg-gray-100 text-gray-500">
+                    —
+                </span>
+            );
         default:
             return (
                 <span className="px-2 py-0.5 rounded text-xs font-semibold bg-green-100 text-green-700">
@@ -45,17 +52,23 @@ const getSeverityLabel = (severity: Finding['severity']) => {
     }
 };
 
-const getStatusLabel = (status: Finding['status']) => (
-    <span
-        className={`font-semibold ${
-            status === 'compliant'
-                ? 'text-green-600'
-                : 'text-red-600'
-        }`}
-    >
-        {status === 'compliant' ? 'Compliant' : 'Non-Compliant'}
-    </span>
-);
+const getStatusLabel = (status?: Finding['status']) => {
+    if (!status) {
+        return <span className="text-gray-500 font-semibold">—</span>;
+    }
+
+    return (
+        <span
+            className={`font-semibold ${
+                status === 'compliant'
+                    ? 'text-green-600'
+                    : 'text-red-600'
+            }`}
+        >
+            {status === 'compliant' ? 'Compliant' : 'Non-Compliant'}
+        </span>
+    );
+};
 
 type FindingsSortKey = 'detectedAt' | 'severity' | 'organization';
 
@@ -95,8 +108,8 @@ const FindingsTable: React.FC<FindingsTableProps> = ({ findings }) => {
 
             const lowerQuery = query.toLowerCase();
             return (
-                finding.organization.toLowerCase().includes(lowerQuery) ||
-                finding.type.toLowerCase().includes(lowerQuery)
+                (finding.organization || '').toLowerCase().includes(lowerQuery) ||
+                (finding.type || '').toLowerCase().includes(lowerQuery)
             );
         });
     }, [findings, query]);
@@ -104,8 +117,8 @@ const FindingsTable: React.FC<FindingsTableProps> = ({ findings }) => {
     const sortedFindings = useMemo(() => {
         return [...filteredFindings].sort((a, b) => {
             if (sortKey === 'detectedAt') {
-                const aDate = new Date(a.detectedAt).getTime();
-                const bDate = new Date(b.detectedAt).getTime();
+                const aDate = new Date(a.detectedAt ?? 0).getTime();
+                const bDate = new Date(b.detectedAt ?? 0).getTime();
                 return sortDirection === 'asc' ? aDate - bDate : bDate - aDate;
             }
 
@@ -191,6 +204,7 @@ const FindingsTable: React.FC<FindingsTableProps> = ({ findings }) => {
                     <th className="py-2 cursor-pointer" onClick={() => toggleSort('severity')}>State</th>
                     <th className="py-2 cursor-pointer" onClick={() => toggleSort('organization')}>Organization</th>
                     <th className="py-2">Type</th>
+                    <th className="py-2">Related Transaction</th>
                     <th className="py-2 cursor-pointer" onClick={() => toggleSort('detectedAt')}>Detected</th>
                     <th className="py-2">Status</th>
                 </tr>
@@ -207,15 +221,46 @@ const FindingsTable: React.FC<FindingsTableProps> = ({ findings }) => {
                         </td>
 
                         <td className="py-2 font-medium text-gray-800">
-                            {finding.organization}
+                            {finding.organization ?? '—'}
                         </td>
 
                         <td className="py-2">
-                            {finding.type}
+                            <div
+                                className={`rounded border-l-4 p-3 ${
+                                    finding.severity === 'critical'
+                                        ? 'border-red-600 bg-red-50'
+                                        : 'border-yellow-500 bg-yellow-50'
+                                }`}
+                            >
+                                <p className="font-medium">
+                                    {finding.summary ?? finding.title ?? '—'}
+                                </p>
+                                <p className="text-sm text-gray-600">
+                                    {finding.recommendedAction ?? '—'}
+                                </p>
+                            </div>
+                        </td>
+
+                        <td className="py-2">
+                            <div className="flex flex-col gap-1">
+                                <span className="text-xs text-gray-500 uppercase tracking-wide">
+                                    Related Transaction
+                                </span>
+                                {finding.executionId ? (
+                                    <TransactionLink id={finding.executionId} />
+                                ) : (
+                                    <span className="text-gray-500">—</span>
+                                )}
+                                <span className="inline-flex items-center gap-1 rounded bg-blue-100 px-2 py-0.5 text-xs text-blue-700">
+                                    🔗 Traceable
+                                </span>
+                            </div>
                         </td>
 
                         <td className="py-2 text-gray-600">
-                            {new Date(finding.detectedAt).toLocaleString()}
+                            {finding.detectedAt
+                                ? new Date(finding.detectedAt).toLocaleString()
+                                : '—'}
                         </td>
 
                         <td className="py-2">
@@ -225,7 +270,7 @@ const FindingsTable: React.FC<FindingsTableProps> = ({ findings }) => {
                 ))}
                 {!sortedFindings.length && (
                     <tr>
-                        <td colSpan={5} className="py-3 text-center text-gray-500">
+                        <td colSpan={6} className="py-3 text-center text-gray-500">
                             No findings match the current filters.
                         </td>
                     </tr>

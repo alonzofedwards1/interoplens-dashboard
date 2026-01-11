@@ -1,12 +1,18 @@
 import React from 'react';
 
-import { InsightCard } from '../hooks/useDashboardMetrics';
+import { ComplianceStandard, InsightCard } from '../hooks/useDashboardMetrics';
 
 interface OperationalInsightsProps {
     cards: InsightCard[];
+    complianceStandard: ComplianceStandard;
+    onComplianceStandardChange: (standard: ComplianceStandard) => void;
 }
 
-const OperationalInsights: React.FC<OperationalInsightsProps> = ({ cards }) => (
+const OperationalInsights: React.FC<OperationalInsightsProps> = ({
+    cards,
+    complianceStandard,
+    onComplianceStandardChange,
+}) => (
     <section aria-labelledby="operational-insights" className="space-y-3">
         <div className="flex items-center justify-between">
             <h2
@@ -15,9 +21,27 @@ const OperationalInsights: React.FC<OperationalInsightsProps> = ({ cards }) => (
             >
                 Operational insights
             </h2>
-            <span className="text-sm text-gray-500">
-                Derived from current findings and PD execution telemetry
-            </span>
+            <div className="flex items-center gap-3 text-sm text-gray-500">
+                <span>
+                    Derived from current findings and PD execution telemetry
+                </span>
+                <label className="flex items-center gap-2 text-sm text-gray-600">
+                    Standard
+                    <select
+                        value={complianceStandard}
+                        onChange={event =>
+                            onComplianceStandardChange(
+                                event.target.value as ComplianceStandard
+                            )
+                        }
+                        className="border rounded px-2 py-1 text-sm"
+                    >
+                        <option value="TEFCA">TEFCA</option>
+                        <option value="IHE">IHE</option>
+                        <option value="HL7">HL7</option>
+                    </select>
+                </label>
+            </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">

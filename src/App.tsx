@@ -9,6 +9,8 @@ import TelemetryPage from './features/telemetry/TelemetryPage';
 import IntegrationIssuesPage from './features/integration-issues/IntegrationIssuesPage';
 import Reports from './features/reports/ReportsPage';
 import Settings from './features/settings/SettingsPage';
+import PDExecutions from './features/pd-executions/PDExecutionsPage';
+import TransactionDetailPage from './features/transactions/TransactionDetailPage';
 
 import CommitteeQueue from './features/committee/CommitteeQueue';
 import CommitteeCaseDetail from './features/committee/CommitteeCaseDetail';
@@ -54,6 +56,14 @@ const AppRoutes: React.FC = () => {
             <Route
                 path="/findings"
                 element={<ProtectedRoute>{<ViewAllFindings />}</ProtectedRoute>}
+            />
+            <Route
+                path="/pd-executions"
+                element={<ProtectedRoute>{<PDExecutions />}</ProtectedRoute>}
+            />
+            <Route
+                path="/transactions/:id"
+                element={<ProtectedRoute>{<TransactionDetailPage />}</ProtectedRoute>}
             />
             <Route
                 path="/telemetry"
