@@ -7,13 +7,13 @@ import BarChart from '../../components/BarChart';
 import PieChart from '../../components/PieChart';
 import Filters from '../../components/Filters';
 import FindingsTable from '../../components/FindingsTable';
-import ExampleFindings from '../../components/ExampleFindings';
 
 import { useServerData } from '../../lib/ServerDataContext';
 import AlertSummaryCards from './components/AlertSummaryCards';
 import OperationalInsights from './components/OperationalInsights';
 import useDashboardMetrics from './hooks/useDashboardMetrics';
 import useDashboardCards from './hooks/useDashboardCards';
+import { apiClient, FindingsCountResponse } from '../../lib/apiClient';
 
 /* ============================
    Types
@@ -102,9 +102,6 @@ const Dashboard: React.FC<DashboardProps> = ({ role, onLogout }) => {
 
                     {/* Findings Table */}
                     <FindingsTable findings={findings} />
-
-                    {/* Example Findings */}
-                    <ExampleFindings findings={findings} />
                 </main>
             </div>
         </div>
