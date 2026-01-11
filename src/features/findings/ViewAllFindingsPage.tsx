@@ -11,14 +11,14 @@ import {
     FaSortDown,
 } from 'react-icons/fa';
 
-import { Finding } from './data/findings.data';
+import { Finding } from '../../types/findings';
 import { useServerData } from '../../lib/ServerDataContext';
 
 /* ============================
    Severity Badge
 ============================ */
 
-const getSeverityBadge = (severity: Finding['severity']) => {
+const getSeverityBadge = (severity?: Finding['severity']) => {
     switch (severity) {
         case 'critical':
             return (
@@ -41,18 +41,28 @@ const getSeverityBadge = (severity: Finding['severity']) => {
     }
 };
 
+const safeUpper = (value?: string | null) => {
+    return value ? value.toUpperCase() : '—';
+};
+
+const formatDateTime = (value?: string | null) => {
+    if (!value) return '—';
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? '—' : date.toLocaleString();
+};
+
 /* ============================
    Sorting Types
 ============================ */
 
 type SortKey =
     | 'severity'
-    | 'organization'
-    | 'type'
-    | 'transaction'
-    | 'environment'
+    | 'executionType'
+    | 'category'
+    | 'summary'
     | 'status'
-    | 'detectedAt';
+    | 'firstSeenAt'
+    | 'lastSeenAt';
 
 type SortDirection = 'asc' | 'desc';
 
@@ -62,10 +72,14 @@ type SortDirection = 'asc' | 'desc';
 
 const ViewAllFindings: React.FC = () => {
     const navigate = useNavigate();
-    const { findings } = useServerData();
+    const { findings: rawFindings } = useServerData();
     const [expandedId, setExpandedId] = useState<string | null>(null);
-    const [sortKey, setSortKey] = useState<SortKey>('detectedAt');
+    const [sortKey, setSortKey] = useState<SortKey>('lastSeenAt');
     const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+    const findings = useMemo(
+        () => (Array.isArray(rawFindings) ? rawFindings : []),
+        [rawFindings]
+    );
 
     const toggleExpand = (id: string) => {
         setExpandedId(prev => (prev === id ? null : id));
@@ -88,15 +102,42 @@ const ViewAllFindings: React.FC = () => {
     };
 
     const sortedFindings = useMemo(() => {
+        const getSortValue = (finding: Finding) => {
+            switch (sortKey) {
+                case 'firstSeenAt':
+                    return new Date(finding.firstSeenAt ?? 0).getTime();
+                case 'lastSeenAt':
+                    return new Date(finding.lastSeenAt ?? 0).getTime();
+                case 'severity':
+                    return finding.severity ?? '';
+                case 'executionType':
+                    return finding.executionType ?? '';
+                case 'category':
+                    return finding.category ?? '';
+                case 'summary':
+                    return finding.summary ?? '';
+                case 'status':
+                    return finding.status ?? '';
+                default:
+                    return '';
+            }
+        };
+
         return [...findings].sort((a, b) => {
-            const aVal = a[sortKey as keyof Finding] ?? '';
-            const bVal = b[sortKey as keyof Finding] ?? '';
+            const aVal = getSortValue(a);
+            const bVal = getSortValue(b);
+
+            if (typeof aVal === 'number' && typeof bVal === 'number') {
+                return sortDirection === 'asc' ? aVal - bVal : bVal - aVal;
+            }
 
             if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
             if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
             return 0;
         });
-    }, [findings, sortKey, sortDirection]);
+    }, [findings, sortDirection, sortKey]);
+
+    console.log('Findings payload', findings);
 
     return (
         <div className="p-6 space-y-4">
@@ -125,30 +166,30 @@ const ViewAllFindings: React.FC = () => {
                         <th className="p-3 cursor-pointer" onClick={() => toggleSort('severity')}>
                             State {renderSortIcon('severity')}
                         </th>
-                        <th className="p-3 cursor-pointer" onClick={() => toggleSort('organization')}>
-                            Organization {renderSortIcon('organization')}
+                        <th className="p-3 cursor-pointer" onClick={() => toggleSort('executionType')}>
+                            Execution Type {renderSortIcon('executionType')}
                         </th>
-                        <th className="p-3 cursor-pointer" onClick={() => toggleSort('type')}>
-                            Finding Type {renderSortIcon('type')}
+                        <th className="p-3 cursor-pointer" onClick={() => toggleSort('category')}>
+                            Category {renderSortIcon('category')}
                         </th>
-                        <th className="p-3 cursor-pointer" onClick={() => toggleSort('transaction')}>
-                            Transaction {renderSortIcon('transaction')}
-                        </th>
-                        <th className="p-3 cursor-pointer" onClick={() => toggleSort('environment')}>
-                            Environment {renderSortIcon('environment')}
+                        <th className="p-3 cursor-pointer" onClick={() => toggleSort('summary')}>
+                            Summary {renderSortIcon('summary')}
                         </th>
                         <th className="p-3 cursor-pointer" onClick={() => toggleSort('status')}>
                             Status {renderSortIcon('status')}
                         </th>
-                        <th className="p-3 cursor-pointer" onClick={() => toggleSort('detectedAt')}>
-                            Detected {renderSortIcon('detectedAt')}
+                        <th className="p-3 cursor-pointer" onClick={() => toggleSort('firstSeenAt')}>
+                            First Seen {renderSortIcon('firstSeenAt')}
+                        </th>
+                        <th className="p-3 cursor-pointer" onClick={() => toggleSort('lastSeenAt')}>
+                            Last Seen {renderSortIcon('lastSeenAt')}
                         </th>
                         <th className="p-3"></th>
                     </tr>
                     </thead>
 
                     <tbody>
-                    {sortedFindings.map(finding => {
+                    {Array.isArray(sortedFindings) && sortedFindings.map((finding: Finding) => {
                         const isExpanded = expandedId === finding.id;
 
                         return (
@@ -159,37 +200,39 @@ const ViewAllFindings: React.FC = () => {
                                     </td>
 
                                     <td className="p-3 font-medium">
-                                        {finding.organization}
+                                        {safeUpper(finding.executionType)}
                                     </td>
 
                                     <td className="p-3">
-                                        {finding.type}
+                                        {safeUpper(finding.category)}
                                     </td>
 
                                     <td className="p-3">
-                                        {finding.transaction ?? '—'}
+                                        {finding.summary ?? '—'}
                                     </td>
 
                                     <td className="p-3 text-gray-600">
-                                        {finding.environment.toUpperCase()}
-                                    </td>
-
-                                    <td className="p-3">
-                                            <span
-                                                className={`font-semibold ${
-                                                    finding.status === 'compliant'
-                                                        ? 'text-green-600'
-                                                        : 'text-red-600'
-                                                }`}
-                                            >
-                                                {finding.status === 'compliant'
-                                                    ? 'Compliant'
-                                                    : 'Non-Compliant'}
-                                            </span>
+                                        <span
+                                            className={`font-semibold ${
+                                                finding.status === 'compliant'
+                                                    ? 'text-green-600'
+                                                    : 'text-red-600'
+                                            }`}
+                                        >
+                                            {finding.status === 'compliant'
+                                                ? 'Compliant'
+                                                : finding.status
+                                                  ? safeUpper(finding.status)
+                                                  : '—'}
+                                        </span>
                                     </td>
 
                                     <td className="p-3 text-gray-600">
-                                        {new Date(finding.detectedAt).toLocaleString()}
+                                        {formatDateTime(finding.firstSeenAt)}
+                                    </td>
+
+                                    <td className="p-3 text-gray-600">
+                                        {formatDateTime(finding.lastSeenAt)}
                                     </td>
 
                                     <td className="p-3 text-right">
@@ -217,10 +260,13 @@ const ViewAllFindings: React.FC = () => {
                                                         Finding Details
                                                     </div>
                                                     <div className="text-gray-600 mb-2">
-                                                        {finding.description}
+                                                        {finding.technicalDetail ?? '—'}
                                                     </div>
                                                     <div className="text-xs text-gray-500">
-                                                        Source: {finding.source}
+                                                        Recommended action: {finding.recommendedAction ?? '—'}
+                                                    </div>
+                                                    <div className="text-xs text-gray-500">
+                                                        Execution ID: {finding.executionId ?? '—'}
                                                     </div>
                                                 </div>
                                             </div>
