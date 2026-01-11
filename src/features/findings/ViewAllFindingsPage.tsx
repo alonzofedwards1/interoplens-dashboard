@@ -13,6 +13,7 @@ import {
 
 import { Finding } from '../../types/findings';
 import { useServerData } from '../../lib/ServerDataContext';
+import { TransactionLink } from '../../components/TransactionLink';
 
 /* ============================
    Severity Badge
@@ -137,8 +138,6 @@ const ViewAllFindings: React.FC = () => {
         });
     }, [findings, sortDirection, sortKey]);
 
-    console.log('Findings payload', findings);
-
     return (
         <div className="p-6 space-y-4">
             <button
@@ -175,6 +174,7 @@ const ViewAllFindings: React.FC = () => {
                         <th className="p-3 cursor-pointer" onClick={() => toggleSort('summary')}>
                             Summary {renderSortIcon('summary')}
                         </th>
+                        <th className="p-3">Related Transaction</th>
                         <th className="p-3 cursor-pointer" onClick={() => toggleSort('status')}>
                             Status {renderSortIcon('status')}
                         </th>
@@ -208,7 +208,36 @@ const ViewAllFindings: React.FC = () => {
                                     </td>
 
                                     <td className="p-3">
-                                        {finding.summary ?? '—'}
+                                        <div
+                                            className={`rounded border-l-4 p-3 ${
+                                                finding.severity === 'critical'
+                                                    ? 'border-red-600 bg-red-50'
+                                                    : 'border-yellow-500 bg-yellow-50'
+                                            }`}
+                                        >
+                                            <p className="font-medium">
+                                                {finding.summary ?? '—'}
+                                            </p>
+                                            <p className="text-sm text-gray-600">
+                                                {finding.recommendedAction ?? '—'}
+                                            </p>
+                                        </div>
+                                    </td>
+
+                                    <td className="p-3">
+                                        <div className="flex flex-col gap-1">
+                                            <span className="text-xs text-gray-500 uppercase tracking-wide">
+                                                Related Transaction
+                                            </span>
+                                            {finding.executionId ? (
+                                                <TransactionLink id={finding.executionId} />
+                                            ) : (
+                                                <span className="text-gray-500">—</span>
+                                            )}
+                                            <span className="inline-flex items-center gap-1 rounded bg-blue-100 px-2 py-0.5 text-xs text-blue-700">
+                                                🔗 Traceable
+                                            </span>
+                                        </div>
                                     </td>
 
                                     <td className="p-3 text-gray-600">
@@ -247,7 +276,7 @@ const ViewAllFindings: React.FC = () => {
 
                                 {isExpanded && (
                                     <tr className="bg-gray-50 border-b">
-                                        <td colSpan={8} className="p-4">
+                                        <td colSpan={9} className="p-4">
                                             <div className="flex gap-3 text-sm text-gray-700">
                                                 {finding.severity === 'critical' ? (
                                                     <FaExclamationCircle className="text-red-500 mt-1" />
