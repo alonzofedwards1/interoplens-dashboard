@@ -30,13 +30,16 @@ interface DashboardProps {
 
 const Dashboard: React.FC<DashboardProps> = ({ role, onLogout }) => {
     const navigate = useNavigate();
-    const { findings, pdExecutions, committeeQueue, loading, error, refresh } =
+    const { findings, pdExecutions, telemetryEvents, loading, error, refresh } =
         useServerData();
+    const [complianceStandard, setComplianceStandard] =
+        React.useState<'TEFCA' | 'IHE' | 'HL7'>('TEFCA');
 
     const { alertCards, insightCards } = useDashboardMetrics(
         findings,
         pdExecutions,
-        committeeQueue
+        telemetryEvents,
+        complianceStandard
     );
     const { cards: alertSummaryCards } = useDashboardCards(alertCards);
     console.log('[DashboardPage] pdExecutions', {
@@ -82,7 +85,11 @@ const Dashboard: React.FC<DashboardProps> = ({ role, onLogout }) => {
                     />
 
                     {/* Operational Insights */}
-                    <OperationalInsights cards={insightCards} />
+                    <OperationalInsights
+                        cards={insightCards}
+                        complianceStandard={complianceStandard}
+                        onComplianceStandardChange={setComplianceStandard}
+                    />
 
                     {/* Charts */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
