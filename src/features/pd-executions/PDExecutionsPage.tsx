@@ -2,20 +2,24 @@ import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaArrowLeft } from 'react-icons/fa';
 
-import { PDExecution } from './data/pdExecutions.data';
+import { PdExecution } from '../../types';
 import { useUserPreference } from '../../lib/userPreferences';
 import { useServerData } from '../../lib/ServerDataContext';
+import { TransactionLink } from '../../components/TransactionLink';
+import { Finding } from '../../types/findings';
 
 /* ============================
    Helpers
 ============================ */
 
-const formatOutcome = (outcome: PDExecution['outcome']) => {
-    switch (outcome) {
+const formatOutcome = (outcome?: string) => {
+    switch ((outcome ?? '').toLowerCase()) {
         case 'success':
             return { label: 'Success', color: 'bg-green-100 text-green-800' };
         case 'failure':
             return { label: 'Failure', color: 'bg-red-100 text-red-800' };
+        default:
+            return { label: 'Unknown', color: 'bg-gray-100 text-gray-700' };
     }
 };
 
@@ -31,7 +35,7 @@ type ExecutionSortKey =
 
 type ExecutionPreferences = {
     search: string;
-    outcomeFilter: PDExecution['outcome'] | 'all';
+    outcomeFilter: 'success' | 'failure' | 'all';
     sortKey: ExecutionSortKey;
     sortDirection: 'asc' | 'desc';
 };
@@ -45,7 +49,7 @@ const defaultExecutionPreferences: ExecutionPreferences = {
 
 const PDExecutions: React.FC = () => {
     const navigate = useNavigate();
-    const { pdExecutions, loading } = useServerData();
+    const { pdExecutions, loading, findings } = useServerData();
     const [preferences, setPreferences] = useUserPreference(
         'pd.executions.table',
         defaultExecutionPreferences
@@ -55,14 +59,15 @@ const PDExecutions: React.FC = () => {
 
     const filteredExecutions = useMemo(() => {
         return pdExecutions.filter(exec => {
-            const matchesOutcome = outcomeFilter === 'all' || exec.outcome === outcomeFilter;
+            const outcome = (exec.outcome ?? '').toLowerCase();
+            const matchesOutcome = outcomeFilter === 'all' || outcome === outcomeFilter;
 
             if (!search.trim()) return matchesOutcome;
 
             const query = search.toLowerCase();
             const matchesText =
-                exec.requestId.toLowerCase().includes(query) ||
-                exec.channelId.toLowerCase().includes(query);
+                (exec.requestId ?? '').toLowerCase().includes(query) ||
+                (exec.channelId ?? '').toLowerCase().includes(query);
 
             return matchesOutcome && matchesText;
         });
@@ -71,8 +76,8 @@ const PDExecutions: React.FC = () => {
     const sortedExecutions = useMemo(() => {
         return [...filteredExecutions].sort((a, b) => {
             if (sortKey === 'completedAt') {
-                const aTs = new Date(a.completedAt).getTime();
-                const bTs = new Date(b.completedAt).getTime();
+                const aTs = new Date(a.completedAt ?? 0).getTime();
+                const bTs = new Date(b.completedAt ?? 0).getTime();
                 return sortDirection === 'asc' ? aTs - bTs : bTs - aTs;
             }
 
@@ -86,16 +91,29 @@ const PDExecutions: React.FC = () => {
         });
     }, [filteredExecutions, sortDirection, sortKey]);
 
+    const findingsByRequestId = useMemo(() => {
+        return (findings as Finding[]).reduce<Record<string, number>>(
+            (acc, finding) => {
+                if (!finding.executionId) return acc;
+                acc[finding.executionId] = (acc[finding.executionId] || 0) + 1;
+                return acc;
+            },
+            {}
+        );
+    }, [findings]);
+
     const summaryStats = useMemo(() => {
         const totalExecutions = pdExecutions.length;
-        const failures = pdExecutions.filter(e => e.outcome === 'failure').length;
+        const failures = pdExecutions.filter(
+            e => (e.outcome ?? '').toLowerCase() === 'failure'
+        ).length;
         const failureRate = totalExecutions
             ? ((failures / totalExecutions) * 100).toFixed(1)
             : '0.0';
 
         const hourCounts: Record<string, number> = {};
         pdExecutions.forEach(e => {
-            const hour = new Date(e.completedAt)
+            const hour = new Date(e.completedAt ?? 0)
                 .getUTCHours()
                 .toString()
                 .padStart(2, '0');
@@ -246,6 +264,7 @@ const PDExecutions: React.FC = () => {
                     <tr className="text-left text-sm text-gray-700">
                         <th className="p-3 cursor-pointer" onClick={() => toggleSort('completedAt')}>Completed At</th>
                         <th className="p-3 cursor-pointer" onClick={() => toggleSort('requestId')}>Request ID</th>
+                        <th className="p-3">Traceability</th>
                         <th className="p-3">Channel ID</th>
                         <th className="p-3">Environment</th>
                         <th className="p-3 cursor-pointer" onClick={() => toggleSort('outcome')}>Outcome</th>
@@ -255,20 +274,47 @@ const PDExecutions: React.FC = () => {
                     <tbody>
                     {sortedExecutions.map(exec => {
                         const outcome = formatOutcome(exec.outcome);
+                        const findingsCount = findingsByRequestId[exec.requestId] ?? 0;
 
                         return (
                             <tr key={exec.requestId} className="border-t text-sm">
                                 <td className="p-3 font-mono">
-                                    {new Date(exec.completedAt).toUTCString()}
+                                    {exec.completedAt
+                                        ? new Date(exec.completedAt).toUTCString()
+                                        : '—'}
                                 </td>
                                 <td className="p-3">
-                                    {exec.requestId}
+                                    <span className="font-mono text-xs">{exec.requestId ?? '—'}</span>
                                 </td>
                                 <td className="p-3">
-                                    {exec.channelId}
+                                    <div className="flex flex-col gap-2 text-sm">
+                                        <div>
+                                            <span className="text-gray-500 uppercase tracking-wide text-xs">
+                                                Transaction ID
+                                            </span>
+                                            <div>
+                                                {exec.requestId ? (
+                                                    <TransactionLink id={exec.requestId} />
+                                                ) : (
+                                                    <span className="text-gray-500">—</span>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">
+                                                {findingsCount} Findings
+                                            </span>
+                                            <span className="inline-flex items-center gap-1 rounded bg-blue-100 px-2 py-0.5 text-xs text-blue-700">
+                                                🔗 Traceable
+                                            </span>
+                                        </div>
+                                    </div>
                                 </td>
                                 <td className="p-3">
-                                    {exec.environment}
+                                    {exec.channelId ?? '—'}
+                                </td>
+                                <td className="p-3">
+                                    {exec.environment ?? '—'}
                                 </td>
                                 <td className="p-3">
                                     <span
@@ -278,8 +324,8 @@ const PDExecutions: React.FC = () => {
                                     </span>
                                 </td>
                                 <td className="p-3">
-                                    {exec.executionTimeMs
-                                        ? `${exec.executionTimeMs} ms`
+                                    {exec.executionTimeMs ?? exec.durationMs
+                                        ? `${exec.executionTimeMs ?? exec.durationMs} ms`
                                         : '—'}
                                 </td>
                             </tr>
@@ -287,7 +333,7 @@ const PDExecutions: React.FC = () => {
                     })}
                     {!sortedExecutions.length && (
                         <tr>
-                            <td colSpan={6} className="p-4 text-center text-gray-500">
+                            <td colSpan={7} className="p-4 text-center text-gray-500">
                                 No executions match the current filters.
                             </td>
                         </tr>

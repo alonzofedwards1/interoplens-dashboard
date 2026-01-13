@@ -1,18 +1,47 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { oidQueueData } from "./data/oidQueue.data";
-import { OidStatus } from "./data/oidStatus.data";
+import { fetchOids } from "../../lib/api/oids";
+import { Oid } from "../../types";
 
 const OidQueue = () => {
     const navigate = useNavigate();
 
-    const [statusFilter, setStatusFilter] = useState<OidStatus | "ALL">("ALL");
+    const [statusFilter, setStatusFilter] = useState<string | "ALL">("ALL");
     const [confidenceFilter, setConfidenceFilter] = useState<"ALL" | "HIGH" | "MEDIUM" | "LOW">("ALL");
     const [sortKey, setSortKey] = useState<"lastSeen" | "oid" | "status" | "displayName">("lastSeen");
     const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+    const [oids, setOids] = useState<Oid[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        let isMounted = true;
+        const loadOids = async () => {
+            try {
+                const data = await fetchOids();
+                if (isMounted) {
+                    setOids(data);
+                    setError(null);
+                }
+            } catch (err) {
+                if (isMounted) {
+                    setError(err instanceof Error ? err.message : "Failed to load OIDs");
+                }
+            } finally {
+                if (isMounted) {
+                    setLoading(false);
+                }
+            }
+        };
+
+        loadOids();
+        return () => {
+            isMounted = false;
+        };
+    }, []);
 
     const filteredAndSorted = useMemo(() => {
-        const filtered = oidQueueData.filter(item => {
+        const filtered = oids.filter(item => {
             if (statusFilter !== "ALL" && item.status !== statusFilter) return false;
             if (confidenceFilter !== "ALL" && item.confidence !== confidenceFilter) return false;
             return true;
@@ -31,7 +60,7 @@ const OidQueue = () => {
             if (aVal > bVal) return sortDirection === "asc" ? 1 : -1;
             return 0;
         });
-    }, [confidenceFilter, sortDirection, sortKey, statusFilter]);
+    }, [confidenceFilter, oids, sortDirection, sortKey, statusFilter]);
 
     return (
         <div className="p-6">
@@ -45,10 +74,9 @@ const OidQueue = () => {
                     onChange={e => setStatusFilter(e.target.value as any)}
                 >
                     <option value="ALL">All Statuses</option>
-                    <option value="UNKNOWN">Unknown</option>
-                    <option value="ACTIVE">Active</option>
-                    <option value="DEPRECATED">Deprecated</option>
-                    <option value="PENDING">Pending</option>
+                    <option value="provisional">Provisional</option>
+                    <option value="approved">Approved</option>
+                    <option value="deprecated">Deprecated</option>
                 </select>
 
                 <select
@@ -87,44 +115,57 @@ const OidQueue = () => {
                 </div>
             </div>
 
-            {/* Table */}
-            <div className="overflow-x-auto">
-                <table className="min-w-full border text-sm">
-                    <thead className="bg-gray-100">
-                    <tr>
-                        <th className="p-2 text-left">OID</th>
-                        <th className="p-2 text-left">Display Name</th>
-                        <th className="p-2 text-left">Owner</th>
-                        <th className="p-2 text-left">Status</th>
-                        <th className="p-2 text-left">Confidence</th>
-                        <th className="p-2 text-left">Last Seen</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    {filteredAndSorted.map(oid => (
-                        <tr
-                            key={oid.oid}
-                            className="border-t cursor-pointer hover:bg-gray-50"
-                            onClick={() => navigate(`/oids/${encodeURIComponent(oid.oid)}`)}
-                        >
-                            <td className="p-2 font-mono">{oid.oid}</td>
-                            <td className="p-2">{oid.displayName}</td>
-                            <td className="p-2">{oid.ownerOrg ?? "Unassigned"}</td>
-                            <td className="p-2">{oid.status}</td>
-                            <td className="p-2">{oid.confidence}</td>
-                            <td className="p-2">{oid.lastSeen}</td>
-                        </tr>
-                    ))}
-                    {filteredAndSorted.length === 0 && (
+            {error && (
+                <div className="mb-4 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                    {error}
+                </div>
+            )}
+
+            {loading ? (
+                <div className="rounded border border-dashed p-6 text-center text-gray-500">
+                    Loading OID directory...
+                </div>
+            ) : (
+                <div className="overflow-x-auto">
+                    <table className="min-w-full border text-sm">
+                        <thead className="bg-gray-100">
                         <tr>
-                            <td colSpan={6} className="p-4 text-center text-gray-500">
-                                No OIDs match the selected filters
-                            </td>
+                            <th className="p-2 text-left">OID</th>
+                            <th className="p-2 text-left">Display Name</th>
+                            <th className="p-2 text-left">Owner</th>
+                            <th className="p-2 text-left">Status</th>
+                            <th className="p-2 text-left">Confidence</th>
+                            <th className="p-2 text-left">Last Seen</th>
                         </tr>
-                    )}
-                    </tbody>
-                </table>
-            </div>
+                        </thead>
+                        <tbody>
+                        {filteredAndSorted.map(oid => (
+                            <tr
+                                key={oid.oid}
+                                className="border-t cursor-pointer hover:bg-gray-50"
+                                onClick={() => navigate(`/oids/${encodeURIComponent(oid.oid)}`)}
+                            >
+                                <td className="p-2 font-mono">{oid.oid}</td>
+                                <td className="p-2">{oid.displayName}</td>
+                                <td className="p-2">{oid.ownerOrg}</td>
+                                <td className="p-2">{oid.status}</td>
+                                <td className="p-2">{oid.confidence}</td>
+                                <td className="p-2">{oid.lastSeen}</td>
+                            </tr>
+                        ))}
+                        {filteredAndSorted.length === 0 && (
+                            <tr>
+                                <td colSpan={6} className="p-4 text-center text-gray-500">
+                                    {oids.length === 0
+                                        ? "No OIDs observed yet."
+                                        : "No OIDs match the selected filters"}
+                                </td>
+                            </tr>
+                        )}
+                        </tbody>
+                    </table>
+                </div>
+            )}
         </div>
     );
 };

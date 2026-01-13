@@ -1,7 +1,7 @@
-import { OidDirectoryRecord } from "../data/oidDirectory.data";
+import type { OidDetail } from "../../../types";
 
 interface Props {
-    record: OidDirectoryRecord;
+    record: OidDetail;
 }
 
 const ResolutionPanel = ({ record }: Props) => {
@@ -14,8 +14,7 @@ const ResolutionPanel = ({ record }: Props) => {
             </p>
 
             <p className="text-sm text-gray-600 mt-2">
-                {record.notes ??
-                    "No resolution notes have been recorded for this OID."}
+                Resolution notes are managed by governance workflows.
             </p>
         </div>
     );

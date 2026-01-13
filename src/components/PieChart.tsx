@@ -7,7 +7,7 @@ import {
     Tooltip
 } from 'recharts';
 
-import { Finding } from '../features/findings/data/findings.data';
+import { Finding } from '../types';
 
 /* ============================
    Derive Compliance Data
@@ -45,27 +45,29 @@ const PieChartComponent: React.FC<Props> = ({ findings }) => {
                 Compliance Status
             </h2>
 
-            <ResponsiveContainer width="100%" height="90%">
-                <PieChart>
-                    <Tooltip />
-                    <Pie
-                        data={data}
-                        dataKey="value"
-                        nameKey="name"
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={70}
-                        label={({ value }) => value}
-                    >
-                        {data.map((entry, index) => (
-                            <Cell
-                                key={entry.name}
-                                fill={COLORS[index]}
-                            />
-                        ))}
-                    </Pie>
-                </PieChart>
-            </ResponsiveContainer>
+            <div className="h-[240px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                        <Tooltip />
+                        <Pie
+                            data={data}
+                            dataKey="value"
+                            nameKey="name"
+                            cx="50%"
+                            cy="50%"
+                            outerRadius={70}
+                            label={({ value }) => value}
+                        >
+                            {data.map((entry, index) => (
+                                <Cell
+                                    key={entry.name}
+                                    fill={COLORS[index]}
+                                />
+                            ))}
+                        </Pie>
+                    </PieChart>
+                </ResponsiveContainer>
+            </div>
         </div>
     );
 };

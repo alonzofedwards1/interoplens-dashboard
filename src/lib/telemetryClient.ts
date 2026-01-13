@@ -1,5 +1,6 @@
 import { TELEMETRY_BASE_URL } from '../config/api';
 import { TelemetryEvent } from '../telemetry/TelemetryEvent';
+import { safeJson } from './apiClient';
 
 type RawTelemetryEvent = {
     eventId: string;
@@ -46,7 +47,7 @@ export async function fetchTelemetryEvents(): Promise<TelemetryEvent[]> {
         throw new Error(`Failed to fetch telemetry events (${res.status})`);
     }
 
-    const data = await res.json();
+    const data = await safeJson(res);
 
     if (!Array.isArray(data)) {
         throw new Error('Unexpected telemetry response format');

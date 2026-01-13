@@ -1,16 +1,15 @@
 import React from 'react';
-import { Finding } from '../features/findings/data/findings.data';
-import { PDExecution } from '../features/pd-executions/data/pdExecutions.data';
+import { Finding, PdExecution, TelemetryEvent } from '../types';
 import { CommitteeQueueItem } from '../features/committee/data/committeeQueue.data';
 import { apiClient, ApiClient } from './apiClient';
-import { TelemetryEvent } from '../telemetry/TelemetryEvent';
 interface ServerDataContextValue {
     findings: Finding[];
-    pdExecutions: PDExecution[];
+    pdExecutions: PdExecution[];
     committeeQueue: CommitteeQueueItem[];
     telemetryEvents: TelemetryEvent[];
     loading: boolean;
     error?: string;
+    telemetryWarning?: string;
     refresh: () => Promise<void>;
 }
 
@@ -40,12 +39,24 @@ const loadFromApi = async (client: ApiClient) => {
     const telemetryEvents =
         telemetryResult.status === 'fulfilled' ? telemetryResult.value : [];
 
-    const errors = [
-        findingsResult,
-        pdExecutionsResult,
-        committeeQueueResult,
-        telemetryResult,
-    ].filter(result => result.status === 'rejected') as PromiseRejectedResult[];
+    if (committeeQueueResult.status === 'rejected') {
+        console.info('Committee queue not enabled', committeeQueueResult.reason);
+    }
+
+    const telemetryWarning =
+        telemetryResult.status === 'rejected'
+            ? (telemetryResult.reason instanceof Error
+                  ? telemetryResult.reason.message
+                  : String(telemetryResult.reason))
+            : undefined;
+
+    if (telemetryWarning) {
+        console.warn('Telemetry unavailable', telemetryWarning);
+    }
+
+    const errors = [findingsResult, pdExecutionsResult].filter(
+        result => result.status === 'rejected'
+    ) as PromiseRejectedResult[];
 
     console.log('[ServerDataContext.loadFromApi] pdExecutions', {
         length: pdExecutions.length,
@@ -58,6 +69,7 @@ const loadFromApi = async (client: ApiClient) => {
         pdExecutions,
         committeeQueue,
         telemetryEvents,
+        telemetryWarning,
         error:
             errors.length > 0
                 ? errors
@@ -76,11 +88,12 @@ export const ServerDataProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
     const [state, setState] = React.useState({
         findings: [] as Finding[],
-        pdExecutions: [] as PDExecution[],
+        pdExecutions: [] as PdExecution[],
         committeeQueue: [] as CommitteeQueueItem[],
         telemetryEvents: [] as TelemetryEvent[],
         loading: true,
         error: undefined as string | undefined,
+        telemetryWarning: undefined as string | undefined,
     });
 
     const refresh = React.useCallback(async () => {
