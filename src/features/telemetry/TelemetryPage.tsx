@@ -4,6 +4,7 @@ import { FaArrowLeft, FaChartBar, FaClock, FaTimesCircle, FaCheckCircle } from '
 
 import { TelemetryEvent } from '../../telemetry/TelemetryEvent';
 import { fetchTelemetryEvents } from '../../lib/telemetryClient';
+import { TransactionLink } from '../../components/TransactionLink';
 
 const formatStatus = (status?: string) => {
     const normalized = (status || 'UNKNOWN').toUpperCase();
@@ -187,6 +188,9 @@ const TelemetryPage: React.FC = () => {
                         </p>
                     </div>
                 </div>
+                <span className="inline-flex items-center gap-1 rounded bg-blue-100 px-2 py-0.5 text-xs text-blue-700">
+                    🔗 Traceable
+                </span>
                 <button
                     onClick={loadTelemetry}
                     className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
@@ -261,6 +265,7 @@ const TelemetryPage: React.FC = () => {
                 <table className="min-w-full border-collapse">
                     <thead className="bg-gray-100 text-left text-sm text-gray-700">
                         <tr>
+                            <th className="p-3">Event ID</th>
                             <th className="p-3">Timestamp</th>
                             <th className="p-3">Event Type</th>
                             <th className="p-3">Status</th>
@@ -277,6 +282,9 @@ const TelemetryPage: React.FC = () => {
                             const status = formatStatus(statusValue);
                             return (
                                 <tr key={event.eventId} className="border-t text-sm">
+                                    <td className="p-3 font-mono text-xs text-gray-700">
+                                        {event.eventId}
+                                    </td>
                                     <td className="p-3 whitespace-nowrap">
                                         {formatTimestamp(event.timestamp)}
                                     </td>
@@ -290,7 +298,11 @@ const TelemetryPage: React.FC = () => {
                                         </span>
                                     </td>
                                     <td className="p-3 font-mono break-all">
-                                        {event.requestId || '—'}
+                                        {event.requestId ? (
+                                            <TransactionLink id={event.requestId} />
+                                        ) : (
+                                            '—'
+                                        )}
                                     </td>
                                     <td className="p-3 font-mono break-all">
                                         {event.channelId || '—'}
@@ -305,7 +317,7 @@ const TelemetryPage: React.FC = () => {
                         })}
                         {!sortedEvents.length && (
                             <tr>
-                                <td colSpan={8} className="p-4 text-center text-gray-500">
+                                <td colSpan={9} className="p-4 text-center text-gray-500">
                                     No telemetry events available.
                                 </td>
                             </tr>

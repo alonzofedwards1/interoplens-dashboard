@@ -5,6 +5,8 @@ import { FaArrowLeft } from 'react-icons/fa';
 import { PDExecution } from './data/pdExecutions.data';
 import { useUserPreference } from '../../lib/userPreferences';
 import { useServerData } from '../../lib/ServerDataContext';
+import { TransactionLink } from '../../components/TransactionLink';
+import { Finding } from '../../types/findings';
 
 /* ============================
    Helpers
@@ -45,7 +47,7 @@ const defaultExecutionPreferences: ExecutionPreferences = {
 
 const PDExecutions: React.FC = () => {
     const navigate = useNavigate();
-    const { pdExecutions, loading } = useServerData();
+    const { pdExecutions, loading, findings } = useServerData();
     const [preferences, setPreferences] = useUserPreference(
         'pd.executions.table',
         defaultExecutionPreferences
@@ -85,6 +87,17 @@ const PDExecutions: React.FC = () => {
             return 0;
         });
     }, [filteredExecutions, sortDirection, sortKey]);
+
+    const findingsByRequestId = useMemo(() => {
+        return (findings as Finding[]).reduce<Record<string, number>>(
+            (acc, finding) => {
+                if (!finding.executionId) return acc;
+                acc[finding.executionId] = (acc[finding.executionId] || 0) + 1;
+                return acc;
+            },
+            {}
+        );
+    }, [findings]);
 
     const summaryStats = useMemo(() => {
         const totalExecutions = pdExecutions.length;
@@ -246,6 +259,7 @@ const PDExecutions: React.FC = () => {
                     <tr className="text-left text-sm text-gray-700">
                         <th className="p-3 cursor-pointer" onClick={() => toggleSort('completedAt')}>Completed At</th>
                         <th className="p-3 cursor-pointer" onClick={() => toggleSort('requestId')}>Request ID</th>
+                        <th className="p-3">Traceability</th>
                         <th className="p-3">Channel ID</th>
                         <th className="p-3">Environment</th>
                         <th className="p-3 cursor-pointer" onClick={() => toggleSort('outcome')}>Outcome</th>
@@ -255,6 +269,7 @@ const PDExecutions: React.FC = () => {
                     <tbody>
                     {sortedExecutions.map(exec => {
                         const outcome = formatOutcome(exec.outcome);
+                        const findingsCount = findingsByRequestId[exec.requestId] ?? 0;
 
                         return (
                             <tr key={exec.requestId} className="border-t text-sm">
@@ -262,7 +277,27 @@ const PDExecutions: React.FC = () => {
                                     {new Date(exec.completedAt).toUTCString()}
                                 </td>
                                 <td className="p-3">
-                                    {exec.requestId}
+                                    <span className="font-mono text-xs">{exec.requestId}</span>
+                                </td>
+                                <td className="p-3">
+                                    <div className="flex flex-col gap-2 text-sm">
+                                        <div>
+                                            <span className="text-gray-500 uppercase tracking-wide text-xs">
+                                                Transaction ID
+                                            </span>
+                                            <div>
+                                                <TransactionLink id={exec.requestId} />
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">
+                                                {findingsCount} Findings
+                                            </span>
+                                            <span className="inline-flex items-center gap-1 rounded bg-blue-100 px-2 py-0.5 text-xs text-blue-700">
+                                                🔗 Traceable
+                                            </span>
+                                        </div>
+                                    </div>
                                 </td>
                                 <td className="p-3">
                                     {exec.channelId}
@@ -287,7 +322,7 @@ const PDExecutions: React.FC = () => {
                     })}
                     {!sortedExecutions.length && (
                         <tr>
-                            <td colSpan={6} className="p-4 text-center text-gray-500">
+                            <td colSpan={7} className="p-4 text-center text-gray-500">
                                 No executions match the current filters.
                             </td>
                         </tr>

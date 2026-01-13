@@ -1,35 +1,23 @@
 export type OidStatus =
-    | "UNKNOWN"
-    | "ACTIVE"
-    | "DEPRECATED"
-    | "PENDING";
+    | "provisional"
+    | "approved"
+    | "deprecated";
 
 export const OID_STATUS_LABELS: Record<OidStatus, string> = {
-    UNKNOWN: "Unknown",
-    ACTIVE: "Active",
-    DEPRECATED: "Deprecated",
-    PENDING: "Pending Approval"
+    provisional: "Provisional",
+    approved: "Approved",
+    deprecated: "Deprecated"
 };
 
 export const OID_STATUS_ACTIONS: Record<OidStatus, string[]> = {
-    UNKNOWN: [
-        "ASSIGN_ORG",
-        "MAP_ALIAS",
-        "IGNORE",
-        "CREATE_FINDING"
-    ],
-    ACTIVE: [
-        "ADD_ALIAS",
-        "DEPRECATE",
-        "CREATE_FINDING"
-    ],
-    DEPRECATED: [
-        "REACTIVATE",
-        "MARK_MIGRATION_COMPLETE",
-        "CREATE_FINDING"
-    ],
-    PENDING: [
+    provisional: [
         "APPROVE",
         "REJECT"
+    ],
+    approved: [
+        "DEPRECATE"
+    ],
+    deprecated: [
+        "REACTIVATE"
     ]
 };
