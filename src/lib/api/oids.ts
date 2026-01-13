@@ -1,8 +1,9 @@
+import { apiGet } from '../apiClient';
+
 export type OidStatus =
-    | 'UNKNOWN'
-    | 'ACTIVE'
-    | 'PENDING'
-    | 'DEPRECATED';
+    | 'provisional'
+    | 'approved'
+    | 'deprecated';
 
 export type OidConfidence =
     | 'HIGH'
@@ -12,7 +13,7 @@ export type OidConfidence =
 export interface OidRecord {
     oid: string;
     displayName: string;
-    ownerOrg?: string;
+    ownerOrg: string;
     status: OidStatus;
     confidence: OidConfidence;
     firstSeen: string;
@@ -29,15 +30,11 @@ export interface OidDetail extends OidRecord {
 }
 
 export async function fetchOids(): Promise<OidRecord[]> {
-    const res = await fetch('/api/oids');
-    if (!res.ok) throw new Error('Failed to load OIDs');
-    return res.json();
+    return apiGet<OidRecord[]>('/api/oids');
 }
 
 export async function fetchOidDetail(oid: string): Promise<OidDetail> {
-    const res = await fetch(`/api/oids/${encodeURIComponent(oid)}`);
-    if (!res.ok) throw new Error('Failed to load OID detail');
-    return res.json();
+    return apiGet<OidDetail>(`/api/oids/${encodeURIComponent(oid)}`);
 }
 
 export async function submitOidGovernance(

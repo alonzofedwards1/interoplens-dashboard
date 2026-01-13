@@ -29,8 +29,15 @@ interface DashboardProps {
 
 const Dashboard: React.FC<DashboardProps> = ({ role, onLogout }) => {
     const navigate = useNavigate();
-    const { findings, pdExecutions, telemetryEvents, loading, error, refresh } =
-        useServerData();
+    const {
+        findings,
+        pdExecutions,
+        telemetryEvents,
+        loading,
+        error,
+        telemetryWarning,
+        refresh,
+    } = useServerData();
     const [complianceStandard, setComplianceStandard] =
         React.useState<'TEFCA' | 'IHE' | 'HL7'>('TEFCA');
 
@@ -75,6 +82,11 @@ const Dashboard: React.FC<DashboardProps> = ({ role, onLogout }) => {
                             >
                                 Retry
                             </button>
+                        </div>
+                    )}
+                    {telemetryWarning && (
+                        <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
+                            Telemetry unavailable: {telemetryWarning}. Observability data will appear once the service recovers.
                         </div>
                     )}
 

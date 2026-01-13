@@ -57,71 +57,7 @@ const OidDetail = () => {
 
     const renderActions = (currentRecord: OidDetailRecord) => {
         switch (currentRecord.status) {
-            case "UNKNOWN":
-                return (
-                    <>
-                        <button
-                            className="btn-primary"
-                            onClick={() => handleGovernanceAction("ASSIGN_ORG")}
-                            disabled={isSubmitting}
-                        >
-                            Assign Organization
-                        </button>
-                        <button
-                            className="btn-secondary"
-                            onClick={() => handleGovernanceAction("MAP_ALIAS")}
-                            disabled={isSubmitting}
-                        >
-                            Map as Alias
-                        </button>
-                        <button
-                            className="btn-outline"
-                            onClick={() => handleGovernanceAction("IGNORE")}
-                            disabled={isSubmitting}
-                        >
-                            Ignore
-                        </button>
-                    </>
-                );
-            case "ACTIVE":
-                return (
-                    <>
-                        <button
-                            className="btn-primary"
-                            onClick={() => handleGovernanceAction("ADD_ALIAS")}
-                            disabled={isSubmitting}
-                        >
-                            Add Alias
-                        </button>
-                        <button
-                            className="btn-warning"
-                            onClick={() => handleGovernanceAction("DEPRECATE")}
-                            disabled={isSubmitting}
-                        >
-                            Deprecate
-                        </button>
-                    </>
-                );
-            case "DEPRECATED":
-                return (
-                    <>
-                        <button
-                            className="btn-primary"
-                            onClick={() => handleGovernanceAction("REACTIVATE")}
-                            disabled={isSubmitting}
-                        >
-                            Reactivate
-                        </button>
-                        <button
-                            className="btn-outline"
-                            onClick={() => handleGovernanceAction("MARK_MIGRATION_COMPLETE")}
-                            disabled={isSubmitting}
-                        >
-                            Mark Migration Complete
-                        </button>
-                    </>
-                );
-            case "PENDING":
+            case "provisional":
                 return (
                     <>
                         <button
@@ -139,6 +75,26 @@ const OidDetail = () => {
                             Reject
                         </button>
                     </>
+                );
+            case "approved":
+                return (
+                    <button
+                        className="btn-warning"
+                        onClick={() => handleGovernanceAction("DEPRECATE")}
+                        disabled={isSubmitting}
+                    >
+                        Deprecate
+                    </button>
+                );
+            case "deprecated":
+                return (
+                    <button
+                        className="btn-primary"
+                        onClick={() => handleGovernanceAction("REACTIVATE")}
+                        disabled={isSubmitting}
+                    >
+                        Reactivate
+                    </button>
                 );
             default:
                 return null;
@@ -190,7 +146,7 @@ const OidDetail = () => {
             <div className="border rounded p-4 mb-4">
                 <p><strong>Name:</strong> {record.displayName}</p>
                 <p><strong>Status:</strong> {record.status}</p>
-                <p><strong>Owner:</strong> {record.ownerOrg ?? "Unassigned"}</p>
+                <p><strong>Owner:</strong> {record.ownerOrg}</p>
                 <p><strong>Confidence:</strong> {record.confidence}</p>
                 <p><strong>First Seen:</strong> {record.firstSeen}</p>
                 <p><strong>Last Seen:</strong> {record.lastSeen}</p>

@@ -73,10 +73,9 @@ const OidQueue = () => {
                     onChange={e => setStatusFilter(e.target.value as any)}
                 >
                     <option value="ALL">All Statuses</option>
-                    <option value="UNKNOWN">Unknown</option>
-                    <option value="ACTIVE">Active</option>
-                    <option value="DEPRECATED">Deprecated</option>
-                    <option value="PENDING">Pending</option>
+                    <option value="provisional">Provisional</option>
+                    <option value="approved">Approved</option>
+                    <option value="deprecated">Deprecated</option>
                 </select>
 
                 <select
@@ -147,7 +146,7 @@ const OidQueue = () => {
                             >
                                 <td className="p-2 font-mono">{oid.oid}</td>
                                 <td className="p-2">{oid.displayName}</td>
-                                <td className="p-2">{oid.ownerOrg ?? "Unassigned"}</td>
+                                <td className="p-2">{oid.ownerOrg}</td>
                                 <td className="p-2">{oid.status}</td>
                                 <td className="p-2">{oid.confidence}</td>
                                 <td className="p-2">{oid.lastSeen}</td>

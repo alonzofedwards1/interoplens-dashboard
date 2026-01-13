@@ -11,6 +11,7 @@ interface ServerDataContextValue {
     telemetryEvents: TelemetryEvent[];
     loading: boolean;
     error?: string;
+    telemetryWarning?: string;
     refresh: () => Promise<void>;
 }
 
@@ -40,12 +41,24 @@ const loadFromApi = async (client: ApiClient) => {
     const telemetryEvents =
         telemetryResult.status === 'fulfilled' ? telemetryResult.value : [];
 
-    const errors = [
-        findingsResult,
-        pdExecutionsResult,
-        committeeQueueResult,
-        telemetryResult,
-    ].filter(result => result.status === 'rejected') as PromiseRejectedResult[];
+    if (committeeQueueResult.status === 'rejected') {
+        console.info('Committee queue not enabled', committeeQueueResult.reason);
+    }
+
+    const telemetryWarning =
+        telemetryResult.status === 'rejected'
+            ? (telemetryResult.reason instanceof Error
+                  ? telemetryResult.reason.message
+                  : String(telemetryResult.reason))
+            : undefined;
+
+    if (telemetryWarning) {
+        console.warn('Telemetry unavailable', telemetryWarning);
+    }
+
+    const errors = [findingsResult, pdExecutionsResult].filter(
+        result => result.status === 'rejected'
+    ) as PromiseRejectedResult[];
 
     console.log('[ServerDataContext.loadFromApi] pdExecutions', {
         length: pdExecutions.length,
@@ -58,6 +71,7 @@ const loadFromApi = async (client: ApiClient) => {
         pdExecutions,
         committeeQueue,
         telemetryEvents,
+        telemetryWarning,
         error:
             errors.length > 0
                 ? errors
@@ -81,6 +95,7 @@ export const ServerDataProvider: React.FC<{ children: React.ReactNode }> = ({
         telemetryEvents: [] as TelemetryEvent[],
         loading: true,
         error: undefined as string | undefined,
+        telemetryWarning: undefined as string | undefined,
     });
 
     const refresh = React.useCallback(async () => {

@@ -7,17 +7,30 @@ import { fetchTelemetryEvents } from './telemetryClient';
 
 const buildUrl = (base: string, path: string) => `${base}${path}`;
 
-export interface FindingsCountResponse {
-    total: number;
-    warnings: number;
-    critical: number;
+export async function safeJson(response: Response) {
+    const text = await response.text();
+
+    try {
+        return text ? JSON.parse(text) : null;
+    } catch {
+        throw new Error('Invalid JSON response');
+    }
+}
+
+export async function apiGet<T>(url: string): Promise<T> {
+    const res = await fetch(url);
+    console.debug('API response', res);
+
+    if (!res.ok) {
+        throw new Error(`${res.status} ${res.statusText}`);
+    }
+
+    return safeJson(res) as T;
 }
 
 export class ApiClient {
     async getFindings(): Promise<Finding[]> {
-        const res = await fetch(buildUrl(API_BASE_URL, '/api/findings'));
-        if (!res.ok) throw new Error(`Failed to load findings (${res.status})`);
-        return res.json();
+        return apiGet<Finding[]>(buildUrl(API_BASE_URL, '/api/findings'));
     }
 
     async getFindingsCount(): Promise<FindingsCountResponse> {
@@ -28,10 +41,9 @@ export class ApiClient {
     }
 
     async getPdExecutions(): Promise<PDExecution[]> {
-        const res = await fetch(buildUrl(API_BASE_URL, '/api/pd-executions'));
-        if (!res.ok)
-            throw new Error(`Failed to load PD executions (${res.status})`);
-        const data = await res.json();
+        const data = await apiGet<PDExecution[]>(
+            buildUrl(API_BASE_URL, '/api/pd-executions')
+        );
         console.log('[apiClient.getPdExecutions] response', {
             isArray: Array.isArray(data),
             length: Array.isArray(data) ? data.length : 'n/a',
@@ -41,10 +53,9 @@ export class ApiClient {
     }
 
     async getCommitteeQueue(): Promise<CommitteeQueueItem[]> {
-        const res = await fetch(buildUrl(API_BASE_URL, '/api/committee-queue'));
-        if (!res.ok)
-            throw new Error(`Failed to load committee queue (${res.status})`);
-        return res.json();
+        return apiGet<CommitteeQueueItem[]>(
+            buildUrl(API_BASE_URL, '/api/committee-queue')
+        );
     }
 
     async getTelemetryEvents(): Promise<TelemetryEvent[]> {
