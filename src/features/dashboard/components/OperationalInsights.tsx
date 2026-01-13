@@ -4,8 +4,10 @@ import { ComplianceStandard, InsightCard } from '../hooks/useDashboardMetrics';
 
 interface OperationalInsightsProps {
     cards: InsightCard[];
-    complianceStandard: ComplianceStandard;
-    onComplianceStandardChange: (standard: ComplianceStandard) => void;
+    complianceStandard: 'TEFCA' | 'IHE' | 'HL7';
+    onComplianceStandardChange: React.Dispatch<
+        React.SetStateAction<'TEFCA' | 'IHE' | 'HL7'>
+    >;
 }
 
 const OperationalInsights: React.FC<OperationalInsightsProps> = ({
