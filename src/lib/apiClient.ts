@@ -33,6 +33,13 @@ export class ApiClient {
         return apiGet<Finding[]>(buildUrl(API_BASE_URL, '/api/findings'));
     }
 
+    async getFindingsCount(): Promise<FindingsCountResponse> {
+        const res = await fetch(buildUrl(API_BASE_URL, '/api/findings/count'));
+        if (!res.ok)
+            throw new Error(`Failed to load findings count (${res.status})`);
+        return res.json();
+    }
+
     async getPdExecutions(): Promise<PDExecution[]> {
         const data = await apiGet<PDExecution[]>(
             buildUrl(API_BASE_URL, '/api/pd-executions')
