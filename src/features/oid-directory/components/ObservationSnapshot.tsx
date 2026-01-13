@@ -1,4 +1,4 @@
-import type { OidDetail } from "../../../lib/api/oids";
+import type { OidDetail } from "../../../types";
 
 interface Props {
     record: OidDetail;
@@ -16,10 +16,10 @@ const ObservationSnapshot = ({ record }: Props) => {
             </ul>
 
             <div className="mt-3 text-sm text-gray-600">
-                <p>PD Transactions: {record.usage.pd}</p>
-                <p>QD Transactions: {record.usage.qd}</p>
-                <p>RD Transactions: {record.usage.rd}</p>
-                <p>XDS Transactions: {record.usage.xds}</p>
+                <p>PD Transactions: {record.usage?.pd ?? '—'}</p>
+                <p>QD Transactions: {record.usage?.qd ?? '—'}</p>
+                <p>RD Transactions: {record.usage?.rd ?? '—'}</p>
+                <p>XDS Transactions: {record.usage?.xds ?? '—'}</p>
             </div>
         </div>
     );

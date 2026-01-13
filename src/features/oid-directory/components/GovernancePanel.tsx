@@ -1,4 +1,4 @@
-import type { OidDetail } from "../../../lib/api/oids";
+import type { OidDetail } from "../../../types";
 import { OID_STATUS_ACTIONS } from "../data/oidStatus.data";
 
 interface Props {

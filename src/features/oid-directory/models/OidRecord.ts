@@ -1,3 +1,4 @@
-import type { OidConfidence, OidDetail, OidRecord, OidStatus } from '../../../lib/api/oids';
+import type { Oid, OidDetail } from '../../../types';
 
-export type { OidConfidence, OidDetail, OidRecord, OidStatus };
+export type OidRecord = Oid;
+export type { OidDetail };

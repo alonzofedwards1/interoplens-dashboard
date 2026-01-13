@@ -1,4 +1,4 @@
-import type { OidDetail } from "../../../lib/api/oids";
+import type { OidDetail } from "../../../types";
 
 interface Props {
     record: OidDetail;
@@ -14,10 +14,10 @@ const UsageTimeline = ({ record }: Props) => {
                 <p>Most recent activity: {record.lastSeen}</p>
                 <p>Total observed activity:</p>
                 <ul className="list-disc ml-6">
-                    <li>PD: {record.usage.pd}</li>
-                    <li>QD: {record.usage.qd}</li>
-                    <li>RD: {record.usage.rd}</li>
-                    <li>XDS: {record.usage.xds}</li>
+                    <li>PD: {record.usage?.pd ?? '—'}</li>
+                    <li>QD: {record.usage?.qd ?? '—'}</li>
+                    <li>RD: {record.usage?.rd ?? '—'}</li>
+                    <li>XDS: {record.usage?.xds ?? '—'}</li>
                 </ul>
             </div>
         </div>

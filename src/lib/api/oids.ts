@@ -1,36 +1,8 @@
 import { apiGet } from '../apiClient';
+import { Oid, OidDetail, OidsListResponse } from '../../types';
 
-export type OidStatus =
-    | 'provisional'
-    | 'approved'
-    | 'deprecated';
-
-export type OidConfidence =
-    | 'HIGH'
-    | 'MEDIUM'
-    | 'LOW';
-
-export interface OidRecord {
-    oid: string;
-    displayName: string;
-    ownerOrg: string;
-    status: OidStatus;
-    confidence: OidConfidence;
-    firstSeen: string;
-    lastSeen: string;
-}
-
-export interface OidDetail extends OidRecord {
-    usage: {
-        pd: number;
-        qd: number;
-        rd: number;
-        xds: number;
-    };
-}
-
-export async function fetchOids(): Promise<OidRecord[]> {
-    return apiGet<OidRecord[]>('/api/oids');
+export async function fetchOids(): Promise<OidsListResponse> {
+    return apiGet<OidsListResponse>('/api/oids');
 }
 
 export async function fetchOidDetail(oid: string): Promise<OidDetail> {

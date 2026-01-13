@@ -8,8 +8,8 @@ import {
 } from 'react-icons/fa';
 
 import { Finding } from '../../../types/findings';
-import { PDExecution } from '../../pd-executions/data/pdExecutions.data';
-import { TelemetryEvent } from '../../../telemetry/TelemetryEvent';
+import { PdExecution } from '../../../types';
+import { TelemetryEvent } from '../../../types';
 
 /* ============================
    Types
@@ -53,15 +53,19 @@ const deriveFindingsMetrics = (findings: Finding[]) => {
     };
 };
 
-const derivePdMetrics = (executions: PDExecution[]) => {
+const derivePdMetrics = (executions: PdExecution[]) => {
     const totalPDExecutions = executions.length;
 
-    const pdSuccessCount = executions.filter(e => e.outcome === 'success').length;
-    const pdErrorCount = executions.filter(e => e.outcome === 'failure').length;
+    const pdSuccessCount = executions.filter(
+        e => (e.outcome ?? '').toLowerCase() === 'success'
+    ).length;
+    const pdErrorCount = executions.filter(
+        e => (e.outcome ?? '').toLowerCase() === 'failure'
+    ).length;
 
     const averagePdLatencyMs = Math.round(
         executions.reduce(
-            (sum, e) => sum + (e.executionTimeMs ?? 0),
+            (sum, e) => sum + (e.executionTimeMs ?? e.durationMs ?? 0),
             0
         ) / Math.max(totalPDExecutions, 1)
     );
@@ -137,7 +141,7 @@ const buildInsightCards = (
     findings: Finding[],
     findingsMetrics: ReturnType<typeof deriveFindingsMetrics>,
     pdMetrics: ReturnType<typeof derivePdMetrics>,
-    pdExecutions: PDExecution[],
+    pdExecutions: PdExecution[],
     telemetryEvents: TelemetryEvent[],
     complianceStandard: ComplianceStandard
 ): InsightCard[] => {
@@ -240,7 +244,7 @@ const buildInsightCards = (
 
 const useDashboardMetrics = (
     findings: Finding[],
-    pdExecutions: PDExecution[],
+    pdExecutions: PdExecution[],
     telemetryEvents: TelemetryEvent[],
     complianceStandard: ComplianceStandard
 ) => {

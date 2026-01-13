@@ -1,7 +1,12 @@
-import { Finding } from '../features/findings/data/findings.data';
-import { PDExecution } from '../features/pd-executions/data/pdExecutions.data';
 import { CommitteeQueueItem } from '../features/committee/data/committeeQueue.data';
-import { TelemetryEvent } from '../telemetry/TelemetryEvent';
+import {
+    FindingsCountResponse,
+    FindingsListResponse,
+    OidsListResponse,
+    TelemetryEvent,
+    PdExecutionsResponse,
+    PdExecutionCountResponse,
+} from '../types';
 import { API_BASE_URL } from '../config/api';
 import { fetchTelemetryEvents } from './telemetryClient';
 
@@ -29,19 +34,21 @@ export async function apiGet<T>(url: string): Promise<T> {
 }
 
 export class ApiClient {
-    async getFindings(): Promise<Finding[]> {
-        return apiGet<Finding[]>(buildUrl(API_BASE_URL, '/api/findings'));
+    async getFindings(): Promise<FindingsListResponse['findings']> {
+        const data = await apiGet<FindingsListResponse | FindingsListResponse['findings']>(
+            buildUrl(API_BASE_URL, '/api/findings')
+        );
+        return Array.isArray(data) ? data : data.findings;
     }
 
     async getFindingsCount(): Promise<FindingsCountResponse> {
-        const res = await fetch(buildUrl(API_BASE_URL, '/api/findings/count'));
-        if (!res.ok)
-            throw new Error(`Failed to load findings count (${res.status})`);
-        return res.json();
+        return apiGet<FindingsCountResponse>(
+            buildUrl(API_BASE_URL, '/api/findings/count')
+        );
     }
 
-    async getPdExecutions(): Promise<PDExecution[]> {
-        const data = await apiGet<PDExecution[]>(
+    async getPdExecutions(): Promise<PdExecutionsResponse> {
+        const data = await apiGet<PdExecutionsResponse>(
             buildUrl(API_BASE_URL, '/api/pd-executions')
         );
         console.log('[apiClient.getPdExecutions] response', {
@@ -50,6 +57,12 @@ export class ApiClient {
             sample: Array.isArray(data) ? data[0] : data,
         });
         return data;
+    }
+
+    async getPdExecutionsCount(): Promise<PdExecutionCountResponse> {
+        return apiGet<PdExecutionCountResponse>(
+            buildUrl(API_BASE_URL, '/api/pd-executions/count')
+        );
     }
 
     async getCommitteeQueue(): Promise<CommitteeQueueItem[]> {
@@ -61,6 +74,10 @@ export class ApiClient {
     async getTelemetryEvents(): Promise<TelemetryEvent[]> {
         // Normalization already handled in telemetryClient.ts
         return fetchTelemetryEvents();
+    }
+
+    async getOids(): Promise<OidsListResponse> {
+        return apiGet<OidsListResponse>(buildUrl(API_BASE_URL, '/api/oids'));
     }
 }
 

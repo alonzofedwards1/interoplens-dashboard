@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { fetchOidDetail, OidDetail as OidDetailRecord, submitOidGovernance } from "../../lib/api/oids";
+import { fetchOidDetail, submitOidGovernance } from "../../lib/api/oids";
+import { OidDetail as OidDetailRecord } from "../../types";
 
 const OidDetail = () => {
     const { oid } = useParams();
@@ -156,10 +157,10 @@ const OidDetail = () => {
             <div className="border rounded p-4 mb-4">
                 <h2 className="font-semibold mb-2">Observed Usage</h2>
                 <ul className="list-disc ml-6">
-                    <li>PD Transactions: {record.usage.pd}</li>
-                    <li>QD Transactions: {record.usage.qd}</li>
-                    <li>RD Transactions: {record.usage.rd}</li>
-                    <li>XDS Transactions: {record.usage.xds}</li>
+                    <li>PD Transactions: {record.usage?.pd ?? '—'}</li>
+                    <li>QD Transactions: {record.usage?.qd ?? '—'}</li>
+                    <li>RD Transactions: {record.usage?.rd ?? '—'}</li>
+                    <li>XDS Transactions: {record.usage?.xds ?? '—'}</li>
                 </ul>
             </div>
 

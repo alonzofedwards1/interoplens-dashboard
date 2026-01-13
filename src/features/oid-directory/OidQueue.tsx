@@ -1,15 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { fetchOids, OidRecord, OidStatus } from "../../lib/api/oids";
+import { fetchOids } from "../../lib/api/oids";
+import { Oid } from "../../types";
 
 const OidQueue = () => {
     const navigate = useNavigate();
 
-    const [statusFilter, setStatusFilter] = useState<OidStatus | "ALL">("ALL");
+    const [statusFilter, setStatusFilter] = useState<string | "ALL">("ALL");
     const [confidenceFilter, setConfidenceFilter] = useState<"ALL" | "HIGH" | "MEDIUM" | "LOW">("ALL");
     const [sortKey, setSortKey] = useState<"lastSeen" | "oid" | "status" | "displayName">("lastSeen");
     const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
-    const [oids, setOids] = useState<OidRecord[]>([]);
+    const [oids, setOids] = useState<Oid[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 

@@ -1,12 +1,10 @@
 import React from 'react';
-import { Finding } from '../features/findings/data/findings.data';
-import { PDExecution } from '../features/pd-executions/data/pdExecutions.data';
+import { Finding, PdExecution, TelemetryEvent } from '../types';
 import { CommitteeQueueItem } from '../features/committee/data/committeeQueue.data';
 import { apiClient, ApiClient } from './apiClient';
-import { TelemetryEvent } from '../telemetry/TelemetryEvent';
 interface ServerDataContextValue {
     findings: Finding[];
-    pdExecutions: PDExecution[];
+    pdExecutions: PdExecution[];
     committeeQueue: CommitteeQueueItem[];
     telemetryEvents: TelemetryEvent[];
     loading: boolean;
@@ -90,7 +88,7 @@ export const ServerDataProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
     const [state, setState] = React.useState({
         findings: [] as Finding[],
-        pdExecutions: [] as PDExecution[],
+        pdExecutions: [] as PdExecution[],
         committeeQueue: [] as CommitteeQueueItem[],
         telemetryEvents: [] as TelemetryEvent[],
         loading: true,

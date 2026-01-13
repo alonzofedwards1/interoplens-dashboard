@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaArrowLeft } from 'react-icons/fa';
 
-import { PDExecution } from './data/pdExecutions.data';
+import { PdExecution } from '../../types';
 import { useUserPreference } from '../../lib/userPreferences';
 import { useServerData } from '../../lib/ServerDataContext';
 import { TransactionLink } from '../../components/TransactionLink';
@@ -12,12 +12,14 @@ import { Finding } from '../../types/findings';
    Helpers
 ============================ */
 
-const formatOutcome = (outcome: PDExecution['outcome']) => {
-    switch (outcome) {
+const formatOutcome = (outcome?: string) => {
+    switch ((outcome ?? '').toLowerCase()) {
         case 'success':
             return { label: 'Success', color: 'bg-green-100 text-green-800' };
         case 'failure':
             return { label: 'Failure', color: 'bg-red-100 text-red-800' };
+        default:
+            return { label: 'Unknown', color: 'bg-gray-100 text-gray-700' };
     }
 };
 
@@ -33,7 +35,7 @@ type ExecutionSortKey =
 
 type ExecutionPreferences = {
     search: string;
-    outcomeFilter: PDExecution['outcome'] | 'all';
+    outcomeFilter: 'success' | 'failure' | 'all';
     sortKey: ExecutionSortKey;
     sortDirection: 'asc' | 'desc';
 };
@@ -57,14 +59,15 @@ const PDExecutions: React.FC = () => {
 
     const filteredExecutions = useMemo(() => {
         return pdExecutions.filter(exec => {
-            const matchesOutcome = outcomeFilter === 'all' || exec.outcome === outcomeFilter;
+            const outcome = (exec.outcome ?? '').toLowerCase();
+            const matchesOutcome = outcomeFilter === 'all' || outcome === outcomeFilter;
 
             if (!search.trim()) return matchesOutcome;
 
             const query = search.toLowerCase();
             const matchesText =
-                exec.requestId.toLowerCase().includes(query) ||
-                exec.channelId.toLowerCase().includes(query);
+                (exec.requestId ?? '').toLowerCase().includes(query) ||
+                (exec.channelId ?? '').toLowerCase().includes(query);
 
             return matchesOutcome && matchesText;
         });
@@ -73,8 +76,8 @@ const PDExecutions: React.FC = () => {
     const sortedExecutions = useMemo(() => {
         return [...filteredExecutions].sort((a, b) => {
             if (sortKey === 'completedAt') {
-                const aTs = new Date(a.completedAt).getTime();
-                const bTs = new Date(b.completedAt).getTime();
+                const aTs = new Date(a.completedAt ?? 0).getTime();
+                const bTs = new Date(b.completedAt ?? 0).getTime();
                 return sortDirection === 'asc' ? aTs - bTs : bTs - aTs;
             }
 
@@ -101,14 +104,16 @@ const PDExecutions: React.FC = () => {
 
     const summaryStats = useMemo(() => {
         const totalExecutions = pdExecutions.length;
-        const failures = pdExecutions.filter(e => e.outcome === 'failure').length;
+        const failures = pdExecutions.filter(
+            e => (e.outcome ?? '').toLowerCase() === 'failure'
+        ).length;
         const failureRate = totalExecutions
             ? ((failures / totalExecutions) * 100).toFixed(1)
             : '0.0';
 
         const hourCounts: Record<string, number> = {};
         pdExecutions.forEach(e => {
-            const hour = new Date(e.completedAt)
+            const hour = new Date(e.completedAt ?? 0)
                 .getUTCHours()
                 .toString()
                 .padStart(2, '0');
@@ -274,10 +279,12 @@ const PDExecutions: React.FC = () => {
                         return (
                             <tr key={exec.requestId} className="border-t text-sm">
                                 <td className="p-3 font-mono">
-                                    {new Date(exec.completedAt).toUTCString()}
+                                    {exec.completedAt
+                                        ? new Date(exec.completedAt).toUTCString()
+                                        : '—'}
                                 </td>
                                 <td className="p-3">
-                                    <span className="font-mono text-xs">{exec.requestId}</span>
+                                    <span className="font-mono text-xs">{exec.requestId ?? '—'}</span>
                                 </td>
                                 <td className="p-3">
                                     <div className="flex flex-col gap-2 text-sm">
@@ -286,7 +293,11 @@ const PDExecutions: React.FC = () => {
                                                 Transaction ID
                                             </span>
                                             <div>
-                                                <TransactionLink id={exec.requestId} />
+                                                {exec.requestId ? (
+                                                    <TransactionLink id={exec.requestId} />
+                                                ) : (
+                                                    <span className="text-gray-500">—</span>
+                                                )}
                                             </div>
                                         </div>
                                         <div className="flex flex-wrap items-center gap-2">
@@ -300,10 +311,10 @@ const PDExecutions: React.FC = () => {
                                     </div>
                                 </td>
                                 <td className="p-3">
-                                    {exec.channelId}
+                                    {exec.channelId ?? '—'}
                                 </td>
                                 <td className="p-3">
-                                    {exec.environment}
+                                    {exec.environment ?? '—'}
                                 </td>
                                 <td className="p-3">
                                     <span
@@ -313,8 +324,8 @@ const PDExecutions: React.FC = () => {
                                     </span>
                                 </td>
                                 <td className="p-3">
-                                    {exec.executionTimeMs
-                                        ? `${exec.executionTimeMs} ms`
+                                    {exec.executionTimeMs ?? exec.durationMs
+                                        ? `${exec.executionTimeMs ?? exec.durationMs} ms`
                                         : '—'}
                                 </td>
                             </tr>

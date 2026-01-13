@@ -1,4 +1,4 @@
-import type { OidDetail } from "../../../lib/api/oids";
+import type { OidDetail } from "../../../types";
 
 interface Props {
     record: OidDetail;

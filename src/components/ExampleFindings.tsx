@@ -7,7 +7,7 @@ import {
     FaChevronUp,
 } from 'react-icons/fa';
 
-import { Finding } from '../features/findings/data/findings.data';
+import { Finding } from '../types';
 
 /* ============================
    Derive Example Findings

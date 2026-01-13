@@ -33,6 +33,10 @@ REACT_APP_TELEMETRY_BASE_URL=http://telemetry.interop.100.48.218.100.nip.io npm 
 
 The telemetry page issues `GET /api/telemetry/events` to retrieve telemetry events and displays them as-is. No additional setup is required beyond exposing that endpoint on the backend.
 
+## API types and contracts
+
+API response types live in `src/types`. API clients import these types, and types must not import API clients, hooks, or React to avoid circular dependencies.
+
 ## Authentication and password reset
 
 Authentication is currently mocked entirely on the frontend. The login form accepts any non-empty email and password, stores a lightweight auth flag in `localStorage`, and immediately redirects to the dashboard. Use the "Use dev credentials" shortcut on the login page for quick access (`admin@interoplens.io` / `admin123`).
