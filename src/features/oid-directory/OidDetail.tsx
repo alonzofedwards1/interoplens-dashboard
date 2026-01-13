@@ -1,14 +1,151 @@
+import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { oidDirectoryData } from "./data/oidDirectory.data";
+import { fetchOidDetail, OidDetail as OidDetailRecord, submitOidGovernance } from "../../lib/api/oids";
 
 const OidDetail = () => {
     const { oid } = useParams();
     const navigate = useNavigate();
 
     const decodedOid = decodeURIComponent(oid || "");
-    const record = oidDirectoryData.find(o => o.oid === decodedOid);
+    const [record, setRecord] = useState<OidDetailRecord | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [actionError, setActionError] = useState<string | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
-    if (!record) {
+    useEffect(() => {
+        let isMounted = true;
+        const loadOidDetail = async () => {
+            if (!decodedOid) return;
+            try {
+                const data = await fetchOidDetail(decodedOid);
+                if (isMounted) {
+                    setRecord(data);
+                    setError(null);
+                }
+            } catch (err) {
+                if (isMounted) {
+                    setError(err instanceof Error ? err.message : "Failed to load OID detail");
+                }
+            } finally {
+                if (isMounted) {
+                    setLoading(false);
+                }
+            }
+        };
+
+        loadOidDetail();
+        return () => {
+            isMounted = false;
+        };
+    }, [decodedOid]);
+
+    const handleGovernanceAction = async (action: string) => {
+        if (!decodedOid) return;
+        setIsSubmitting(true);
+        setActionError(null);
+        try {
+            await submitOidGovernance(decodedOid, action);
+            const data = await fetchOidDetail(decodedOid);
+            setRecord(data);
+        } catch (err) {
+            setActionError(err instanceof Error ? err.message : "Governance action failed");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const renderActions = (currentRecord: OidDetailRecord) => {
+        switch (currentRecord.status) {
+            case "UNKNOWN":
+                return (
+                    <>
+                        <button
+                            className="btn-primary"
+                            onClick={() => handleGovernanceAction("ASSIGN_ORG")}
+                            disabled={isSubmitting}
+                        >
+                            Assign Organization
+                        </button>
+                        <button
+                            className="btn-secondary"
+                            onClick={() => handleGovernanceAction("MAP_ALIAS")}
+                            disabled={isSubmitting}
+                        >
+                            Map as Alias
+                        </button>
+                        <button
+                            className="btn-outline"
+                            onClick={() => handleGovernanceAction("IGNORE")}
+                            disabled={isSubmitting}
+                        >
+                            Ignore
+                        </button>
+                    </>
+                );
+            case "ACTIVE":
+                return (
+                    <>
+                        <button
+                            className="btn-primary"
+                            onClick={() => handleGovernanceAction("ADD_ALIAS")}
+                            disabled={isSubmitting}
+                        >
+                            Add Alias
+                        </button>
+                        <button
+                            className="btn-warning"
+                            onClick={() => handleGovernanceAction("DEPRECATE")}
+                            disabled={isSubmitting}
+                        >
+                            Deprecate
+                        </button>
+                    </>
+                );
+            case "DEPRECATED":
+                return (
+                    <>
+                        <button
+                            className="btn-primary"
+                            onClick={() => handleGovernanceAction("REACTIVATE")}
+                            disabled={isSubmitting}
+                        >
+                            Reactivate
+                        </button>
+                        <button
+                            className="btn-outline"
+                            onClick={() => handleGovernanceAction("MARK_MIGRATION_COMPLETE")}
+                            disabled={isSubmitting}
+                        >
+                            Mark Migration Complete
+                        </button>
+                    </>
+                );
+            case "PENDING":
+                return (
+                    <>
+                        <button
+                            className="btn-success"
+                            onClick={() => handleGovernanceAction("APPROVE")}
+                            disabled={isSubmitting}
+                        >
+                            Approve
+                        </button>
+                        <button
+                            className="btn-danger"
+                            onClick={() => handleGovernanceAction("REJECT")}
+                            disabled={isSubmitting}
+                        >
+                            Reject
+                        </button>
+                    </>
+                );
+            default:
+                return null;
+        }
+    };
+
+    if (loading) {
         return (
             <div className="p-6">
                 <button
@@ -17,46 +154,26 @@ const OidDetail = () => {
                 >
                     ← Back to OID Directory
                 </button>
-                <p className="text-red-600">OID not found.</p>
+                <div className="rounded border border-dashed p-6 text-center text-gray-500">
+                    Loading OID detail...
+                </div>
             </div>
         );
     }
 
-    const renderActions = () => {
-        switch (record.status) {
-            case "UNKNOWN":
-                return (
-                    <>
-                        <button className="btn-primary">Assign Organization</button>
-                        <button className="btn-secondary">Map as Alias</button>
-                        <button className="btn-outline">Ignore</button>
-                    </>
-                );
-            case "ACTIVE":
-                return (
-                    <>
-                        <button className="btn-primary">Add Alias</button>
-                        <button className="btn-warning">Deprecate</button>
-                    </>
-                );
-            case "DEPRECATED":
-                return (
-                    <>
-                        <button className="btn-primary">Reactivate</button>
-                        <button className="btn-outline">Mark Migration Complete</button>
-                    </>
-                );
-            case "PENDING":
-                return (
-                    <>
-                        <button className="btn-success">Approve</button>
-                        <button className="btn-danger">Reject</button>
-                    </>
-                );
-            default:
-                return null;
-        }
-    };
+    if (!record || error) {
+        return (
+            <div className="p-6">
+                <button
+                    className="text-blue-600 mb-4"
+                    onClick={() => navigate("/oids")}
+                >
+                    ← Back to OID Directory
+                </button>
+                <p className="text-red-600">{error ?? "OID not found."}</p>
+            </div>
+        );
+    }
 
     return (
         <div className="p-6">
@@ -93,8 +210,13 @@ const OidDetail = () => {
             {/* Actions */}
             <div className="border rounded p-4">
                 <h2 className="font-semibold mb-2">Governance Actions</h2>
+                {actionError && (
+                    <div className="mb-3 rounded border border-red-200 bg-red-50 p-2 text-sm text-red-700">
+                        {actionError}
+                    </div>
+                )}
                 <div className="flex gap-2 flex-wrap">
-                    {renderActions()}
+                    {renderActions(record)}
                 </div>
             </div>
         </div>

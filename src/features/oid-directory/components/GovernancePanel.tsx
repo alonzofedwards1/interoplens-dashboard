@@ -1,12 +1,12 @@
-import { OidDirectoryRecord } from "../data/oidDirectory.data";
+import type { OidDetail } from "../../../lib/api/oids";
 import { OID_STATUS_ACTIONS } from "../data/oidStatus.data";
 
 interface Props {
-    record: OidDirectoryRecord;
+    record: OidDetail;
 }
 
 const GovernancePanel = ({ record }: Props) => {
-    const actions = OID_STATUS_ACTIONS[record.status];
+    const actions = OID_STATUS_ACTIONS[record.status] ?? [];
 
     const renderButton = (action: string) => (
         <button

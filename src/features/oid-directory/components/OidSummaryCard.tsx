@@ -1,7 +1,7 @@
-import { OidDirectoryRecord } from "../data/oidDirectory.data";
+import type { OidDetail } from "../../../lib/api/oids";
 
 interface Props {
-    record: OidDirectoryRecord;
+    record: OidDetail;
 }
 
 const OidSummaryCard = ({ record }: Props) => {
@@ -14,7 +14,6 @@ const OidSummaryCard = ({ record }: Props) => {
             <p><strong>Status:</strong> {record.status}</p>
             <p><strong>Owner:</strong> {record.ownerOrg ?? "Unassigned"}</p>
             <p><strong>Confidence:</strong> {record.confidence}</p>
-            <p><strong>Source:</strong> {record.source}</p>
             <p><strong>First Seen:</strong> {record.firstSeen}</p>
             <p><strong>Last Seen:</strong> {record.lastSeen}</p>
         </div>

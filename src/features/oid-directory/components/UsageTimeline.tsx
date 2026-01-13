@@ -1,7 +1,7 @@
-import { OidDirectoryRecord } from "../data/oidDirectory.data";
+import type { OidDetail } from "../../../lib/api/oids";
 
 interface Props {
-    record: OidDirectoryRecord;
+    record: OidDetail;
 }
 
 const UsageTimeline = ({ record }: Props) => {
