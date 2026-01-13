@@ -7,7 +7,6 @@ import BarChart from '../../components/BarChart';
 import PieChart from '../../components/PieChart';
 import Filters from '../../components/Filters';
 import FindingsTable from '../../components/FindingsTable';
-import ExampleFindings from '../../components/ExampleFindings';
 
 import { useServerData } from '../../lib/ServerDataContext';
 import AlertSummaryCards from './components/AlertSummaryCards';
@@ -114,9 +113,6 @@ const Dashboard: React.FC<DashboardProps> = ({ role, onLogout }) => {
 
                     {/* Findings Table */}
                     <FindingsTable findings={findings} />
-
-                    {/* Example Findings */}
-                    <ExampleFindings findings={findings} />
                 </main>
             </div>
         </div>
