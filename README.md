@@ -39,9 +39,10 @@ API response types live in `src/types`. API clients import these types, and type
 
 ## Authentication and password reset
 
-Authentication is currently mocked entirely on the frontend. The login form accepts any non-empty email and password, stores a lightweight auth flag in `localStorage`, and immediately redirects to the dashboard. Use the "Use dev credentials" shortcut on the login page for quick access (`admin@interoplens.io` / `admin123`).
+Authentication is backed by the API and uses a session-based flow. The frontend calls the following endpoints:
 
-* There are no backend authentication calls or token checks.
-* All dashboard routes are protected by the frontend auth flag and will redirect to `/login` when unauthenticated.
-* The forgot-password screen is informational only until backend integration is added.
-* TODO: Replace the mocked login with real backend authentication when available.
+* `POST /api/auth/login` with `{ "username": "...", "password": "..." }` to start a session.
+* `POST /api/auth/logout` to end the session.
+* `GET /api/auth/me` to hydrate the current user on page load.
+
+All requests include `credentials: 'include'` so cookies are sent with every call. When no active session is found, the dashboard redirects to the login screen. The forgot-password screen is informational only until backend integration is added.
