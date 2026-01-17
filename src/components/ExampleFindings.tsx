@@ -16,11 +16,15 @@ import { Finding } from '../types';
 const buildExampleFindings = (findings: Finding[]) =>
     findings
         .filter(f => f.severity !== 'ok')
-        .sort(
-            (a, b) =>
-                new Date(b.detectedAt).getTime() -
-                new Date(a.detectedAt).getTime()
-        )
+        .sort((a, b) => {
+            const bTime = b.detectedAt
+                ? new Date(b.detectedAt).getTime()
+                : 0;
+            const aTime = a.detectedAt
+                ? new Date(a.detectedAt).getTime()
+                : 0;
+            return bTime - aTime;
+        })
         .slice(0, 3);
 
 /* ============================
@@ -32,12 +36,12 @@ const getSeverityMeta = (severity: Finding['severity']) => {
         case 'critical':
             return {
                 icon: <FaExclamationCircle className="text-red-500 mt-1" />,
-                label: 'Critical'
+                label: 'Critical',
             };
         case 'warning':
             return {
                 icon: <FaExclamationTriangle className="text-yellow-400 mt-1" />,
-                label: 'Warning'
+                label: 'Warning',
             };
         default:
             return null;
@@ -52,6 +56,7 @@ type Props = { findings: Finding[] };
 
 const ExampleFindings: React.FC<Props> = ({ findings }) => {
     const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
+
     const exampleFindings = React.useMemo(
         () => buildExampleFindings(findings),
         [findings]
@@ -98,7 +103,7 @@ const ExampleFindings: React.FC<Props> = ({ findings }) => {
                                     <div>
                                         <div className="text-xs text-gray-500 mb-1">
                                             <div className="font-medium text-gray-700">
-                                                {finding.organization}
+                                                {finding.organization ?? 'Unknown Org'}
                                             </div>
                                         </div>
 
@@ -125,14 +130,18 @@ const ExampleFindings: React.FC<Props> = ({ findings }) => {
                                             <span className="font-medium text-gray-700">
                                                 Type
                                             </span>
-                                            <div>{finding.type}</div>
+                                            <div>{finding.type ?? '—'}</div>
                                         </div>
 
                                         <div>
                                             <span className="font-medium text-gray-700">
                                                 Environment
                                             </span>
-                                            <div>{finding.environment.toUpperCase()}</div>
+                                            <div>
+                                                {finding.environment
+                                                    ? finding.environment.toUpperCase()
+                                                    : 'UNKNOWN'}
+                                            </div>
                                         </div>
 
                                         <div>
@@ -140,7 +149,9 @@ const ExampleFindings: React.FC<Props> = ({ findings }) => {
                                                 Detected At
                                             </span>
                                             <div>
-                                                {new Date(finding.detectedAt).toUTCString()}
+                                                {finding.detectedAt
+                                                    ? new Date(finding.detectedAt).toUTCString()
+                                                    : '—'}
                                             </div>
                                         </div>
 
@@ -148,14 +159,14 @@ const ExampleFindings: React.FC<Props> = ({ findings }) => {
                                             <span className="font-medium text-gray-700">
                                                 Source
                                             </span>
-                                            <div>{finding.source}</div>
+                                            <div>{finding.source ?? '—'}</div>
                                         </div>
 
                                         <div className="col-span-2">
                                             <span className="font-medium text-gray-700">
                                                 Description
                                             </span>
-                                            <div>{finding.description}</div>
+                                            <div>{finding.description ?? '—'}</div>
                                         </div>
                                     </div>
                                 </div>
@@ -166,7 +177,7 @@ const ExampleFindings: React.FC<Props> = ({ findings }) => {
             </div>
 
             <div className="mt-4 text-center">
-                <Link to="/findings">
+                <Link to="/findings" className="text-xs text-blue-600 hover:underline">
                     View All Findings
                 </Link>
             </div>

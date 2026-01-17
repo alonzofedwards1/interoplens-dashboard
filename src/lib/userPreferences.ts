@@ -45,7 +45,7 @@ const setUserPreference = <T,>(userId: string, key: string, value: T) => {
  */
 export const useUserPreference = <T,>(key: string, defaultValue: T) => {
     const { user } = useAuth();
-    const userId = user?.userId !== undefined ? String(user.userId) : undefined;
+    const userId = user?.username;
 
     const defaultRef = useRef(defaultValue);
     defaultRef.current = defaultValue;

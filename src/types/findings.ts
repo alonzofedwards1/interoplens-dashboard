@@ -1,29 +1,55 @@
+export type FindingSeverity =
+    | 'low'
+    | 'medium'
+    | 'high'
+    | 'warning'
+    | 'critical'
+    | 'ok'; // needed for UI filtering logic
+
+export type FindingStatus =
+    | 'open'
+    | 'resolved'
+    | 'ignored'
+    | 'compliant'
+    | 'non-compliant'
+    | 'committee_queue'
+    | 'closed';
+
 export interface Finding {
+    /** Identity */
     id: string;
-    title: string;
-    status:
-        | 'open'
-        | 'resolved'
-        | 'ignored'
-        | 'compliant'
-        | 'non-compliant'
-        | 'committee_queue'
-        | 'closed';
-    severity?: 'low' | 'medium' | 'high' | 'warning' | 'critical';
-    createdAt: string;
-    executionId?: string;
-    executionType?: string;
-    category?: string;
+
+    /** Human-facing */
+    title?: string;
     summary?: string;
+    description?: string; // used by ExampleFindings + table
     technicalDetail?: string;
     recommendedAction?: string;
+
+    /** Classification */
+    status: FindingStatus;
+    severity?: FindingSeverity;
+    category?: string;
+    type?: string;
+
+    /** Ownership / attribution */
+    ownerOrg?: string;
+    organization?: string; // REQUIRED by UI filters + tables
+    source?: string;        // REQUIRED by ExampleFindings
+
+    /** Execution / telemetry linkage */
+    executionId?: string;
+    executionType?: string;
+    transaction?: string;
+
+    /** Environment / runtime */
     environment?: string;
+
+    /** Temporal */
+    createdAt: string;
+    detectedAt?: string;
     firstSeenAt?: string | null;
     lastSeenAt?: string | null;
-    detectedAt?: string;
-    ownerOrg?: string;
-    type?: string;
-    transaction?: string;
 }
 
 export interface FindingsListResponse {

@@ -1,8 +1,16 @@
 import type { OidDetail } from "../../../types";
 import { OID_STATUS_ACTIONS } from "../data/oidStatus.data";
 
+/**
+ * Derive the valid OID status type directly from the action map.
+ * This guarantees frontend + data alignment.
+ */
+type OidStatus = keyof typeof OID_STATUS_ACTIONS;
+
 interface Props {
-    record: OidDetail;
+    record: OidDetail & {
+        status: OidStatus;
+    };
 }
 
 const GovernancePanel = ({ record }: Props) => {
@@ -19,10 +27,18 @@ const GovernancePanel = ({ record }: Props) => {
 
     return (
         <div className="border rounded p-4 bg-white">
-            <h2 className="text-lg font-semibold mb-2">Governance Actions</h2>
+            <h2 className="text-lg font-semibold mb-2">
+                Governance Actions
+            </h2>
 
             <div className="flex gap-2 flex-wrap">
-                {actions.map(renderButton)}
+                {actions.length > 0 ? (
+                    actions.map(renderButton)
+                ) : (
+                    <span className="text-sm text-gray-500">
+                        No actions available for this status
+                    </span>
+                )}
             </div>
         </div>
     );

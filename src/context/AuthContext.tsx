@@ -1,8 +1,8 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
-import * as authApi from '../lib/api/auth';
+import * as authApi from '../api/auth';
 
-export type AuthUser = authApi.User;
+export type AuthUser = authApi.AuthUser;
 
 type AuthContextValue = {
     user: AuthUser | null;
@@ -29,12 +29,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, []);
 
     const login = useCallback(async (username: string, password: string) => {
-        await authApi.login(username, password);
-        const sessionUser = await authApi.me();
-        if (!sessionUser) {
-            throw new Error('Unable to load session');
-        }
-        setUser({ userId: sessionUser.userId });
+        const session = await authApi.login(username, password);
+        setUser({ username: session.username });
     }, []);
 
     const logout = useCallback(async () => {
