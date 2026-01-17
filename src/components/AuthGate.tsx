@@ -1,10 +1,12 @@
 import React from 'react';
+import { Navigate, useLocation } from 'react-router-dom';
 
 import { useAuth } from '../context/AuthContext';
-import LoginPage from '../pages/LoginPage';
 
 const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const { user, loading } = useAuth();
+    const location = useLocation();
+    const publicRoutes = ['/login', '/forgot-password'];
 
     if (loading) {
         return (
@@ -18,7 +20,14 @@ const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     }
 
     if (!user) {
-        return <LoginPage />;
+        if (publicRoutes.includes(location.pathname)) {
+            return <>{children}</>;
+        }
+        return <Navigate to="/login" replace />;
+    }
+
+    if (location.pathname === '/login') {
+        return <Navigate to="/dashboard" replace />;
     }
 
     return <>{children}</>;

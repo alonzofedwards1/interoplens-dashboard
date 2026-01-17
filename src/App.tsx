@@ -10,6 +10,7 @@ import Reports from './features/reports/ReportsPage';
 import Settings from './features/settings/SettingsPage';
 import PDExecutions from './features/pd-executions/PDExecutionsPage';
 import TransactionDetailPage from './features/transactions/TransactionDetailPage';
+import LoginPage from './pages/LoginPage';
 
 import CommitteeQueue from './features/committee/CommitteeQueue';
 import CommitteeCaseDetail from './features/committee/CommitteeCaseDetail';
@@ -30,6 +31,7 @@ const AppRoutes: React.FC = () => {
     return (
         <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/login" element={<LoginPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
             <Route
