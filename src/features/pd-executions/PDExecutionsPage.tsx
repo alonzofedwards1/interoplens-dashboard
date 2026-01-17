@@ -141,12 +141,16 @@ const PDExecutions: React.FC = () => {
 
     const toggleSort = (key: ExecutionSortKey) => {
         if (sortKey === key) {
-            setPreferences(prev => ({
+            setPreferences((prev: ExecutionPreferences) => ({
                 ...prev,
                 sortDirection: prev.sortDirection === 'asc' ? 'desc' : 'asc',
             }));
         } else {
-            setPreferences(prev => ({ ...prev, sortKey: key, sortDirection: 'asc' }));
+            setPreferences((prev: ExecutionPreferences) => ({
+                ...prev,
+                sortKey: key,
+                sortDirection: 'asc',
+            }));
         }
     };
 
@@ -203,7 +207,7 @@ const PDExecutions: React.FC = () => {
                             id="pd-outcome"
                             value={outcomeFilter}
                             onChange={event =>
-                                setPreferences(prev => ({
+                                setPreferences((prev: ExecutionPreferences) => ({
                                     ...prev,
                                     outcomeFilter: event.target.value as typeof outcomeFilter,
                                 }))
@@ -220,7 +224,7 @@ const PDExecutions: React.FC = () => {
                         type="search"
                         value={search}
                         onChange={event =>
-                            setPreferences(prev => ({
+                            setPreferences((prev: ExecutionPreferences) => ({
                                 ...prev,
                                 search: event.target.value,
                             }))
@@ -237,7 +241,7 @@ const PDExecutions: React.FC = () => {
                             id="pd-sort"
                             value={sortKey}
                             onChange={event =>
-                                setPreferences(prev => ({
+                                setPreferences((prev: ExecutionPreferences) => ({
                                     ...prev,
                                     sortKey: event.target.value as ExecutionSortKey,
                                 }))

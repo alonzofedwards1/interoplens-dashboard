@@ -6,7 +6,7 @@ import ReportsPage from './ReportsPage';
 
 jest.mock('../../context/AuthContext', () => ({
     useAuth: () => ({
-        user: { username: 'demo@example.com' },
+        user: { userId: 42 },
         login: jest.fn(),
         logout: jest.fn(),
         refreshUser: jest.fn(),

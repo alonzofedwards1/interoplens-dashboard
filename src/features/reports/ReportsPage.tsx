@@ -34,6 +34,8 @@ const defaultReportFilters = {
     status: "all",
 };
 
+type ReportFilters = typeof defaultReportFilters;
+
 const Reports: React.FC = () => {
     const navigate = useNavigate();
 
@@ -93,13 +95,13 @@ const Reports: React.FC = () => {
                 environment={environment}
                 status={status}
                 onDateRangeChange={value =>
-                    setFilters(prev => ({ ...prev, dateRange: value }))
+                    setFilters((prev: ReportFilters) => ({ ...prev, dateRange: value }))
                 }
                 onEnvironmentChange={value =>
-                    setFilters(prev => ({ ...prev, environment: value }))
+                    setFilters((prev: ReportFilters) => ({ ...prev, environment: value }))
                 }
                 onStatusChange={value =>
-                    setFilters(prev => ({ ...prev, status: value }))
+                    setFilters((prev: ReportFilters) => ({ ...prev, status: value }))
                 }
             />
 
