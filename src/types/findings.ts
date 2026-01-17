@@ -24,6 +24,7 @@ export interface Finding {
     ownerOrg?: string;
     type?: string;
     transaction?: string;
+    organization?: string;
 }
 
 export interface FindingsListResponse {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
     FaExclamationCircle,
@@ -7,7 +7,7 @@ import {
     FaChevronUp,
 } from 'react-icons/fa';
 
-import { Finding } from '../types/findings';
+import { Finding } from '@/types';
 
 /* ============================
    Derive Example Findings
@@ -15,11 +15,15 @@ import { Finding } from '../types/findings';
 
 const buildExampleFindings = (findings: Finding[]) =>
     findings
-        .filter(f => f.severity !== 'ok')
+        .filter(
+            f =>
+                f.severity === 'warning' ||
+                f.severity === 'critical'
+        )
         .sort(
             (a, b) =>
-                new Date(b.detectedAt).getTime() -
-                new Date(a.detectedAt).getTime()
+                new Date(b.detectedAt ?? b.createdAt).getTime() -
+                new Date(a.detectedAt ?? a.createdAt).getTime()
         )
         .slice(0, 3);
 
@@ -32,17 +36,23 @@ const getSeverityMeta = (severity: Finding['severity']) => {
         case 'critical':
             return {
                 icon: <FaExclamationCircle className="text-red-500 mt-1" />,
-                label: 'Critical'
+                label: 'Critical',
             };
         case 'warning':
             return {
                 icon: <FaExclamationTriangle className="text-yellow-400 mt-1" />,
-                label: 'Warning'
+                label: 'Warning',
             };
         default:
             return null;
     }
 };
+
+const formatEnvironment = (env?: string) =>
+    env ? env.toUpperCase() : 'UNKNOWN';
+
+const formatDate = (value?: string) =>
+    value ? new Date(value).toUTCString() : '—';
 
 /* ============================
    Component
@@ -52,7 +62,8 @@ type Props = { findings: Finding[] };
 
 const ExampleFindings: React.FC<Props> = ({ findings }) => {
     const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
-    const exampleFindings = React.useMemo(
+
+    const exampleFindings = useMemo(
         () => buildExampleFindings(findings),
         [findings]
     );
@@ -96,10 +107,8 @@ const ExampleFindings: React.FC<Props> = ({ findings }) => {
                                     {meta.icon}
 
                                     <div>
-                                        <div className="text-xs text-gray-500 mb-1">
-                                            <div className="font-medium text-gray-700">
-                                                {finding.organization}
-                                            </div>
+                                        <div className="font-medium text-gray-700">
+                                            {finding.category ?? 'General'}
                                         </div>
 
                                         <div className="font-medium">
@@ -122,40 +131,38 @@ const ExampleFindings: React.FC<Props> = ({ findings }) => {
                                 <div className="px-4 pb-3 pt-2 text-xs text-gray-600 border-t bg-white">
                                     <div className="grid grid-cols-2 gap-3">
                                         <div>
-                                            <span className="font-medium text-gray-700">
-                                                Type
-                                            </span>
-                                            <div>{finding.type}</div>
+                      <span className="font-medium text-gray-700">
+                        Type
+                      </span>
+                                            <div>{finding.type ?? '—'}</div>
                                         </div>
 
                                         <div>
-                                            <span className="font-medium text-gray-700">
-                                                Environment
-                                            </span>
-                                            <div>{finding.environment.toUpperCase()}</div>
+                      <span className="font-medium text-gray-700">
+                        Environment
+                      </span>
+                                            <div>{formatEnvironment(finding.environment)}</div>
                                         </div>
 
                                         <div>
-                                            <span className="font-medium text-gray-700">
-                                                Detected At
-                                            </span>
-                                            <div>
-                                                {new Date(finding.detectedAt).toUTCString()}
-                                            </div>
+                      <span className="font-medium text-gray-700">
+                        Detected At
+                      </span>
+                                            <div>{formatDate(finding.detectedAt)}</div>
                                         </div>
 
                                         <div>
-                                            <span className="font-medium text-gray-700">
-                                                Source
-                                            </span>
-                                            <div>{finding.source}</div>
+                      <span className="font-medium text-gray-700">
+                        Execution
+                      </span>
+                                            <div>{finding.executionType ?? '—'}</div>
                                         </div>
 
                                         <div className="col-span-2">
-                                            <span className="font-medium text-gray-700">
-                                                Description
-                                            </span>
-                                            <div>{finding.description}</div>
+                      <span className="font-medium text-gray-700">
+                        Summary
+                      </span>
+                                            <div>{finding.summary ?? 'No description provided.'}</div>
                                         </div>
                                     </div>
                                 </div>
@@ -166,7 +173,10 @@ const ExampleFindings: React.FC<Props> = ({ findings }) => {
             </div>
 
             <div className="mt-4 text-center">
-                <Link to="/findings">
+                <Link
+                    to="/findings"
+                    className="text-xs text-blue-600 hover:underline"
+                >
                     View All Findings
                 </Link>
             </div>
