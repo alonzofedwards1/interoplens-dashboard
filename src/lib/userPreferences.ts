@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
-import { useAuth } from './AuthContext';
+import { useAuth } from '../context/AuthContext';
 
 type PreferenceStore = Record<string, Record<string, unknown>>;
 
@@ -45,7 +45,7 @@ const setUserPreference = <T,>(userId: string, key: string, value: T) => {
  */
 export const useUserPreference = <T,>(key: string, defaultValue: T) => {
     const { user } = useAuth();
-    const userId = user?.email;
+    const userId = user?.username;
 
     const defaultRef = useRef(defaultValue);
     defaultRef.current = defaultValue;

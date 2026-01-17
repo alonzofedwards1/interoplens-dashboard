@@ -41,7 +41,9 @@ const normalizeTelemetryEvent = (event: RawTelemetryEvent): TelemetryEvent => ({
 });
 
 export async function fetchTelemetryEvents(): Promise<TelemetryEvent[]> {
-    const res = await fetch(`${TELEMETRY_BASE_URL}/api/telemetry/events`);
+    const res = await fetch(`${TELEMETRY_BASE_URL}/api/telemetry/events`, {
+        credentials: 'include',
+    });
 
     if (!res.ok) {
         throw new Error(`Failed to fetch telemetry events (${res.status})`);

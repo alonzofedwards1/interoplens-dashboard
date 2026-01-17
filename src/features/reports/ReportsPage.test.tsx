@@ -4,8 +4,14 @@ import userEvent from '@testing-library/user-event';
 
 import ReportsPage from './ReportsPage';
 
-jest.mock('../../lib/AuthContext', () => ({
-    useAuth: () => ({ isAuthenticated: true, user: { email: 'demo@example.com' } }),
+jest.mock('../../context/AuthContext', () => ({
+    useAuth: () => ({
+        user: { username: 'demo@example.com' },
+        login: jest.fn(),
+        logout: jest.fn(),
+        refreshUser: jest.fn(),
+        loading: false,
+    }),
 }));
 
 const mockNavigate = jest.fn();
