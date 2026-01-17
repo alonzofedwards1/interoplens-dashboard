@@ -85,8 +85,9 @@ const derivePdMetrics = (executions: PdExecution[]) => {
 const buildAlertCards = (
     pdMetrics: ReturnType<typeof derivePdMetrics>,
     findingsMetrics: ReturnType<typeof deriveFindingsMetrics>
-) => {
+): AlertCard[] => {
     const findingsHighlight = findingsMetrics.totalFindings > 0;
+
     return [
         {
             title: 'Total PD Executions',
@@ -132,7 +133,7 @@ const buildAlertCards = (
             icon: <FaGavel className="text-red-600 text-2xl" />,
             bgColor: 'bg-red-200',
             textColor: 'text-red-900',
-            route: '/findings?status=committee_queue',
+            route: '/committee', // ✅ FIXED
         },
     ];
 };
@@ -156,17 +157,21 @@ const buildInsightCards = (
             (f.category ?? '').toLowerCase()
         )
     );
+
     const compliant = applicableFindings.filter(
         f => (f.status ?? '').toLowerCase() === 'closed'
     ).length;
-    const compliancePercent = applicableFindings.length === 0
-        ? 100
-        : Math.round((compliant / applicableFindings.length) * 100);
+
+    const compliancePercent =
+        applicableFindings.length === 0
+            ? 100
+            : Math.round((compliant / applicableFindings.length) * 100);
 
     const productionFindings = findings.filter(f => {
         const environment = (f.environment ?? '').toLowerCase();
         return environment === 'production' || environment === 'prod';
     });
+
     const criticalProdOpen = productionFindings.filter(f => {
         const severity = (f.severity ?? '').toLowerCase();
         const status = (f.status ?? '').toLowerCase();
@@ -175,29 +180,32 @@ const buildInsightCards = (
 
     const findingsPer100 = pdMetrics.totalPDExecutions
         ? Math.round(
-              (findingsMetrics.totalFindings / pdMetrics.totalPDExecutions) * 100
-          )
+            (findingsMetrics.totalFindings / pdMetrics.totalPDExecutions) * 100
+        )
         : 0;
+
     const criticalRate = findingsMetrics.totalFindings
         ? Math.round(
-              (findingsMetrics.criticalCount / findingsMetrics.totalFindings) * 100
-          )
+            (findingsMetrics.criticalCount / findingsMetrics.totalFindings) * 100
+        )
         : 0;
 
     const telemetryRequestIds = new Set(
         telemetryEvents
             .map(event => event.requestId)
-            .filter((requestId): requestId is string => Boolean(requestId))
+            .filter((id): id is string => Boolean(id))
     );
+
     const traceableExecutionsCount = pdMetrics.totalPDExecutions
         ? pdExecutions.filter(exec =>
-              telemetryRequestIds.has(exec.requestId)
-          ).length
+            telemetryRequestIds.has(exec.requestId)
+        ).length
         : 0;
+
     const traceCoveragePercent = pdMetrics.totalPDExecutions
         ? Math.round(
-              (traceableExecutionsCount / pdMetrics.totalPDExecutions) * 100
-          )
+            (traceableExecutionsCount / pdMetrics.totalPDExecutions) * 100
+        )
         : 0;
 
     return [
@@ -216,19 +224,19 @@ const buildInsightCards = (
             summary: `${Math.round(
                 (pdMetrics.pdSuccessCount /
                     Math.max(pdMetrics.totalPDExecutions, 1)) *
-                    100
+                100
             )}% success rate`,
             detail: `${pdMetrics.pdErrorCount} errors observed; average latency ${pdMetrics.averagePdLatencyMs} ms.`,
         },
         {
             title: 'Findings density',
             summary: `${findingsPer100} findings per 100 PD transactions`,
-            detail: `We’re seeing ~${findingsPer100} findings per 100 PD transactions, which indicates moderate operational noise.`,
+            detail: `We’re seeing ~${findingsPer100} findings per 100 PD transactions.`,
         },
         {
             title: 'Critical findings rate',
             summary: `${criticalRate}% of findings are critical`,
-            detail: `Only ${criticalRate}% of findings are critical, allowing teams to prioritize high-impact issues.`,
+            detail: `Only ${criticalRate}% of findings are critical, enabling focused remediation.`,
         },
         {
             title: 'Traceability coverage',
@@ -248,10 +256,6 @@ const useDashboardMetrics = (
     telemetryEvents: TelemetryEvent[],
     complianceStandard: ComplianceStandard
 ) => {
-    console.log('[useDashboardMetrics] pdExecutions', {
-        length: pdExecutions.length,
-        sample: pdExecutions[0],
-    });
     const findingsMetrics = React.useMemo(
         () => deriveFindingsMetrics(findings),
         [findings]
@@ -263,10 +267,7 @@ const useDashboardMetrics = (
     );
 
     return {
-        alertCards: buildAlertCards(
-            pdMetrics,
-            findingsMetrics
-        ),
+        alertCards: buildAlertCards(pdMetrics, findingsMetrics),
         insightCards: buildInsightCards(
             findings,
             findingsMetrics,
