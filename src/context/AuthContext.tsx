@@ -1,75 +1,70 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState } from "react";
+import * as authApi from "../api/auth";
 
-import * as authApi from '../api/auth';
+type User = {
+    userId: number;
+};
 
-export type AuthUser = authApi.AuthUser;
-
-type AuthContextValue = {
-    user: AuthUser | null;
+type AuthContextType = {
+    user: User | null;
     loading: boolean;
     login: (username: string, password: string) => Promise<void>;
     logout: () => Promise<void>;
-    refreshUser: () => Promise<void>;
 };
 
-const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+const AuthContext = createContext<AuthContextType | null>(null);
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const [user, setUser] = useState<AuthUser | null>(null);
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
+                                                                          children,
+                                                                      }) => {
+    const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
 
-    const refreshUser = useCallback(async () => {
+    // Called once on app startup to restore session from cookie
+    async function loadSession() {
         try {
-            const sessionUser = await authApi.me();
-            setUser(sessionUser);
-        } catch (error) {
-            console.error('Failed to refresh session', error);
+            const me = await authApi.me();
+            setUser(me);
+        } catch {
             setUser(null);
-        }
-    }, []);
-
-    const login = useCallback(async (username: string, password: string) => {
-        const session = await authApi.login(username, password);
-        setUser({ username: session.username });
-    }, []);
-
-    const logout = useCallback(async () => {
-        try {
-            await authApi.logout();
         } finally {
-            setUser(null);
+            setLoading(false);
         }
-    }, []);
+    }
 
     useEffect(() => {
-        let isMounted = true;
-
-        const loadSession = async () => {
-            try {
-                await refreshUser();
-            } finally {
-                if (isMounted) {
-                    setLoading(false);
-                }
-            }
-        };
-
         loadSession();
-        return () => {
-            isMounted = false;
-        };
-    }, [refreshUser]);
+    }, []);
 
-    const value = useMemo(
-        () => ({ user, loading, login, logout, refreshUser }),
-        [user, loading, login, logout, refreshUser]
+    async function login(username: string, password: string) {
+        await authApi.login(username, password);
+        const me = await authApi.me();
+        setUser(me);
+    }
+
+    async function logout() {
+        await authApi.logout();
+        setUser(null);
+    }
+
+    return (
+        <AuthContext.Provider
+            value={{
+                user,
+                loading,
+                login,
+                logout,
+            }}
+        >
+            {children}
+        </AuthContext.Provider>
     );
-
-    return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-export const useAuth = () => {
+export function useAuth() {
     const ctx = useContext(AuthContext);
-    if (!ctx) throw new Error('useAuth must be used within an AuthProvider');
+    if (!ctx) {
+        throw new Error("useAuth must be used inside AuthProvider");
+    }
     return ctx;
-};
+}

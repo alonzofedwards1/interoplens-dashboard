@@ -1,102 +1,59 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-
-import { useAuth } from '../context/AuthContext';
-
-type PreferenceStore = Record<string, Record<string, unknown>>;
-
-const STORAGE_KEY = 'userPreferences';
-
-const readStore = (): PreferenceStore => {
-    const raw = localStorage.getItem(STORAGE_KEY);
-
-    if (!raw) return {};
-
-    try {
-        return JSON.parse(raw) as PreferenceStore;
-    } catch (error) {
-        console.error('Failed to parse user preferences', error);
-        return {};
-    }
-};
-
-const writeStore = (store: PreferenceStore) => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
-};
-
-const getUserPreference = <T,>(userId: string, key: string, defaultValue: T): T => {
-    const store = readStore();
-
-    if (!store[userId]?.[key]) return defaultValue;
-
-    return store[userId][key] as T;
-};
-
-const setUserPreference = <T,>(userId: string, key: string, value: T) => {
-    const store = readStore();
-    const currentUserPrefs = store[userId] || {};
-    const updatedUserPrefs = { ...currentUserPrefs, [key]: value };
-
-    writeStore({ ...store, [userId]: updatedUserPrefs });
-};
+import { useEffect, useRef, useState } from "react";
+import { useAuth } from "../context/AuthContext";
 
 /**
- * Stores the provided preference under the current user's session. Falls back
- * to in-memory state when no authenticated session is present.
+ * Stores per-user preferences in localStorage, namespaced by userId.
+ * If user is not logged in, preferences are not persisted.
  */
-export const useUserPreference = <T,>(key: string, defaultValue: T) => {
+export const useUserPreference = <T,>(
+    key: string,
+    defaultValue: T
+): [T, (value: T) => void] => {
     const { user } = useAuth();
-    const userId = user?.username;
+
+    // User ID is now numeric
+    const userId = user?.userId;
 
     const defaultRef = useRef(defaultValue);
     defaultRef.current = defaultValue;
 
-    const [value, setValue] = useState<T>(() => {
-        if (!userId) return defaultRef.current;
+    const storageKey = userId ? `user:${userId}:${key}` : null;
 
-        return getUserPreference(userId, key, defaultRef.current);
+    const [value, setValue] = useState<T>(() => {
+        if (!storageKey) return defaultValue;
+
+        try {
+            const raw = localStorage.getItem(storageKey);
+            return raw !== null ? JSON.parse(raw) : defaultValue;
+        } catch {
+            return defaultValue;
+        }
     });
 
     useEffect(() => {
-        if (!userId) {
+        if (!storageKey) return;
+
+        try {
+            localStorage.setItem(storageKey, JSON.stringify(value));
+        } catch {
+            // ignore write errors
+        }
+    }, [storageKey, value]);
+
+    // Reset when user changes
+    useEffect(() => {
+        if (!storageKey) {
             setValue(defaultRef.current);
             return;
         }
 
-        setValue(getUserPreference(userId, key, defaultRef.current));
-    }, [userId, key]);
+        try {
+            const raw = localStorage.getItem(storageKey);
+            setValue(raw !== null ? JSON.parse(raw) : defaultRef.current);
+        } catch {
+            setValue(defaultRef.current);
+        }
+    }, [storageKey]);
 
-    useEffect(() => {
-        if (!userId) return undefined;
-
-        const handleStorage = (event: StorageEvent) => {
-            if (event.key === STORAGE_KEY) {
-                setValue(getUserPreference(userId, key, defaultRef.current));
-            }
-        };
-
-        window.addEventListener('storage', handleStorage);
-        return () => window.removeEventListener('storage', handleStorage);
-    }, [key, userId]);
-
-    const update = useCallback<React.Dispatch<React.SetStateAction<T>>>(
-        next => {
-            setValue(prev => {
-                const resolved =
-                    typeof next === 'function'
-                        ? (next as (current: T) => T)(prev)
-                        : next;
-
-                if (userId) {
-                    setUserPreference(userId, key, resolved);
-                }
-
-                return resolved;
-            });
-        },
-        [key, userId]
-    );
-
-    return [value, update] as const;
+    return [value, setValue];
 };
-
-export const clearUserPreferences = () => localStorage.removeItem(STORAGE_KEY);
