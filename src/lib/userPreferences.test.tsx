@@ -9,7 +9,7 @@ jest.mock('../context/AuthContext', () => {
     return {
         ...actual,
         useAuth: () => ({
-            user: { username: 'demo@example.com' },
+            user: { userId: 42 },
             login: jest.fn(),
             logout: jest.fn(),
             refreshUser: jest.fn(),
@@ -32,7 +32,7 @@ describe('useUserPreference', () => {
         localStorage.setItem(
             'userPreferences',
             JSON.stringify({
-                'demo@example.com': {
+                '42': {
                     'findings.dashboard.table': {
                         query: '',
                         sortKey: 'detectedAt',
@@ -61,7 +61,7 @@ describe('useUserPreference', () => {
         await waitFor(() => expect(onValue).toHaveBeenCalledWith('desc'));
 
         const updatedStore = {
-            'demo@example.com': {
+            '42': {
                 'findings.dashboard.table': {
                     query: 'acme',
                     sortKey: 'severity',
