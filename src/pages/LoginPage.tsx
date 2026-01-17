@@ -1,34 +1,40 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../lib/AuthContext';
 
-const Login: React.FC = () => {
+import { useAuth } from '../context/AuthContext';
+
+const LoginPage: React.FC = () => {
     const navigate = useNavigate();
     const { login } = useAuth();
 
-    const [email, setEmail] = useState('');
+    const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
+    const [submitting, setSubmitting] = useState(false);
 
-    const devEmail = 'admin@interoplens.io';
-    const devPassword = 'admin123';
+    const handleSubmit = async (event: React.FormEvent) => {
+        event.preventDefault();
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-
-        if (!email.trim() || !password.trim()) {
-            setError('Email and password are required.');
+        if (!username.trim() || !password.trim()) {
+            setError('Username and password are required.');
             return;
         }
 
+        setSubmitting(true);
         setError('');
-        login({ email, name: email, role: 'admin' });
-        navigate('/dashboard', { replace: true });
-    };
 
-    const prefillDevCredentials = () => {
-        setEmail(devEmail);
-        setPassword(devPassword);
+        try {
+            await login(username.trim(), password);
+            navigate('/dashboard', { replace: true });
+        } catch (loginError) {
+            const message =
+                loginError instanceof Error
+                    ? loginError.message
+                    : 'Unable to sign in. Please try again.';
+            setError(message);
+        } finally {
+            setSubmitting(false);
+        }
     };
 
     return (
@@ -50,16 +56,17 @@ const Login: React.FC = () => {
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
                         <label
-                            htmlFor="login-email"
+                            htmlFor="login-username"
                             className="block text-sm font-medium text-gray-700 mb-1"
                         >
-                            Email
+                            Username
                         </label>
                         <input
-                            type="email"
-                            id="login-email"
-                            value={email}
-                            onChange={e => setEmail(e.target.value)}
+                            type="text"
+                            id="login-username"
+                            value={username}
+                            onChange={event => setUsername(event.target.value)}
+                            autoComplete="username"
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
                         />
                     </div>
@@ -75,42 +82,23 @@ const Login: React.FC = () => {
                             type="password"
                             id="login-password"
                             value={password}
-                            onChange={e => setPassword(e.target.value)}
+                            onChange={event => setPassword(event.target.value)}
+                            autoComplete="current-password"
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
                         />
                     </div>
 
                     <button
                         type="submit"
-                        className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition"
+                        disabled={submitting}
+                        className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-medium rounded-md transition"
                     >
-                        Sign In
+                        {submitting ? 'Signing in…' : 'Sign In'}
                     </button>
                 </form>
-
-                <div className="flex items-center justify-between text-sm text-blue-700">
-                    <button
-                        type="button"
-                        onClick={prefillDevCredentials}
-                        className="underline hover:text-blue-800"
-                    >
-                        Use dev credentials
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => navigate('/forgot-password')}
-                        className="underline hover:text-blue-800"
-                    >
-                        Forgot password?
-                    </button>
-                </div>
-
-                <div className="text-center text-xs text-gray-400 pt-4 border-t">
-                    Demo Environment · Synthetic Data · Dev sign-in: {devEmail} / {devPassword}
-                </div>
             </div>
         </div>
     );
 };
 
-export default Login;
+export default LoginPage;
