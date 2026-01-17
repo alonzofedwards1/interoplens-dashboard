@@ -1,18 +1,19 @@
 import React from 'react';
 import { act, render, waitFor } from '@testing-library/react';
 
-import { AuthProvider } from './AuthContext';
+import { AuthProvider } from '../context/AuthContext';
 import { useUserPreference } from './userPreferences';
 
-jest.mock('./AuthContext', () => {
-    const actual = jest.requireActual('./AuthContext');
+jest.mock('../context/AuthContext', () => {
+    const actual = jest.requireActual('../context/AuthContext');
     return {
         ...actual,
         useAuth: () => ({
-            isAuthenticated: true,
-            user: { email: 'demo@example.com' },
+            user: { username: 'demo@example.com' },
             login: jest.fn(),
             logout: jest.fn(),
+            refreshUser: jest.fn(),
+            loading: false,
         }),
         AuthProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
     };

@@ -1,9 +1,9 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import Login from './LoginPage';
-import { useAuth } from '../../lib/AuthContext';
+import Login from '../../pages/LoginPage';
+import { useAuth } from '../../context/AuthContext';
 
-jest.mock('../../lib/AuthContext');
+jest.mock('../../context/AuthContext');
 
 const mockNavigate = jest.fn();
 
@@ -24,9 +24,10 @@ describe('LoginPage', () => {
     });
 
     test('authenticates locally and redirects on success', async () => {
+        mockLogin.mockResolvedValue(undefined);
         render(<Login />);
 
-        const emailInput = screen.getByLabelText(/email/i) as HTMLInputElement;
+        const emailInput = screen.getByLabelText(/username/i) as HTMLInputElement;
         const passwordInput = screen.getByLabelText(/password/i) as HTMLInputElement;
 
         await userEvent.type(emailInput, 'admin@interoplens.io');
@@ -34,11 +35,7 @@ describe('LoginPage', () => {
         await userEvent.click(screen.getByRole('button', { name: /sign in/i }));
 
         await waitFor(() =>
-            expect(mockLogin).toHaveBeenCalledWith({
-                email: 'admin@interoplens.io',
-                name: 'admin@interoplens.io',
-                role: 'admin',
-            })
+            expect(mockLogin).toHaveBeenCalledWith('admin@interoplens.io', 'admin123')
         );
         expect(mockNavigate).toHaveBeenCalledWith('/dashboard', { replace: true });
     });
@@ -49,7 +46,7 @@ describe('LoginPage', () => {
         await userEvent.click(screen.getByRole('button', { name: /sign in/i }));
 
         await waitFor(() =>
-            expect(screen.getByText(/email and password are required/i)).toBeInTheDocument()
+            expect(screen.getByText(/username and password are required/i)).toBeInTheDocument()
         );
 
         expect(mockLogin).not.toHaveBeenCalled();

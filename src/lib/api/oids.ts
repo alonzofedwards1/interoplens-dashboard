@@ -17,6 +17,7 @@ export async function submitOidGovernance(
     const res = await fetch(`/api/oids/${encodeURIComponent(oid)}/governance`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ action, notes }),
     });
 

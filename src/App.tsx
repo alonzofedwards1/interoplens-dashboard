@@ -1,8 +1,8 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 
-import Login from './features/auth/LoginPage';
 import ForgotPasswordPage from './features/auth/ForgotPasswordPage';
+import LoginPage from './pages/LoginPage';
 import Dashboard from './features/dashboard/DashboardPage';
 import ViewAllFindings from './features/findings/ViewAllFindingsPage';
 import TelemetryPage from './features/telemetry/TelemetryPage';
@@ -19,97 +19,60 @@ import KnowledgeBasePage from './features/knowledge-base/KnowledgeBasePage';
 import OidQueue from './features/oid-directory/OidQueue';
 import OidDetail from './features/oid-directory/OidDetail';
 
-import { AuthProvider, useAuth } from './lib/AuthContext';
+import { useAuth } from './context/AuthContext';
 import { ServerDataProvider } from './lib/ServerDataContext';
-import { isAuthEnabled } from './config/auth';
-
-const ProtectedRoute: React.FC<{ children: React.ReactElement }> = ({ children }) => {
-    const { isAuthenticated } = useAuth();
-    if (!isAuthenticated) {
-        return <Navigate to="/login" replace />;
-    }
-
-    return children;
-};
 
 const AppRoutes: React.FC = () => {
-    const { isAuthenticated, user, logout } = useAuth();
+    const { logout } = useAuth();
+    const handleLogout = () => {
+        void logout();
+    };
 
     return (
         <Routes>
-            <Route
-                path="/"
-                element={<Navigate to={isAuthenticated ? '/dashboard' : '/login'} replace />}
-            />
-            <Route path="/login" element={<Login />} />
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/login" element={<LoginPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
             <Route
                 path="/dashboard"
-                element={
-                    <ProtectedRoute>
-                        <Dashboard role={user?.role ?? null} onLogout={logout} />
-                    </ProtectedRoute>
-                }
+                element={<Dashboard role={null} onLogout={handleLogout} />}
             />
 
-            <Route
-                path="/findings"
-                element={<ProtectedRoute>{<ViewAllFindings />}</ProtectedRoute>}
-            />
+            <Route path="/findings" element={<ViewAllFindings />} />
             <Route
                 path="/pd-executions"
-                element={<ProtectedRoute>{<PDExecutions />}</ProtectedRoute>}
+                element={<PDExecutions />}
             />
             <Route
                 path="/transactions/:id"
-                element={<ProtectedRoute>{<TransactionDetailPage />}</ProtectedRoute>}
+                element={<TransactionDetailPage />}
             />
-            <Route
-                path="/telemetry"
-                element={<ProtectedRoute>{<TelemetryPage />}</ProtectedRoute>}
-            />
+            <Route path="/telemetry" element={<TelemetryPage />} />
 
             {/* Committee */}
-            <Route
-                path="/committee"
-                element={<ProtectedRoute>{<CommitteeQueue />}</ProtectedRoute>}
-            />
+            <Route path="/committee" element={<CommitteeQueue />} />
             <Route
                 path="/committee/:id"
-                element={<ProtectedRoute>{<CommitteeCaseDetail />}</ProtectedRoute>}
+                element={<CommitteeCaseDetail />}
             />
 
-            <Route
-                path="/knowledge-base"
-                element={<ProtectedRoute>{<KnowledgeBasePage />}</ProtectedRoute>}
-            />
+            <Route path="/knowledge-base" element={<KnowledgeBasePage />} />
 
             {/* OID Directory */}
-            <Route path="/oids" element={<ProtectedRoute>{<OidQueue />}</ProtectedRoute>} />
-            <Route
-                path="/oids/:oid"
-                element={<ProtectedRoute>{<OidDetail />}</ProtectedRoute>}
-            />
+            <Route path="/oids" element={<OidQueue />} />
+            <Route path="/oids/:oid" element={<OidDetail />} />
 
             <Route
                 path="/integration-issues"
-                element={
-                    <ProtectedRoute>
-                        <IntegrationIssuesPage role={user?.role ?? null} />
-                    </ProtectedRoute>
-                }
+                element={<IntegrationIssuesPage role={null} />}
             />
             <Route path="/IntegrationIssues" element={<Navigate to="/integration-issues" replace />} />
 
-            <Route path="/reports" element={<ProtectedRoute>{<Reports />}</ProtectedRoute>} />
+            <Route path="/reports" element={<Reports />} />
             <Route
                 path="/settings"
-                element={
-                    <ProtectedRoute>
-                        <Settings role={user?.role ?? null} />
-                    </ProtectedRoute>
-                }
+                element={<Settings role={null} />}
             />
 
             <Route path="*" element={<Navigate to="/" replace />} />
@@ -119,11 +82,9 @@ const AppRoutes: React.FC = () => {
 
 const App: React.FC = () => {
     return (
-        <AuthProvider>
-            <ServerDataProvider>
-                <AppRoutes />
-            </ServerDataProvider>
-        </AuthProvider>
+        <ServerDataProvider>
+            <AppRoutes />
+        </ServerDataProvider>
     );
 };
 
