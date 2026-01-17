@@ -1,5 +1,7 @@
 import React from 'react';
-import { Finding, PdExecution, TelemetryEvent } from '../types';
+import { Finding } from '../types/findings';
+import { PdExecution } from '../types/pdExecutions';
+import { TelemetryEvent } from '../types/telemetry';
 import { CommitteeQueueItem } from '../features/committee/data/committeeQueue.data';
 import { apiClient, ApiClient } from './apiClient';
 interface ServerDataContextValue {

@@ -8,8 +8,8 @@ import {
 } from 'react-icons/fa';
 
 import { Finding } from '../../../types/findings';
-import { PdExecution } from '../../../types';
-import { TelemetryEvent } from '../../../types';
+import { PdExecution } from '../../../types/pdExecutions';
+import { TelemetryEvent } from '../../../types/telemetry';
 
 /* ============================
    Types

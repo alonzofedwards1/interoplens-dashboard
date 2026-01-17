@@ -133,12 +133,16 @@ const FindingsTable: React.FC<FindingsTableProps> = ({ findings }) => {
 
     const toggleSort = (key: FindingsSortKey) => {
         if (sortKey === key) {
-            setPreferences(prev => ({
+            setPreferences((prev: FindingsPreferences) => ({
                 ...prev,
                 sortDirection: prev.sortDirection === 'asc' ? 'desc' : 'asc',
             }));
         } else {
-            setPreferences(prev => ({ ...prev, sortKey: key, sortDirection: 'asc' }));
+            setPreferences((prev: FindingsPreferences) => ({
+                ...prev,
+                sortKey: key,
+                sortDirection: 'asc',
+            }));
         }
     };
 
@@ -162,7 +166,7 @@ const FindingsTable: React.FC<FindingsTableProps> = ({ findings }) => {
                     type="search"
                     value={query}
                     onChange={event =>
-                        setPreferences(prev => ({
+                        setPreferences((prev: FindingsPreferences) => ({
                             ...prev,
                             query: event.target.value,
                         }))
@@ -176,7 +180,7 @@ const FindingsTable: React.FC<FindingsTableProps> = ({ findings }) => {
                     <select
                         value={sortKey}
                         onChange={event =>
-                            setPreferences(prev => ({
+                            setPreferences((prev: FindingsPreferences) => ({
                                 ...prev,
                                 sortKey: event.target.value as FindingsSortKey,
                             }))

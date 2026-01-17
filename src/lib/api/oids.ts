@@ -1,5 +1,6 @@
 import { apiGet } from '../apiClient';
-import { Oid, OidDetail, OidsListResponse } from '../../types';
+import { authFetch } from './auth';
+import { OidDetail, OidsListResponse } from '../../types/oids';
 
 export async function fetchOids(): Promise<OidsListResponse> {
     return apiGet<OidsListResponse>('/api/oids');
@@ -14,10 +15,8 @@ export async function submitOidGovernance(
     action: string,
     notes?: string
 ) {
-    const res = await fetch(`/api/oids/${encodeURIComponent(oid)}/governance`, {
+    const res = await authFetch(`/api/oids/${encodeURIComponent(oid)}/governance`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({ action, notes }),
     });
 
