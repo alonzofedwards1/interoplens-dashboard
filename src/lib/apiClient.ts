@@ -23,7 +23,7 @@ export async function safeJson(response: Response) {
 }
 
 export async function apiGet<T>(url: string): Promise<T> {
-    const res = await fetch(url);
+    const res = await fetch(url, { credentials: 'include' });
     console.debug('API response', res);
 
     if (!res.ok) {
