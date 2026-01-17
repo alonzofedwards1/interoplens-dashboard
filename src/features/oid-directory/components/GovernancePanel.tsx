@@ -1,12 +1,13 @@
-import type { OidDetail } from "../../../types";
-import { OID_STATUS_ACTIONS } from "../data/oidStatus.data";
+import type { OidDetail } from "../../../types/oids";
+import { OID_STATUS_ACTIONS, type OidStatus } from "../data/oidStatus.data";
 
 interface Props {
     record: OidDetail;
 }
 
 const GovernancePanel = ({ record }: Props) => {
-    const actions = OID_STATUS_ACTIONS[record.status] ?? [];
+    const status = record.status.toLowerCase() as OidStatus;
+    const actions = status in OID_STATUS_ACTIONS ? OID_STATUS_ACTIONS[status] : [];
 
     const renderButton = (action: string) => (
         <button

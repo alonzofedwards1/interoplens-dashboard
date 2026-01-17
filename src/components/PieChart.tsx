@@ -7,7 +7,7 @@ import {
     Tooltip
 } from 'recharts';
 
-import { Finding } from '../types';
+import { Finding } from '../types/findings';
 
 /* ============================
    Derive Compliance Data

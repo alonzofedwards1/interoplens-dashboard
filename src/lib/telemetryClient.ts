@@ -1,6 +1,6 @@
 import { TELEMETRY_BASE_URL } from '../config/api';
 import { TelemetryEvent } from '../telemetry/TelemetryEvent';
-import { safeJson } from './apiClient';
+import { safeJson } from './api/utils';
 
 type RawTelemetryEvent = {
     eventId: string;
