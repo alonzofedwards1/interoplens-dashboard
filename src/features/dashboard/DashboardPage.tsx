@@ -12,7 +12,6 @@ import { useServerData } from '../../lib/ServerDataContext';
 import AlertSummaryCards from './components/AlertSummaryCards';
 import OperationalInsights from './components/OperationalInsights';
 import useDashboardMetrics from './hooks/useDashboardMetrics';
-import useDashboardCards from './hooks/useDashboardCards';
 
 /* ============================
    Types
@@ -29,6 +28,7 @@ interface DashboardProps {
 
 const Dashboard: React.FC<DashboardProps> = ({ role, onLogout }) => {
     const navigate = useNavigate();
+
     const {
         findings,
         pdExecutions,
@@ -38,21 +38,24 @@ const Dashboard: React.FC<DashboardProps> = ({ role, onLogout }) => {
         telemetryWarning,
         refresh,
     } = useServerData();
+
     const [complianceStandard, setComplianceStandard] =
         React.useState<'TEFCA' | 'IHE' | 'HL7'>('TEFCA');
 
+    /**
+     * ✅ SINGLE SOURCE OF TRUTH
+     * Metrics are derived ONLY here
+     */
     const { alertCards, insightCards } = useDashboardMetrics(
         findings,
         pdExecutions,
         telemetryEvents,
         complianceStandard
     );
-    const { cards: alertSummaryCards } = useDashboardCards(alertCards);
-    console.log('[DashboardPage] pdExecutions', {
-        length: pdExecutions.length,
-        sample: pdExecutions[0],
-        loading,
-        error,
+
+    console.log('[Dashboard] metrics snapshot', {
+        totalFindings: findings.length,
+        alertCards,
     });
 
     if (loading) {
@@ -71,7 +74,9 @@ const Dashboard: React.FC<DashboardProps> = ({ role, onLogout }) => {
                 <Topbar role={role} onLogout={onLogout} />
 
                 <main className="p-4 space-y-6">
-                    {/* Alert Summary Cards */}
+                    {/* ============================
+                        Alerts / Errors
+                    ============================ */}
                     {error && (
                         <div className="rounded-md border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-800">
                             {error}. Showing cached fixtures; refresh once the API is available.
@@ -84,34 +89,46 @@ const Dashboard: React.FC<DashboardProps> = ({ role, onLogout }) => {
                             </button>
                         </div>
                     )}
+
                     {telemetryWarning && (
                         <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
                             Telemetry unavailable: {telemetryWarning}. Observability data will appear once the service recovers.
                         </div>
                     )}
 
+                    {/* ============================
+                        Alert Summary Cards
+                    ============================ */}
                     <AlertSummaryCards
-                        cards={alertSummaryCards}
+                        cards={alertCards}
                         onNavigate={route => navigate(route)}
                     />
 
-                    {/* Operational Insights */}
+                    {/* ============================
+                        Operational Insights
+                    ============================ */}
                     <OperationalInsights
                         cards={insightCards}
                         complianceStandard={complianceStandard}
                         onComplianceStandardChange={setComplianceStandard}
                     />
 
-                    {/* Charts */}
+                    {/* ============================
+                        Charts
+                    ============================ */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <BarChart findings={findings} />
                         <PieChart findings={findings} />
                     </div>
 
-                    {/* Filters */}
+                    {/* ============================
+                        Filters
+                    ============================ */}
                     <Filters />
 
-                    {/* Findings Table */}
+                    {/* ============================
+                        Findings Table
+                    ============================ */}
                     <FindingsTable findings={findings} />
                 </main>
             </div>

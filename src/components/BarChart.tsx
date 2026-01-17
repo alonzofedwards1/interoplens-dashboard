@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
     BarChart,
     Bar,
@@ -6,44 +6,63 @@ import {
     YAxis,
     CartesianGrid,
     Tooltip,
-    ResponsiveContainer
+    ResponsiveContainer,
+    Cell,
 } from 'recharts';
 
-import { Finding } from '../types/findings';
+import { Finding } from '@/types';
 
 /* ============================
-   Derive Findings by Transaction
+   Color Palette
 ============================ */
 
-const buildChartData = (findings: Finding[]) =>
-    Object.values(
-        findings.reduce<
-            Record<string, { name: string; findings: number }>
-        >((acc, finding) => {
-            if (!finding.transaction) return acc;
+const CATEGORY_COLORS = [
+    '#3B82F6', // blue
+    '#10B981', // green
+    '#F59E0B', // amber
+    '#EF4444', // red
+    '#8B5CF6', // purple
+    '#EC4899', // pink
+    '#14B8A6', // teal
+];
 
-            if (!acc[finding.transaction]) {
-                acc[finding.transaction] = {
-                    name: finding.transaction,
+/* ============================
+   Derive Findings by Category
+============================ */
+
+type ChartRow = {
+    name: string;
+    findings: number;
+};
+
+const buildChartData = (findings: Finding[]): ChartRow[] =>
+    Object.values(
+        findings.reduce<Record<string, ChartRow>>((acc, finding) => {
+            const category = finding.category ?? 'Uncategorized';
+
+            if (!acc[category]) {
+                acc[category] = {
+                    name: category,
                     findings: 1,
                 };
             } else {
-                acc[finding.transaction].findings += 1;
+                acc[category].findings += 1;
             }
 
             return acc;
         }, {})
-    );
+    ).sort((a, b) => b.findings - a.findings); // nicer ordering
 
 /* ============================
    Component
 ============================ */
+
 type Props = {
     findings: Finding[];
 };
 
 const BarChartComponent: React.FC<Props> = ({ findings }) => {
-    const findingsByTransaction = React.useMemo(
+    const findingsByCategory = useMemo(
         () => buildChartData(findings),
         [findings]
     );
@@ -51,18 +70,38 @@ const BarChartComponent: React.FC<Props> = ({ findings }) => {
     return (
         <div className="bg-white rounded-2xl shadow p-4 w-full h-[300px]">
             <h2 className="text-lg font-semibold mb-2">
-                Findings by Transaction Type
+                Findings by Category
             </h2>
 
-            <ResponsiveContainer width="100%" height="90%">
-                <BarChart data={findingsByTransaction}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis allowDecimals={false} />
-                    <Tooltip />
-                    <Bar dataKey="findings" fill="#3B82F6" />
-                </BarChart>
-            </ResponsiveContainer>
+            {findingsByCategory.length === 0 ? (
+                <div className="text-sm text-gray-500 h-full flex items-center justify-center">
+                    No findings available
+                </div>
+            ) : (
+                <ResponsiveContainer width="100%" height="90%">
+                    <BarChart data={findingsByCategory}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis
+                            dataKey="name"
+                            angle={-25}
+                            textAnchor="end"
+                            height={60}
+                        />
+                        <YAxis allowDecimals={false} />
+                        <Tooltip />
+                        <Bar dataKey="findings">
+                            {findingsByCategory.map((_, index) => (
+                                <Cell
+                                    key={`cell-${index}`}
+                                    fill={
+                                        CATEGORY_COLORS[index % CATEGORY_COLORS.length]
+                                    }
+                                />
+                            ))}
+                        </Bar>
+                    </BarChart>
+                </ResponsiveContainer>
+            )}
         </div>
     );
 };
