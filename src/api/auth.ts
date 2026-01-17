@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../config/api';
 import { safeJson } from '../lib/apiClient';
 
 export type AuthUser = {
@@ -9,14 +10,27 @@ type LoginResponse = {
     expiresAt: string;
 };
 
+const resolveAuthUrl = (input: RequestInfo): RequestInfo => {
+    if (typeof input !== 'string') return input;
+    if (input.startsWith('http')) return input;
+    if (input.startsWith('/')) return `${API_BASE_URL}${input}`;
+    return `${API_BASE_URL}/${input}`;
+};
+
 const authFetch = async (input: RequestInfo, init?: RequestInit) =>
-    fetch(input, {
+    fetch(resolveAuthUrl(input), {
         credentials: 'include',
         ...init,
     });
 
+const readJsonIfAvailable = async (response: Response) => {
+    const contentType = response.headers.get('content-type') ?? '';
+    if (!contentType.includes('application/json')) return null;
+    return safeJson(response);
+};
+
 const readErrorMessage = async (response: Response, fallback: string) => {
-    const data = await safeJson(response);
+    const data = await readJsonIfAvailable(response.clone());
     if (data && typeof data === 'object' && 'message' in data) {
         const message = (data as { message?: string }).message;
         if (message) return message;
@@ -36,7 +50,7 @@ export const login = async (username: string, password: string): Promise<LoginRe
         throw new Error(message);
     }
 
-    const data = (await safeJson(res)) as LoginResponse;
+    const data = (await readJsonIfAvailable(res)) as LoginResponse | null;
     if (!data?.username) {
         throw new Error('Invalid login response');
     }
@@ -65,7 +79,7 @@ export const me = async (): Promise<AuthUser | null> => {
         throw new Error(message);
     }
 
-    const data = (await safeJson(res)) as AuthUser | null;
+    const data = (await readJsonIfAvailable(res)) as AuthUser | null;
     if (!data?.username) return null;
 
     return { username: data.username };
