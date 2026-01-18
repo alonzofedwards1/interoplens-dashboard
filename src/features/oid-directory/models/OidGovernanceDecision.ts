@@ -1,4 +1,4 @@
-import { OidStatus } from "../data/oidStatus.data";
+import type { OidStatus } from "../../../types";
 
 export type OidDecisionType =
     | "ASSIGN_ORG"

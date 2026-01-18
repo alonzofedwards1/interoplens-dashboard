@@ -1,23 +1,16 @@
-export type OidStatus =
-    | "provisional"
-    | "approved"
-    | "deprecated";
+import type { OidStatus, OidGovernanceAction } from "../../../types";
 
 export const OID_STATUS_LABELS: Record<OidStatus, string> = {
     provisional: "Provisional",
     approved: "Approved",
-    deprecated: "Deprecated"
+    deprecated: "Deprecated",
 };
 
-export const OID_STATUS_ACTIONS: Record<OidStatus, string[]> = {
-    provisional: [
-        "APPROVE",
-        "REJECT"
-    ],
-    approved: [
-        "DEPRECATE"
-    ],
-    deprecated: [
-        "REACTIVATE"
-    ]
-};
+export const OID_STATUS_ACTIONS: Record<
+    OidStatus,
+    readonly OidGovernanceAction[]
+> = {
+    provisional: ["APPROVE", "REJECT"],
+    approved: ["DEPRECATE"],
+    deprecated: ["REACTIVATE"],
+} as const;

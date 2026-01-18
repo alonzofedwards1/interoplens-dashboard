@@ -3,179 +3,80 @@ import { useParams, useNavigate } from "react-router-dom";
 import { fetchOidDetail, submitOidGovernance } from "../../lib/api/oids";
 import { OidDetail as OidDetailRecord } from "../../types";
 
+import OidSummaryCard from "./components/OidSummaryCard";
+import ObservationSnapshot from "./components/ObservationSnapshot";
+import UsageTimeline from "./components/UsageTimeline";
+import GovernancePanel from "./components/GovernancePanel";
+import LinkedFindingsTable from "./components/LinkedFindingsTable";
+
 const OidDetail = () => {
     const { oid } = useParams();
     const navigate = useNavigate();
-
     const decodedOid = decodeURIComponent(oid || "");
+
     const [record, setRecord] = useState<OidDetailRecord | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [actionError, setActionError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    useEffect(() => {
-        let isMounted = true;
-        const loadOidDetail = async () => {
-            if (!decodedOid) return;
-            try {
-                const data = await fetchOidDetail(decodedOid);
-                if (isMounted) {
-                    setRecord(data);
-                    setError(null);
-                }
-            } catch (err) {
-                if (isMounted) {
-                    setError(err instanceof Error ? err.message : "Failed to load OID detail");
-                }
-            } finally {
-                if (isMounted) {
-                    setLoading(false);
-                }
-            }
-        };
-
-        loadOidDetail();
-        return () => {
-            isMounted = false;
-        };
-    }, [decodedOid]);
-
-    const handleGovernanceAction = async (action: string) => {
-        if (!decodedOid) return;
-        setIsSubmitting(true);
-        setActionError(null);
+    const load = async () => {
         try {
-            await submitOidGovernance(decodedOid, action);
+            setLoading(true);
             const data = await fetchOidDetail(decodedOid);
             setRecord(data);
+            setError(null);
         } catch (err) {
-            setActionError(err instanceof Error ? err.message : "Governance action failed");
+            setError(err instanceof Error ? err.message : "Failed to load OID");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (decodedOid) load();
+    }, [decodedOid]);
+
+    const handleGovernance = async (
+        action: "APPROVE" | "REJECT" | "DEPRECATE" | "REACTIVATE"
+    ) => {
+        if (!decodedOid) return;
+        try {
+            setIsSubmitting(true);
+            await submitOidGovernance(decodedOid, action);
+            await load(); // 🔁 re-fetch authoritative state
         } finally {
             setIsSubmitting(false);
         }
     };
 
-    const renderActions = (currentRecord: OidDetailRecord) => {
-        switch (currentRecord.status) {
-            case "provisional":
-                return (
-                    <>
-                        <button
-                            className="btn-success"
-                            onClick={() => handleGovernanceAction("APPROVE")}
-                            disabled={isSubmitting}
-                        >
-                            Approve
-                        </button>
-                        <button
-                            className="btn-danger"
-                            onClick={() => handleGovernanceAction("REJECT")}
-                            disabled={isSubmitting}
-                        >
-                            Reject
-                        </button>
-                    </>
-                );
-            case "approved":
-                return (
-                    <button
-                        className="btn-warning"
-                        onClick={() => handleGovernanceAction("DEPRECATE")}
-                        disabled={isSubmitting}
-                    >
-                        Deprecate
-                    </button>
-                );
-            case "deprecated":
-                return (
-                    <button
-                        className="btn-primary"
-                        onClick={() => handleGovernanceAction("REACTIVATE")}
-                        disabled={isSubmitting}
-                    >
-                        Reactivate
-                    </button>
-                );
-            default:
-                return null;
-        }
-    };
-
-    if (loading) {
-        return (
-            <div className="p-6">
-                <button
-                    className="text-blue-600 mb-4"
-                    onClick={() => navigate("/oids")}
-                >
-                    ← Back to OID Directory
-                </button>
-                <div className="rounded border border-dashed p-6 text-center text-gray-500">
-                    Loading OID detail...
-                </div>
-            </div>
-        );
-    }
-
-    if (!record || error) {
-        return (
-            <div className="p-6">
-                <button
-                    className="text-blue-600 mb-4"
-                    onClick={() => navigate("/oids")}
-                >
-                    ← Back to OID Directory
-                </button>
-                <p className="text-red-600">{error ?? "OID not found."}</p>
-            </div>
-        );
-    }
+    if (loading) return <div className="p-6">Loading OID…</div>;
+    if (!record || error)
+        return <div className="p-6 text-red-600">{error}</div>;
 
     return (
-        <div className="p-6">
+        <div className="p-6 space-y-4">
             <button
-                className="text-blue-600 mb-4"
                 onClick={() => navigate("/oids")}
+                className="text-blue-600 text-sm"
             >
                 ← Back to OID Directory
             </button>
 
-            <h1 className="text-2xl font-semibold mb-2 font-mono">{record.oid}</h1>
+            <h1 className="text-2xl font-semibold font-mono">{record.oid}</h1>
 
-            {/* Summary */}
-            <div className="border rounded p-4 mb-4">
-                <p><strong>Name:</strong> {record.displayName}</p>
-                <p><strong>Status:</strong> {record.status}</p>
-                <p><strong>Owner:</strong> {record.ownerOrg}</p>
-                <p><strong>Confidence:</strong> {record.confidence}</p>
-                <p><strong>First Seen:</strong> {record.firstSeen}</p>
-                <p><strong>Last Seen:</strong> {record.lastSeen}</p>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <OidSummaryCard record={record} />
+                <ObservationSnapshot record={record} />
+                <UsageTimeline record={record} />
+
+                <GovernancePanel
+                    record={record}
+                    isSubmitting={isSubmitting}
+                    onAction={handleGovernance}
+                />
             </div>
 
-            {/* Observation Snapshot */}
-            <div className="border rounded p-4 mb-4">
-                <h2 className="font-semibold mb-2">Observed Usage</h2>
-                <ul className="list-disc ml-6">
-                    <li>PD Transactions: {record.usage?.pd ?? '—'}</li>
-                    <li>QD Transactions: {record.usage?.qd ?? '—'}</li>
-                    <li>RD Transactions: {record.usage?.rd ?? '—'}</li>
-                    <li>XDS Transactions: {record.usage?.xds ?? '—'}</li>
-                </ul>
-            </div>
-
-            {/* Actions */}
-            <div className="border rounded p-4">
-                <h2 className="font-semibold mb-2">Governance Actions</h2>
-                {actionError && (
-                    <div className="mb-3 rounded border border-red-200 bg-red-50 p-2 text-sm text-red-700">
-                        {actionError}
-                    </div>
-                )}
-                <div className="flex gap-2 flex-wrap">
-                    {renderActions(record)}
-                </div>
-            </div>
+            <LinkedFindingsTable findings={record.findings ?? []} />
         </div>
     );
 };

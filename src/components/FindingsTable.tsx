@@ -6,7 +6,7 @@ import { TransactionLink } from './TransactionLink';
 import { useUserPreference } from '../lib/userPreferences';
 
 /* ============================
-   Derive Recent Findings
+   Helpers
 ============================ */
 
 const buildRecentFindings = (findings: Finding[]) =>
@@ -18,10 +18,6 @@ const buildRecentFindings = (findings: Finding[]) =>
                 new Date(a.detectedAt ?? 0).getTime()
         )
         .slice(0, 5);
-
-/* ============================
-   Helpers
-============================ */
 
 const getSeverityLabel = (severity?: Finding['severity']) => {
     switch (severity) {
@@ -37,12 +33,6 @@ const getSeverityLabel = (severity?: Finding['severity']) => {
                     Warning
                 </span>
             );
-        case undefined:
-            return (
-                <span className="px-2 py-0.5 rounded text-xs font-semibold bg-gray-100 text-gray-500">
-                    —
-                </span>
-            );
         default:
             return (
                 <span className="px-2 py-0.5 rounded text-xs font-semibold bg-green-100 text-green-700">
@@ -53,9 +43,7 @@ const getSeverityLabel = (severity?: Finding['severity']) => {
 };
 
 const getStatusLabel = (status?: Finding['status']) => {
-    if (!status) {
-        return <span className="text-gray-500 font-semibold">—</span>;
-    }
+    if (!status) return <span className="text-gray-500">—</span>;
 
     return (
         <span
@@ -94,25 +82,35 @@ interface FindingsTableProps {
 
 const FindingsTable: React.FC<FindingsTableProps> = ({ findings }) => {
     const navigate = useNavigate();
+
     const [preferences, setPreferences] = useUserPreference(
         'findings.dashboard.table',
         defaultFindingsPreferences
     );
 
-    const { query, sortDirection, sortKey } = preferences;
+    const { query, sortKey, sortDirection } = preferences;
+
+    /* ============================
+       FILTER
+    ============================ */
 
     const filteredFindings = useMemo(() => {
-        const recentFindings = buildRecentFindings(findings);
-        return recentFindings.filter(finding => {
-            if (!query.trim()) return true;
+        const recent = buildRecentFindings(findings);
 
-            const lowerQuery = query.toLowerCase();
-            return (
-                (finding.organization || '').toLowerCase().includes(lowerQuery) ||
-                (finding.type || '').toLowerCase().includes(lowerQuery)
-            );
-        });
+        if (!query.trim()) return recent;
+
+        const q = query.toLowerCase();
+
+        return recent.filter(f =>
+            f.organization?.name?.toLowerCase().includes(q) ||
+            f.type?.toLowerCase().includes(q) ||
+            f.summary?.toLowerCase().includes(q)
+        );
     }, [findings, query]);
+
+    /* ============================
+       SORT
+    ============================ */
 
     const sortedFindings = useMemo(() => {
         return [...filteredFindings].sort((a, b) => {
@@ -122,37 +120,31 @@ const FindingsTable: React.FC<FindingsTableProps> = ({ findings }) => {
                 return sortDirection === 'asc' ? aDate - bDate : bDate - aDate;
             }
 
-            const aValue = a[sortKey] ?? '';
-            const bValue = b[sortKey] ?? '';
+            if (sortKey === 'organization') {
+                const aOrg = a.organization?.name ?? '';
+                const bOrg = b.organization?.name ?? '';
+                return sortDirection === 'asc'
+                    ? aOrg.localeCompare(bOrg)
+                    : bOrg.localeCompare(aOrg);
+            }
 
-            if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
-            if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
-            return 0;
+            const aVal = a.severity ?? '';
+            const bVal = b.severity ?? '';
+
+            return sortDirection === 'asc'
+                ? aVal.localeCompare(bVal)
+                : bVal.localeCompare(aVal);
         });
-    }, [filteredFindings, sortDirection, sortKey]);
+    }, [filteredFindings, sortKey, sortDirection]);
 
-    const toggleSort = (key: FindingsSortKey) => {
-        if (sortKey === key) {
-            setPreferences((prev: FindingsPreferences) => ({
-                ...prev,
-                sortDirection: prev.sortDirection === 'asc' ? 'desc' : 'asc',
-            }));
-        } else {
-            setPreferences((prev: FindingsPreferences) => ({
-                ...prev,
-                sortKey: key,
-                sortDirection: 'asc',
-            }));
-        }
-    };
+    /* ============================
+       RENDER
+    ============================ */
 
     return (
         <div className="bg-white rounded-2xl shadow p-4 mt-4 space-y-3">
             <div className="flex justify-between items-center">
-                <h2 className="text-lg font-semibold">
-                    Recent Findings
-                </h2>
-
+                <h2 className="text-lg font-semibold">Recent Findings</h2>
                 <button
                     onClick={() => navigate('/findings')}
                     className="text-sm text-blue-600 hover:underline"
@@ -161,117 +153,55 @@ const FindingsTable: React.FC<FindingsTableProps> = ({ findings }) => {
                 </button>
             </div>
 
-            <div className="flex flex-wrap gap-3 items-center justify-between">
-                <input
-                    type="search"
-                    value={query}
-                    onChange={event =>
-                        setPreferences((prev: FindingsPreferences) => ({
-                            ...prev,
-                            query: event.target.value,
-                        }))
-                    }
-                    placeholder="Filter by organization or type"
-                    className="border rounded px-3 py-2 text-sm w-full sm:w-72"
-                />
-
-                <div className="flex items-center gap-2 text-sm">
-                    <span className="text-gray-600">Sort by</span>
-                    <select
-                        value={sortKey}
-                        onChange={event =>
-                            setPreferences((prev: FindingsPreferences) => ({
-                                ...prev,
-                                sortKey: event.target.value as FindingsSortKey,
-                            }))
-                        }
-                        className="border rounded px-2 py-1"
-                    >
-                        <option value="detectedAt">Detected</option>
-                        <option value="severity">Severity</option>
-                        <option value="organization">Organization</option>
-                    </select>
-
-                    <button
-                        onClick={() => toggleSort(sortKey)}
-                        className="px-2 py-1 border rounded"
-                        aria-label={`Toggle sort direction (currently ${sortDirection})`}
-                    >
-                        {sortDirection === 'asc' ? 'Asc' : 'Desc'}
-                    </button>
-                </div>
-            </div>
+            <input
+                type="search"
+                value={query}
+                onChange={e =>
+                    setPreferences(prev => ({
+                        ...prev,
+                        query: e.target.value,
+                    }))
+                }
+                placeholder="Filter by organization or summary"
+                className="border rounded px-3 py-2 text-sm w-full sm:w-72"
+            />
 
             <table className="w-full text-sm text-left">
                 <thead>
                 <tr className="text-gray-600 border-b">
-                    <th className="py-2 cursor-pointer" onClick={() => toggleSort('severity')}>State</th>
-                    <th className="py-2 cursor-pointer" onClick={() => toggleSort('organization')}>Organization</th>
-                    <th className="py-2">Type</th>
-                    <th className="py-2">Related Transaction</th>
-                    <th className="py-2 cursor-pointer" onClick={() => toggleSort('detectedAt')}>Detected</th>
+                    <th className="py-2">State</th>
+                    <th className="py-2">Organization</th>
+                    <th className="py-2">Summary</th>
+                    <th className="py-2">Transaction</th>
+                    <th className="py-2">Detected</th>
                     <th className="py-2">Status</th>
                 </tr>
                 </thead>
 
                 <tbody>
-                {sortedFindings.map(finding => (
-                    <tr
-                        key={finding.id}
-                        className="border-b last:border-b-0"
-                    >
+                {sortedFindings.map(f => (
+                    <tr key={f.id} className="border-b last:border-b-0">
+                        <td className="py-2">{getSeverityLabel(f.severity)}</td>
+                        <td className="py-2 font-medium">
+                            {f.organization?.name ?? '—'}
+                        </td>
+                        <td className="py-2">{f.summary ?? '—'}</td>
                         <td className="py-2">
-                            {getSeverityLabel(finding.severity)}
+                            {f.executionId ? (
+                                <TransactionLink id={f.executionId} />
+                            ) : (
+                                '—'
+                            )}
                         </td>
-
-                        <td className="py-2 font-medium text-gray-800">
-                            {finding.organization ?? '—'}
-                        </td>
-
-                        <td className="py-2">
-                            <div
-                                className={`rounded border-l-4 p-3 ${
-                                    finding.severity === 'critical'
-                                        ? 'border-red-600 bg-red-50'
-                                        : 'border-yellow-500 bg-yellow-50'
-                                }`}
-                            >
-                                <p className="font-medium">
-                                    {finding.summary ?? finding.title ?? '—'}
-                                </p>
-                                <p className="text-sm text-gray-600">
-                                    {finding.recommendedAction ?? '—'}
-                                </p>
-                            </div>
-                        </td>
-
-                        <td className="py-2">
-                            <div className="flex flex-col gap-1">
-                                <span className="text-xs text-gray-500 uppercase tracking-wide">
-                                    Related Transaction
-                                </span>
-                                {finding.executionId ? (
-                                    <TransactionLink id={finding.executionId} />
-                                ) : (
-                                    <span className="text-gray-500">—</span>
-                                )}
-                                <span className="inline-flex items-center gap-1 rounded bg-blue-100 px-2 py-0.5 text-xs text-blue-700">
-                                    🔗 Traceable
-                                </span>
-                            </div>
-                        </td>
-
                         <td className="py-2 text-gray-600">
-                            {finding.detectedAt
-                                ? new Date(finding.detectedAt).toLocaleString()
+                            {f.detectedAt
+                                ? new Date(f.detectedAt).toLocaleString()
                                 : '—'}
                         </td>
-
-                        <td className="py-2">
-                            {getStatusLabel(finding.status)}
-                        </td>
+                        <td className="py-2">{getStatusLabel(f.status)}</td>
                     </tr>
                 ))}
+
                 {!sortedFindings.length && (
                     <tr>
                         <td colSpan={6} className="py-3 text-center text-gray-500">

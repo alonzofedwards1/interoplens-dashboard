@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { fetchOids } from "../../lib/api/oids";
-import { Oid } from "../../types";
+import { Oid } from "@/types";
 
 const OidQueue = () => {
     const navigate = useNavigate();

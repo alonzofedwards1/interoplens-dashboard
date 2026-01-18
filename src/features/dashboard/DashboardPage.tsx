@@ -1,24 +1,27 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
-import Sidebar from '../../components/Sidebar';
-import Topbar from '../../components/Topbar';
-import BarChart from '../../components/BarChart';
-import PieChart from '../../components/PieChart';
-import Filters from '../../components/Filters';
-import FindingsTable from '../../components/FindingsTable';
+import Sidebar from "../../components/Sidebar";
+import Topbar from "../../components/Topbar";
+import BarChart from "../../components/BarChart";
+import PieChart from "../../components/PieChart";
+import Filters, { FiltersState } from "../../components/Filters";
+import FindingsTable from "../../components/FindingsTable";
 
-import { useServerData } from '../../lib/ServerDataContext';
-import AlertSummaryCards from './components/AlertSummaryCards';
-import OperationalInsights from './components/OperationalInsights';
-import useDashboardMetrics from './hooks/useDashboardMetrics';
+import { useServerData } from "../../lib/ServerDataContext";
+import AlertSummaryCards from "./components/AlertSummaryCards";
+import OperationalInsights from "./components/OperationalInsights";
+import useDashboardMetrics from "./hooks/useDashboardMetrics";
+import { Finding } from "../../types/findings";
 
 /* ============================
    Types
 ============================ */
 
+import { UserRole } from "../../types/auth";
+
 interface DashboardProps {
-    role: 'admin' | 'analyst' | 'committee' | null;
+    role: UserRole | null;
     onLogout: () => void;
 }
 
@@ -39,12 +42,41 @@ const Dashboard: React.FC<DashboardProps> = ({ role, onLogout }) => {
         refresh,
     } = useServerData();
 
+    /* ============================
+       Dashboard Filters (Minimal)
+    ============================ */
+
+    const [filters, setFilters] = useState<FiltersState>({
+        organization: "",
+        status: "",
+    });
+
+    /**
+     * Dashboard does NOT need org filtering yet,
+     * but Filters requires organizations — so we derive them safely.
+     */
+    const organizations = useMemo(() => {
+        const map = new Map<string, { id: string; name: string }>();
+
+        (findings as Finding[]).forEach((f) => {
+            if (f.organization?.id && f.organization?.name) {
+                map.set(f.organization.id, {
+                    id: f.organization.id,
+                    name: f.organization.name,
+                });
+            }
+        });
+
+        return Array.from(map.values()).sort((a, b) =>
+            a.name.localeCompare(b.name)
+        );
+    }, [findings]);
+
     const [complianceStandard, setComplianceStandard] =
-        React.useState<'TEFCA' | 'IHE' | 'HL7'>('TEFCA');
+        useState<"TEFCA" | "IHE" | "HL7">("TEFCA");
 
     /**
      * ✅ SINGLE SOURCE OF TRUTH
-     * Metrics are derived ONLY here
      */
     const { alertCards, insightCards } = useDashboardMetrics(
         findings,
@@ -52,11 +84,6 @@ const Dashboard: React.FC<DashboardProps> = ({ role, onLogout }) => {
         telemetryEvents,
         complianceStandard
     );
-
-    console.log('[Dashboard] metrics snapshot', {
-        totalFindings: findings.length,
-        alertCards,
-    });
 
     if (loading) {
         return (
@@ -79,7 +106,7 @@ const Dashboard: React.FC<DashboardProps> = ({ role, onLogout }) => {
                     ============================ */}
                     {error && (
                         <div className="rounded-md border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-800">
-                            {error}. Showing cached fixtures; refresh once the API is available.
+                            {error}. Showing cached fixtures.
                             <button
                                 type="button"
                                 onClick={refresh}
@@ -92,7 +119,7 @@ const Dashboard: React.FC<DashboardProps> = ({ role, onLogout }) => {
 
                     {telemetryWarning && (
                         <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
-                            Telemetry unavailable: {telemetryWarning}. Observability data will appear once the service recovers.
+                            Telemetry unavailable: {telemetryWarning}
                         </div>
                     )}
 
@@ -101,7 +128,7 @@ const Dashboard: React.FC<DashboardProps> = ({ role, onLogout }) => {
                     ============================ */}
                     <AlertSummaryCards
                         cards={alertCards}
-                        onNavigate={route => navigate(route)}
+                        onNavigate={(route) => navigate(route)}
                     />
 
                     {/* ============================
@@ -122,9 +149,13 @@ const Dashboard: React.FC<DashboardProps> = ({ role, onLogout }) => {
                     </div>
 
                     {/* ============================
-                        Filters
+                        Filters (NOW VALID)
                     ============================ */}
-                    <Filters />
+                    <Filters
+                        value={filters}
+                        onChange={setFilters}
+                        organizations={organizations}
+                    />
 
                     {/* ============================
                         Findings Table
