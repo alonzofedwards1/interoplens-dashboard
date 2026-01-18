@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import Login from '../../pages/LoginPage';
+import Login from './LoginPage';
 import { useAuth } from '../../context/AuthContext';
 
 jest.mock('../../context/AuthContext');

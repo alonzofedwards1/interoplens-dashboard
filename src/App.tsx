@@ -10,7 +10,7 @@ import Reports from "./features/reports/ReportsPage";
 import Settings from "./features/settings/SettingsPage";
 import PDExecutions from "./features/pd-executions/PDExecutionsPage";
 import TransactionDetailPage from "./features/transactions/TransactionDetailPage";
-import LoginPage from "./pages/LoginPage";
+import LoginPage from "./features/auth/LoginPage";
 
 import CommitteeQueue from "./features/committee/CommitteeQueue";
 import CommitteeCaseDetail from "./features/committee/CommitteeCaseDetail";
