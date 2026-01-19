@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { FaArrowLeft } from 'react-icons/fa';
 import {
     Bar,
@@ -11,13 +11,16 @@ import {
     YAxis,
 } from 'recharts';
 
-import { PdExecution } from '../../types/pdExecutions';
 import { useUserPreference } from '../../lib/userPreferences';
 import { useServerData } from '../../lib/ServerDataContext';
 import { TransactionLink } from '../../components/TransactionLink';
 import Pagination from '../../components/Pagination';
 import { Finding } from '../../types/findings';
 import { fetchPdExecutionTelemetry } from '../../lib/api/pdExecutions';
+import {
+    getCertificateStatusBadge,
+    getExecutionCertificateDetails,
+} from '../../lib/certificates';
 
 /* ============================
    Helpers
@@ -49,6 +52,7 @@ type ExecutionSortKey =
 type ExecutionPreferences = {
     search: string;
     outcomeFilter: 'success' | 'failure' | 'all';
+    certStatusFilter: 'all' | 'valid' | 'expiring' | 'expired' | 'impacted';
     sortKey: ExecutionSortKey;
     sortDirection: 'asc' | 'desc';
 };
@@ -56,12 +60,14 @@ type ExecutionPreferences = {
 const defaultExecutionPreferences: ExecutionPreferences = {
     search: '',
     outcomeFilter: 'all',
+    certStatusFilter: 'all',
     sortKey: 'completedAt',
     sortDirection: 'desc',
 };
 
 const PDExecutions: React.FC = () => {
     const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
     const { pdExecutions, loading, findings } = useServerData();
     const [preferences, setPreferences] = useUserPreference(
         'pd.executions.table',
@@ -76,7 +82,39 @@ const PDExecutions: React.FC = () => {
     const missingTelemetryApiLogged = useRef(false);
     const missingChartDataLogged = useRef(false);
 
-    const { outcomeFilter, search, sortDirection, sortKey } = preferences;
+    const { outcomeFilter, search, sortDirection, sortKey, certStatusFilter } =
+        preferences;
+
+    const certStatusParam = searchParams.get('certStatus');
+
+    useEffect(() => {
+        if (!certStatusParam) return;
+        const normalized = certStatusParam
+            .split(',')
+            .map(value => value.trim().toUpperCase())
+            .filter(Boolean);
+
+        const hasExpired = normalized.includes('EXPIRED');
+        const hasExpiring = normalized.includes('EXPIRING_SOON');
+        const hasValid = normalized.includes('VALID');
+
+        let nextFilter: ExecutionPreferences['certStatusFilter'] = 'all';
+        if (hasExpired && hasExpiring) {
+            nextFilter = 'impacted';
+        } else if (hasExpired) {
+            nextFilter = 'expired';
+        } else if (hasExpiring) {
+            nextFilter = 'expiring';
+        } else if (hasValid) {
+            nextFilter = 'valid';
+        }
+
+        setPreferences(prev =>
+            prev.certStatusFilter === nextFilter
+                ? prev
+                : { ...prev, certStatusFilter: nextFilter }
+        );
+    }, [certStatusParam, setPreferences]);
 
     const timeRangeBounds = useMemo(() => {
         const now = new Date();
@@ -114,6 +152,21 @@ const PDExecutions: React.FC = () => {
         return pdExecutions.filter(exec => {
             const outcome = (exec.outcome ?? '').toLowerCase();
             const matchesOutcome = outcomeFilter === 'all' || outcome === outcomeFilter;
+            const certificateStatus = getExecutionCertificateDetails(exec).status;
+
+            const matchesCertStatus = (() => {
+                if (certStatusFilter === 'all') return true;
+                if (certStatusFilter === 'valid') return certificateStatus === 'VALID';
+                if (certStatusFilter === 'expiring') {
+                    return certificateStatus === 'EXPIRING_SOON';
+                }
+                if (certStatusFilter === 'expired') return certificateStatus === 'EXPIRED';
+                return (
+                    certStatusFilter === 'impacted' &&
+                    (certificateStatus === 'EXPIRED' ||
+                        certificateStatus === 'EXPIRING_SOON')
+                );
+            })();
 
             const completedAtMs = exec.completedAt
                 ? new Date(exec.completedAt).getTime()
@@ -125,16 +178,18 @@ const PDExecutions: React.FC = () => {
                 timeRangeBounds.endTime === undefined ||
                 (!Number.isNaN(completedAtMs) && completedAtMs <= timeRangeBounds.endTime);
 
-            if (!search.trim()) return matchesOutcome && matchesStart && matchesEnd;
+            if (!search.trim()) {
+                return matchesOutcome && matchesCertStatus && matchesStart && matchesEnd;
+            }
 
             const query = search.toLowerCase();
             const matchesText =
                 (exec.requestId ?? '').toLowerCase().includes(query) ||
                 (exec.qhinName ?? '').toLowerCase().includes(query);
 
-            return matchesOutcome && matchesText && matchesStart && matchesEnd;
+            return matchesOutcome && matchesCertStatus && matchesText && matchesStart && matchesEnd;
         });
-    }, [outcomeFilter, pdExecutions, search, timeRangeBounds]);
+    }, [certStatusFilter, outcomeFilter, pdExecutions, search, timeRangeBounds]);
 
     const sortedExecutions = useMemo(() => {
         return [...filteredExecutions].sort((a, b) => {
@@ -306,6 +361,26 @@ const PDExecutions: React.FC = () => {
         }
     };
 
+    const updateCertStatusFilter = (
+        nextValue: ExecutionPreferences['certStatusFilter']
+    ) => {
+        setPreferences(prev => ({ ...prev, certStatusFilter: nextValue }));
+
+        const params = new URLSearchParams(searchParams);
+        if (nextValue === 'all') {
+            params.delete('certStatus');
+        } else if (nextValue === 'impacted') {
+            params.set('certStatus', 'EXPIRED,EXPIRING_SOON');
+        } else if (nextValue === 'valid') {
+            params.set('certStatus', 'VALID');
+        } else if (nextValue === 'expiring') {
+            params.set('certStatus', 'EXPIRING_SOON');
+        } else if (nextValue === 'expired') {
+            params.set('certStatus', 'EXPIRED');
+        }
+        setSearchParams(params);
+    };
+
     return (
         <div className="p-6 space-y-6">
             {/* Header */}
@@ -425,6 +500,27 @@ const PDExecutions: React.FC = () => {
                             <option value="failure">Failure</option>
                         </select>
                     </div>
+                    <div className="flex gap-2 items-center">
+                        <label htmlFor="pd-cert-status" className="text-gray-700">
+                            Certificate Status
+                        </label>
+                        <select
+                            id="pd-cert-status"
+                            value={certStatusFilter}
+                            onChange={event =>
+                                updateCertStatusFilter(
+                                    event.target.value as ExecutionPreferences['certStatusFilter']
+                                )
+                            }
+                            className="border rounded px-2 py-1"
+                        >
+                            <option value="all">All</option>
+                            <option value="valid">Valid</option>
+                            <option value="expiring">Expiring Soon</option>
+                            <option value="expired">Expired</option>
+                            <option value="impacted">Impacted</option>
+                        </select>
+                    </div>
 
                     <input
                         type="search"
@@ -478,6 +574,7 @@ const PDExecutions: React.FC = () => {
                         <th className="p-3">Telemetry Events</th>
                         <th className="p-3">QHIN</th>
                         <th className="p-3">Environment</th>
+                        <th className="p-3">Certificate Status</th>
                         <th className="p-3 cursor-pointer" onClick={() => toggleSort('outcome')}>Outcome</th>
                         <th className="p-3 cursor-pointer" onClick={() => toggleSort('durationMs')}>Response Time</th>
                     </tr>
@@ -489,6 +586,8 @@ const PDExecutions: React.FC = () => {
                         const telemetryCount = exec.requestId
                             ? telemetryCounts[exec.requestId]
                             : null;
+                        const certificateStatus = getExecutionCertificateDetails(exec).status;
+                        const badge = getCertificateStatusBadge(certificateStatus);
 
                         return (
                             <tr key={exec.requestId} className="border-t text-sm">
@@ -552,6 +651,19 @@ const PDExecutions: React.FC = () => {
                                     {exec.sourceEnvironment ?? '—'}
                                 </td>
                                 <td className="p-3">
+                                    {certificateStatus ? (
+                                        <span
+                                            title={badge.tooltip}
+                                            className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-medium ${badge.className}`}
+                                        >
+                                            <span aria-hidden="true">{badge.icon}</span>
+                                            {badge.label}
+                                        </span>
+                                    ) : (
+                                        <span className="text-gray-500">—</span>
+                                    )}
+                                </td>
+                                <td className="p-3">
                                     <span
                                         className={`px-2 py-1 rounded text-xs ${outcome.color}`}
                                     >
@@ -566,7 +678,7 @@ const PDExecutions: React.FC = () => {
                     })}
                     {!sortedExecutions.length && (
                         <tr>
-                            <td colSpan={8} className="p-4 text-center text-gray-500">
+                            <td colSpan={9} className="p-4 text-center text-gray-500">
                                 No executions match the current filters.
                             </td>
                         </tr>
