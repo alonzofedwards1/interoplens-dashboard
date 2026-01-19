@@ -20,6 +20,25 @@ export async function apiGet<T>(url: string): Promise<T> {
     return safeJson(res) as T;
 }
 
+/* ============================================================
+   Integration Health Types
+============================================================ */
+
+export interface IntegrationHealthResponse {
+    totalExecutions: number;
+    successRate: number;
+    certificateHealth: {
+        expired: number;
+        expiringSoon: number;
+        valid: number | null;
+    };
+    affectedPartners: number;
+}
+
+/* ============================================================
+   API CLIENT
+============================================================ */
+
 export class ApiClient {
     async getFindings(): Promise<FindingsListResponse['findings']> {
         const data = await apiGet<
@@ -49,9 +68,17 @@ export class ApiClient {
         return fetchTelemetryEvents();
     }
 
-    // ✅ FIXED
     async getOids(): Promise<Oid[]> {
         return apiGet<Oid[]>(buildUrl(API_BASE_URL, '/api/oids'));
+    }
+
+    /* ==============================
+       ✅ REAL INTEGRATION HEALTH API
+    ============================== */
+    async getIntegrationHealth(): Promise<IntegrationHealthResponse> {
+        return apiGet<IntegrationHealthResponse>(
+            buildUrl(API_BASE_URL, '/api/health/integrations')
+        );
     }
 }
 

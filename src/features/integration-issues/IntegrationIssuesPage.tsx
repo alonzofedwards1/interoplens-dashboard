@@ -1,11 +1,12 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import {useState} from "react";
+import {useNavigate} from "react-router-dom";
 
 import ExecutiveSummary from "./tabs/ExecutiveSummary";
 import AnalystBreakdown from "./tabs/AnalystBreakdown";
 import TechnicalLogs from "./tabs/TechnicalLogs";
 
-import { UserRole } from "../../types/auth";
+import {UserRole} from "../../types/auth";
+import {useServerData} from '../../lib/ServerDataContext';
 
 /* ============================
    Types
@@ -18,20 +19,28 @@ interface Props {
 type TabId = "summary" | "analysis" | "logs";
 
 const tabs: { id: TabId; label: string }[] = [
-    { id: "summary", label: "Summary" },
-    { id: "analysis", label: "Analysis" },
-    { id: "logs", label: "Technical Logs" }
+    {id: "summary", label: "Summary"},
+    {id: "analysis", label: "Analysis"},
+    {id: "logs", label: "Technical Logs"}
 ];
 
 /* ============================
    Component
 ============================ */
 
-const IntegrationIssuesPage: React.FC<Props> = ({ role }) => {
+const IntegrationIssuesPage: React.FC<Props> = ({role}) => {
     const [activeTab, setActiveTab] = useState<TabId>("summary");
     const navigate = useNavigate();
 
     const canViewLogs = role === "admin" || role === "analyst";
+
+    // ✅ THIS IS CORRECT
+    const {integrationHealth, loading} = useServerData();
+
+    console.log(
+        '[IntegrationIssuesPage] integrationHealth',
+        integrationHealth
+    );
 
     return (
         <div className="p-6 space-y-6">
@@ -52,7 +61,6 @@ const IntegrationIssuesPage: React.FC<Props> = ({ role }) => {
                     Understand why integrations are succeeding or struggling
                 </p>
             </div>
-
             {/* Tabs */}
             <div className="flex space-x-4 border-b">
                 {tabs.map((tab) => {
@@ -78,9 +86,9 @@ const IntegrationIssuesPage: React.FC<Props> = ({ role }) => {
 
             {/* Content */}
             <div>
-                {activeTab === "summary" && <ExecutiveSummary />}
-                {activeTab === "analysis" && <AnalystBreakdown />}
-                {activeTab === "logs" && canViewLogs && <TechnicalLogs />}
+                {activeTab === "summary" && <ExecutiveSummary/>}
+                {activeTab === "analysis" && <AnalystBreakdown/>}
+                {activeTab === "logs" && canViewLogs && <TechnicalLogs/>}
             </div>
         </div>
     );

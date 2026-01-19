@@ -1,18 +1,20 @@
 import { useMemo, useState } from "react";
 import CertificateHealthWidget from "../widgets/CertificateHealthWidget";
 import CertInspectorModal from "../modals/CertInspectorModal";
-import { useIntegrationHealth } from "../../../hooks/useIntegrationHealth";
+import { useServerData } from "../../../lib/ServerDataContext";
 
 const ExecutiveSummary = () => {
     const [showCertModal, setShowCertModal] = useState(false);
-    const { data, loading, error } = useIntegrationHealth();
+
+    // ✅ REAL DATA SOURCE (Backend API)
+    const { integrationHealth, loading, error } = useServerData();
 
     const executionTotals = useMemo(() => {
-        const total = data?.totalExecutions ?? 0;
-        const successRate = data?.successRate ?? 0;
-        const affectedPartners = data?.affectedPartners ?? 0;
+        const total = integrationHealth?.totalExecutions ?? 0;
+        const successRate = integrationHealth?.successRate ?? 0;
+        const affectedPartners = integrationHealth?.affectedPartners ?? 0;
         return { total, successRate, affectedPartners };
-    }, [data]);
+    }, [integrationHealth]);
 
     const healthStatus = useMemo(() => {
         if (loading) return "Loading";
@@ -21,7 +23,7 @@ const ExecutiveSummary = () => {
         if (executionTotals.successRate >= 95) return "Stable";
         if (executionTotals.successRate >= 85) return "Degraded";
         return "At Risk";
-    }, [error, executionTotals, loading]);
+    }, [loading, error, executionTotals]);
 
     const actionRequiredText = useMemo(() => {
         if (loading) return "Assessing required actions...";
@@ -38,7 +40,7 @@ const ExecutiveSummary = () => {
             } currently experiencing degraded outcomes.`;
         }
         return "Some executions are failing or partial. Review affected integrations.";
-    }, [error, executionTotals, loading]);
+    }, [loading, error, executionTotals]);
 
     const narrativeText = useMemo(() => {
         if (loading) return "Loading execution narrative...";
@@ -49,17 +51,17 @@ const ExecutiveSummary = () => {
         const partnerLabel =
             executionTotals.affectedPartners === 1 ? "partner" : "partners";
         return `Success rate is ${executionTotals.successRate}% across ${executionTotals.total} executions. ${executionTotals.affectedPartners} ${partnerLabel} are impacted.`;
-    }, [error, executionTotals, loading]);
+    }, [loading, error, executionTotals]);
 
     const certificateHealth = useMemo(() => {
         if (loading) return undefined;
-        return data?.certificateHealth;
-    }, [data, loading]);
+        return integrationHealth?.certificateHealth;
+    }, [integrationHealth, loading]);
 
     return (
         <>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Card 1: Overall Health */}
+                {/* Overall Health */}
                 <div className="bg-white p-5 rounded shadow">
                     <h3 className="text-sm font-semibold text-gray-500">
                         Overall Health
@@ -98,14 +100,14 @@ const ExecutiveSummary = () => {
                     )}
                 </div>
 
-                {/* Card 2: Certificate Health */}
+                {/* Certificate Health */}
                 <CertificateHealthWidget
                     data={certificateHealth}
                     errorMessage={error ? "Unable to load certificate health." : null}
                     onViewDetails={() => setShowCertModal(true)}
                 />
 
-                {/* Card 3: Action Required */}
+                {/* Action Required */}
                 <div className="bg-white p-5 rounded shadow">
                     <h3 className="text-sm font-semibold text-gray-500">
                         Action Required
@@ -122,11 +124,9 @@ const ExecutiveSummary = () => {
                     )}
                 </div>
 
-                {/* Narrative Panel */}
+                {/* Narrative */}
                 <div className="md:col-span-3 bg-blue-50 p-5 rounded border border-blue-200">
-                    <h4 className="font-semibold mb-2">
-                        What’s happening?
-                    </h4>
+                    <h4 className="font-semibold mb-2">What’s happening?</h4>
                     {loading ? (
                         <div className="space-y-2 animate-pulse">
                             <div className="h-4 bg-blue-100 rounded w-11/12" />
@@ -138,7 +138,7 @@ const ExecutiveSummary = () => {
                 </div>
             </div>
 
-            {/* Cert Inspector Modal */}
+            {/* Certificate Inspector Modal */}
             {showCertModal && (
                 <CertInspectorModal
                     onClose={() => setShowCertModal(false)}
