@@ -1,103 +1,60 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import CertificateHealthWidget from "../widgets/CertificateHealthWidget";
 import CertInspectorModal from "../modals/CertInspectorModal";
-import {
-    fetchPdExecutionCounts,
-    normalizeCertificateHealth,
-} from "../../../services/pdExecutions.service";
-import { PdExecutionCounts } from "../../../types/pdExecutions";
+import { useIntegrationHealth } from "../../../hooks/useIntegrationHealth";
 
 const ExecutiveSummary = () => {
     const [showCertModal, setShowCertModal] = useState(false);
-    const [counts, setCounts] = useState<PdExecutionCounts | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-
-    useEffect(() => {
-        let isMounted = true;
-
-        const loadCounts = async () => {
-            try {
-                const data = await fetchPdExecutionCounts();
-                if (isMounted) {
-                    setCounts(data);
-                    setError(null);
-                }
-            } catch (err) {
-                if (isMounted) {
-                    setError(
-                        err instanceof Error
-                            ? err.message
-                            : "Unable to load execution health summary."
-                    );
-                }
-            } finally {
-                if (isMounted) {
-                    setIsLoading(false);
-                }
-            }
-        };
-
-        loadCounts();
-
-        return () => {
-            isMounted = false;
-        };
-    }, []);
+    const { data, loading, error } = useIntegrationHealth();
 
     const executionTotals = useMemo(() => {
-        const total = counts?.total ?? 0;
-        const success = counts?.success ?? 0;
-        const failure = counts?.failure ?? 0;
-        const partial = counts?.partial ?? 0;
-        const successRate = total ? Math.round((success / total) * 100) : 0;
-        return { total, success, failure, partial, successRate };
-    }, [counts]);
+        const total = data?.totalExecutions ?? 0;
+        const successRate = data?.successRate ?? 0;
+        const affectedPartners = data?.affectedPartners ?? 0;
+        return { total, successRate, affectedPartners };
+    }, [data]);
 
     const healthStatus = useMemo(() => {
-        if (isLoading) return "Loading";
+        if (loading) return "Loading";
         if (error) return "Unavailable";
         if (executionTotals.total === 0) return "No Data";
         if (executionTotals.successRate >= 95) return "Stable";
         if (executionTotals.successRate >= 85) return "Degraded";
         return "At Risk";
-    }, [error, executionTotals, isLoading]);
+    }, [error, executionTotals, loading]);
 
     const actionRequiredText = useMemo(() => {
-        if (isLoading) return "Assessing required actions...";
+        if (loading) return "Assessing required actions...";
         if (error) return "Unable to determine action requirements.";
         if (executionTotals.total === 0) {
             return "No execution activity reported yet.";
         }
-        const attentionCount = executionTotals.failure + executionTotals.partial;
-        if (attentionCount === 0) {
-            return "No action required. All tracked executions succeeded.";
+        if (executionTotals.successRate >= 95) {
+            return "No action required. Success rates remain strong.";
         }
-        return `${attentionCount} execution${
-            attentionCount === 1 ? "" : "s"
-        } need attention based on recent outcomes.`;
-    }, [error, executionTotals, isLoading]);
+        if (executionTotals.affectedPartners > 0) {
+            return `${executionTotals.affectedPartners} partner${
+                executionTotals.affectedPartners === 1 ? "" : "s"
+            } currently experiencing degraded outcomes.`;
+        }
+        return "Some executions are failing or partial. Review affected integrations.";
+    }, [error, executionTotals, loading]);
 
     const narrativeText = useMemo(() => {
-        if (isLoading) return "Loading execution narrative...";
+        if (loading) return "Loading execution narrative...";
         if (error) return "Execution narrative is unavailable right now.";
         if (executionTotals.total === 0) {
             return "No execution insights are available until telemetry arrives.";
         }
-        return `Success rate is ${executionTotals.successRate}% across ${executionTotals.total} executions. Review failure and partial outcomes for current risks.`;
-    }, [error, executionTotals, isLoading]);
+        const partnerLabel =
+            executionTotals.affectedPartners === 1 ? "partner" : "partners";
+        return `Success rate is ${executionTotals.successRate}% across ${executionTotals.total} executions. ${executionTotals.affectedPartners} ${partnerLabel} are impacted.`;
+    }, [error, executionTotals, loading]);
 
     const certificateHealth = useMemo(() => {
-        if (isLoading) return undefined;
-        const normalized = normalizeCertificateHealth(
-            counts?.certificateHealth
-        );
-        if (normalized) return normalized;
-        if (counts) {
-            return { expired: 0, expiringSoon: 0, valid: 0 };
-        }
-        return undefined;
-    }, [counts, isLoading]);
+        if (loading) return undefined;
+        return data?.certificateHealth;
+    }, [data, loading]);
 
     return (
         <>
@@ -107,7 +64,7 @@ const ExecutiveSummary = () => {
                     <h3 className="text-sm font-semibold text-gray-500">
                         Overall Health
                     </h3>
-                    {isLoading ? (
+                    {loading ? (
                         <div className="mt-3 space-y-2 animate-pulse">
                             <div className="h-8 bg-gray-100 rounded w-2/3" />
                             <div className="h-4 bg-gray-100 rounded w-5/6" />
@@ -153,7 +110,7 @@ const ExecutiveSummary = () => {
                     <h3 className="text-sm font-semibold text-gray-500">
                         Action Required
                     </h3>
-                    {isLoading ? (
+                    {loading ? (
                         <div className="mt-3 space-y-2 animate-pulse">
                             <div className="h-4 bg-gray-100 rounded w-11/12" />
                             <div className="h-4 bg-gray-100 rounded w-9/12" />
@@ -170,7 +127,7 @@ const ExecutiveSummary = () => {
                     <h4 className="font-semibold mb-2">
                         What’s happening?
                     </h4>
-                    {isLoading ? (
+                    {loading ? (
                         <div className="space-y-2 animate-pulse">
                             <div className="h-4 bg-blue-100 rounded w-11/12" />
                             <div className="h-4 bg-blue-100 rounded w-10/12" />
