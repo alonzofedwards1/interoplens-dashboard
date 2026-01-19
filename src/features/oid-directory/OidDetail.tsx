@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+
 import { fetchOidDetail, submitOidGovernance } from "../../lib/api/oids";
-import { OidDetail as OidDetailRecord } from "../../types";
+import type { OidDetail as OidDetailRecord, OidGovernanceAction } from "../../types";
 
 import OidSummaryCard from "./components/OidSummaryCard";
 import ObservationSnapshot from "./components/ObservationSnapshot";
@@ -26,6 +27,7 @@ const OidDetail = () => {
             setRecord(data);
             setError(null);
         } catch (err) {
+            console.error("Failed to load OID detail", err);
             setError(err instanceof Error ? err.message : "Failed to load OID");
         } finally {
             setLoading(false);
@@ -33,25 +35,39 @@ const OidDetail = () => {
     };
 
     useEffect(() => {
-        if (decodedOid) load();
+        if (decodedOid) {
+            load();
+        }
     }, [decodedOid]);
 
-    const handleGovernance = async (
-        action: "APPROVE" | "REJECT" | "DEPRECATE" | "REACTIVATE"
-    ) => {
-        if (!decodedOid) return;
+    const handleGovernance = async (action: OidGovernanceAction) => {
+        if (!record) return;
+
         try {
             setIsSubmitting(true);
-            await submitOidGovernance(decodedOid, action);
-            await load(); // 🔁 re-fetch authoritative state
+            await submitOidGovernance(record.oid, action);
+
+            // ✅ Re-fetch after successful transition
+            await load();
+        } catch (err: any) {
+            console.error("Governance action failed", err);
+
+            alert(
+                err?.response?.data?.detail ??
+                "Invalid governance transition"
+            );
         } finally {
             setIsSubmitting(false);
         }
     };
 
-    if (loading) return <div className="p-6">Loading OID…</div>;
-    if (!record || error)
+    if (loading) {
+        return <div className="p-6">Loading OID…</div>;
+    }
+
+    if (!record || error) {
         return <div className="p-6 text-red-600">{error}</div>;
+    }
 
     return (
         <div className="p-6 space-y-4">

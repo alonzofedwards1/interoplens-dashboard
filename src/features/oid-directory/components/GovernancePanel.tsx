@@ -13,24 +13,33 @@ interface Props {
 
 const GovernancePanel = ({ record, onAction, isSubmitting }: Props) => {
     const status: OidStatus = record.status;
-    const actions = OID_STATUS_ACTIONS[status];
+
+    // ✅ readonly-safe
+    const actions: readonly OidGovernanceAction[] =
+        OID_STATUS_ACTIONS[status] ?? [];
 
     return (
         <div className="border rounded p-4 bg-white">
             <h2 className="text-lg font-semibold mb-2">Governance</h2>
 
-            <div className="flex gap-2 flex-wrap">
-                {actions.map((action) => (
-                    <button
-                        key={action}
-                        disabled={isSubmitting}
-                        onClick={() => onAction(action)}
-                        className="px-3 py-1 border rounded text-sm bg-gray-100 hover:bg-gray-200 disabled:opacity-50"
-                    >
-                        {action.replace(/_/g, " ")}
-                    </button>
-                ))}
-            </div>
+            {actions.length === 0 ? (
+                <div className="text-sm text-gray-500">
+                    No governance actions available for this status.
+                </div>
+            ) : (
+                <div className="flex gap-2 flex-wrap">
+                    {actions.map((action) => (
+                        <button
+                            key={action}
+                            disabled={isSubmitting}
+                            onClick={() => onAction(action)}
+                            className="px-3 py-1 border rounded text-sm bg-gray-100 hover:bg-gray-200 disabled:opacity-50"
+                        >
+                            {action.replace(/_/g, " ")}
+                        </button>
+                    ))}
+                </div>
+            )}
         </div>
     );
 };

@@ -42,7 +42,7 @@ const Sidebar = () => {
 
             {/* Telemetry */}
             <NavLink
-                to="/telemetry"
+                to="/pd-executions"
                 className={({ isActive }) =>
                     `${iconClass} ${isActive ? activeClass : inactiveClass}`
                 }

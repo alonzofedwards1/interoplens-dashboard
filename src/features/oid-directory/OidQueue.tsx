@@ -73,10 +73,10 @@ const OidQueue = () => {
                     value={statusFilter}
                     onChange={e => setStatusFilter(e.target.value as any)}
                 >
-                    <option value="ALL">All Statuses</option>
-                    <option value="provisional">Provisional</option>
-                    <option value="approved">Approved</option>
-                    <option value="deprecated">Deprecated</option>
+                    <option value="UNKNOWN">Unknown</option>
+                    <option value="PENDING">Pending</option>
+                    <option value="ACTIVE">Active</option>
+                    <option value="DEPRECATED">Deprecated</option>
                 </select>
 
                 <select
