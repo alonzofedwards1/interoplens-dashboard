@@ -1,25 +1,13 @@
-interface CertificateDetails {
-    subject: string;
-    issuer: string;
-    thumbprint: string;
-    notBefore: string;
-    notAfter: string;
-    status: "Valid" | "Expiring Soon" | "Expired";
-    detectedVia: "Live Transaction" | "Trust Metadata";
-}
+import { CertificateEvidence } from "../../../types/integrationHealth";
 
 interface Props {
-    cert: CertificateDetails;
+    cert: CertificateEvidence | null;
     onClose: () => void;
 }
 
 const CertInspectorModal: React.FC<Props> = ({ cert, onClose }) => {
-    const statusColor =
-        cert.status === "Expired"
-            ? "text-red-600"
-            : cert.status === "Expiring Soon"
-                ? "text-yellow-600"
-                : "text-green-600";
+    const statusLabel = cert ? "Expired" : "Unknown";
+    const statusColor = cert ? "text-red-600" : "text-gray-500";
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
@@ -36,48 +24,37 @@ const CertInspectorModal: React.FC<Props> = ({ cert, onClose }) => {
                     </button>
                 </div>
 
+                <p className="text-xs text-gray-500">
+                    Certificate Evidence (Observed in Live Traffic)
+                </p>
+
                 <div className="space-y-2 text-sm">
                     <div>
                         <span className="font-medium">Status: </span>
-                        <span className={statusColor}>{cert.status}</span>
-                    </div>
-
-                    <div>
-                        <span className="font-medium">Subject: </span>
-                        {cert.subject}
-                    </div>
-
-                    <div>
-                        <span className="font-medium">Issuer: </span>
-                        {cert.issuer}
+                        <span className={statusColor}>{statusLabel}</span>
                     </div>
 
                     <div>
                         <span className="font-medium">Thumbprint: </span>
                         <code className="text-xs bg-gray-100 px-1 rounded">
-                            {cert.thumbprint}
+                            {cert?.thumbprint ?? "Unknown"}
                         </code>
                     </div>
 
                     <div>
-                        <span className="font-medium">Valid From: </span>
-                        {cert.notBefore}
+                        <span className="font-medium">Partner: </span>
+                        {cert?.qhinName ?? "Unknown"}
                     </div>
 
                     <div>
-                        <span className="font-medium">Valid Until: </span>
-                        {cert.notAfter}
+                        <span className="font-medium">Direction: </span>
+                        {cert?.direction ?? "Unknown"}
                     </div>
 
                     <div>
                         <span className="font-medium">Detected Via: </span>
-                        {cert.detectedVia}
+                        Live Transaction
                     </div>
-                </div>
-
-                <div className="pt-4 border-t text-xs text-gray-500">
-                    Certificate validity is evaluated using the X.509{" "}
-                    <code>NotAfter</code> field.
                 </div>
             </div>
         </div>

@@ -4,12 +4,15 @@ export type PDOutcome = 'success' | 'failure';
 
 export interface PDExecution {
     requestId: string;
+    transactionType: 'PD' | 'DQ' | 'DR';
+    direction: 'inbound' | 'outbound';
     startedAt: string;
     completedAt: string;
-    executionTimeMs: number;
+    durationMs: number;
     outcome: PDOutcome;
-    channelId: string;
-    environment: string;
+    retryCount: number;
+    sourceEnvironment: string;
+    qhinName?: string;
 }
 
 /**
@@ -21,56 +24,74 @@ export interface PDExecution {
 export const pdExecutionsData: PDExecution[] = [
     {
         requestId: 'req-001',
+        transactionType: 'PD',
+        direction: 'outbound',
         startedAt: '2025-12-18T14:04:20Z',
         completedAt: '2025-12-18T14:05:00Z',
-        executionTimeMs: 412,
+        durationMs: 412,
         outcome: 'success',
-        channelId: 'mirth-pd-01',
-        environment: 'prod',
+        retryCount: 0,
+        sourceEnvironment: 'prod',
+        qhinName: 'mirth-pd-01',
     },
     {
         requestId: 'req-002',
+        transactionType: 'PD',
+        direction: 'outbound',
         startedAt: '2025-12-18T13:41:20Z',
         completedAt: '2025-12-18T13:42:00Z',
-        executionTimeMs: 365,
+        durationMs: 365,
         outcome: 'success',
-        channelId: 'mirth-pd-02',
-        environment: 'prod',
+        retryCount: 0,
+        sourceEnvironment: 'prod',
+        qhinName: 'mirth-pd-02',
     },
     {
         requestId: 'req-003',
+        transactionType: 'PD',
+        direction: 'outbound',
         startedAt: '2025-12-18T12:20:30Z',
         completedAt: '2025-12-18T12:22:00Z',
-        executionTimeMs: 745,
+        durationMs: 745,
         outcome: 'failure',
-        channelId: 'mirth-pd-03',
-        environment: 'test',
+        retryCount: 1,
+        sourceEnvironment: 'test',
+        qhinName: 'mirth-pd-03',
     },
     {
         requestId: 'req-004',
+        transactionType: 'PD',
+        direction: 'outbound',
         startedAt: '2025-12-18T10:29:30Z',
         completedAt: '2025-12-18T10:30:00Z',
-        executionTimeMs: 430,
+        durationMs: 430,
         outcome: 'success',
-        channelId: 'mirth-pd-04',
-        environment: 'prod',
+        retryCount: 0,
+        sourceEnvironment: 'prod',
+        qhinName: 'mirth-pd-04',
     },
     {
         requestId: 'req-005',
+        transactionType: 'PD',
+        direction: 'outbound',
         startedAt: '2025-12-18T08:34:10Z',
         completedAt: '2025-12-18T08:35:00Z',
-        executionTimeMs: 510,
+        durationMs: 510,
         outcome: 'failure',
-        channelId: 'mirth-pd-05',
-        environment: 'test',
+        retryCount: 2,
+        sourceEnvironment: 'test',
+        qhinName: 'mirth-pd-05',
     },
     {
         requestId: 'req-006',
+        transactionType: 'PD',
+        direction: 'outbound',
         startedAt: '2025-12-18T05:30:10Z',
         completedAt: '2025-12-18T05:31:00Z',
-        executionTimeMs: 612,
+        durationMs: 612,
         outcome: 'success',
-        channelId: 'mirth-pd-06',
-        environment: 'prod',
+        retryCount: 0,
+        sourceEnvironment: 'prod',
+        qhinName: 'mirth-pd-06',
     },
 ];
