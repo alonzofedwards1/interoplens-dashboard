@@ -276,7 +276,7 @@ const ViewAllFindingsPage: React.FC = () => {
                                     <td className="p-3">
                                         {safeUpper(finding.category)}
                                     </td>
-                                    <td className="p-3">
+                                    <td className="p-3 text-gray-700">
                                         {certCopy?.summary ?? finding.summary}
                                     </td>
                                     <td className="p-3">
@@ -322,7 +322,7 @@ const ViewAllFindingsPage: React.FC = () => {
                                             className="p-4 text-sm text-gray-700"
                                         >
                                             {certCopy ? (
-                                                <div className="space-y-2">
+                                                <div className="space-y-2 text-gray-700">
                                                     <p>
                                                         <span className="font-semibold">
                                                             Why this matters:

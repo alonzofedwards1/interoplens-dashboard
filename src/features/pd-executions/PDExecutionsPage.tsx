@@ -435,8 +435,8 @@ const PDExecutions: React.FC = () => {
             </div>
 
             {/* Execution Table */}
-            <div className="bg-white rounded-lg shadow overflow-x-auto">
-                <div className="flex flex-wrap gap-3 items-center justify-between p-3 border-b text-sm">
+                <div className="bg-white rounded-lg shadow overflow-x-auto">
+                    <div className="flex flex-wrap gap-3 items-center justify-between p-3 border-b text-sm">
                     <div className="flex flex-wrap gap-2 items-center">
                         <label htmlFor="pd-time-range" className="text-gray-700">
                             Time Range
@@ -567,7 +567,7 @@ const PDExecutions: React.FC = () => {
 
                 <table className="min-w-full border-collapse">
                     <thead className="bg-gray-100">
-                    <tr className="text-left text-sm text-gray-700">
+                    <tr className="text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
                         <th className="p-3 cursor-pointer" onClick={() => toggleSort('completedAt')}>Completed At</th>
                         <th className="p-3 cursor-pointer" onClick={() => toggleSort('requestId')}>Request ID</th>
                         <th className="p-3">Traceability</th>
@@ -654,7 +654,7 @@ const PDExecutions: React.FC = () => {
                                     {certificateStatus ? (
                                         <span
                                             title={badge.tooltip}
-                                            className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-medium ${badge.className}`}
+                                            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${badge.className}`}
                                         >
                                             <span aria-hidden="true">{badge.icon}</span>
                                             {badge.label}

@@ -109,7 +109,7 @@ const TransactionDetailPage: React.FC = () => {
                         Transport Security (Certificate)
                     </h3>
                     <span
-                        className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-medium ${certificateBadge.className}`}
+                        className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${certificateBadge.className}`}
                     >
                         <span aria-hidden="true">{certificateBadge.icon}</span>
                         {certificateBadge.label}
@@ -117,7 +117,7 @@ const TransactionDetailPage: React.FC = () => {
                 </div>
 
                 <div className="rounded-lg border bg-white p-4 shadow-sm space-y-3 text-sm">
-                    <p className="text-gray-700">
+                    <p className="text-gray-600">
                         {getCertificateStatusDescription(certificateDetails.status)}
                     </p>
 
@@ -175,14 +175,14 @@ const TransactionDetailPage: React.FC = () => {
                             return (
                                 <div
                                     key={finding.id}
-                                    className={`rounded border-l-4 p-3 ${
+                                    className={`rounded-lg border border-l-4 bg-white p-4 shadow-sm ${
                                         finding.severity === 'critical'
-                                            ? 'border-red-600 bg-red-50'
-                                            : 'border-yellow-500 bg-yellow-50'
+                                            ? 'border-red-500'
+                                            : 'border-yellow-500'
                                     }`}
                                 >
                                     <div className="flex items-center justify-between">
-                                        <div className="font-medium">
+                                        <div className="font-semibold text-gray-800">
                                             {certCopy?.summary ??
                                                 finding.summary ??
                                                 '—'}
@@ -192,7 +192,7 @@ const TransactionDetailPage: React.FC = () => {
                                         </span>
                                     </div>
                                     {certCopy ? (
-                                        <div className="mt-2 space-y-2 text-sm text-gray-700">
+                                        <div className="mt-3 space-y-2 text-sm text-gray-700">
                                             <p>
                                                 <span className="font-semibold">
                                                     Why this matters:
@@ -206,7 +206,7 @@ const TransactionDetailPage: React.FC = () => {
                                                 {certCopy.action}
                                             </p>
                                             {certCopy.thumbprint && (
-                                                <p className="text-xs text-gray-600">
+                                                <p className="text-xs text-gray-500">
                                                     Affected certificate:{' '}
                                                     <span className="font-mono">
                                                         {certCopy.thumbprint}
@@ -215,7 +215,7 @@ const TransactionDetailPage: React.FC = () => {
                                             )}
                                         </div>
                                     ) : (
-                                        <div className="mt-1 text-sm text-gray-600">
+                                        <div className="mt-2 text-sm text-gray-600">
                                             {finding.recommendedAction ?? '—'}
                                         </div>
                                     )}

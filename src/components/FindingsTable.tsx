@@ -209,7 +209,7 @@ const FindingsTable: React.FC<FindingsTableProps> = ({ findings }) => {
                         <td className="py-2 font-medium">
                             {f.organization?.name ?? '—'}
                         </td>
-                        <td className="py-2">
+                        <td className="py-2 text-gray-700">
                             {buildCertificateFindingCopy(
                                 f,
                                 f.executionId
