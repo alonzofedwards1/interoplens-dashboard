@@ -1,4 +1,5 @@
 import type { OidDetail } from "../../../types";
+import { OID_STATUS_LABELS } from "../data/oidStatus.data";
 
 interface Props {
     record: OidDetail;
@@ -11,7 +12,7 @@ const OidSummaryCard = ({ record }: Props) => {
 
             <p><strong>OID:</strong> <span className="font-mono">{record.oid}</span></p>
             <p><strong>Name:</strong> {record.displayName}</p>
-            <p><strong>Status:</strong> {record.status}</p>
+            <p><strong>Status:</strong> {OID_STATUS_LABELS[record.status]}</p>
             <p><strong>Owner:</strong> {record.ownerOrg ?? "Unassigned"}</p>
             <p><strong>Confidence:</strong> {record.confidence}</p>
             <p><strong>First Seen:</strong> {record.firstSeen}</p>

@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 
 import { fetchOidDetail, submitOidGovernance } from "../../lib/api/oids";
 import type { OidDetail as OidDetailRecord, OidGovernanceAction } from "../../types";
+import { normalizeOidDetail } from "./utils/normalizeOid";
 
 import OidSummaryCard from "./components/OidSummaryCard";
 import ObservationSnapshot from "./components/ObservationSnapshot";
@@ -13,51 +14,71 @@ import LinkedFindingsTable from "./components/LinkedFindingsTable";
 const OidDetail = () => {
     const { oid } = useParams();
     const navigate = useNavigate();
-    const decodedOid = decodeURIComponent(oid || "");
+    const decodedOid = useMemo(() => {
+        if (!oid) return "";
+        try {
+            return decodeURIComponent(oid);
+        } catch {
+            return oid;
+        }
+    }, [oid]);
 
     const [record, setRecord] = useState<OidDetailRecord | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [actionError, setActionError] = useState<string | null>(null);
+    const inFlightRef = useRef(false);
 
-    const load = async () => {
+    const load = useCallback(async () => {
         try {
             setLoading(true);
             const data = await fetchOidDetail(decodedOid);
-            setRecord(data);
+            if (!data) {
+                setRecord(null);
+                setError("No OID data returned.");
+                return;
+            }
+            // Normalize to guard against missing fields or unknown status values.
+            setRecord(normalizeOidDetail(data, decodedOid));
             setError(null);
         } catch (err) {
-            console.error("Failed to load OID detail", err);
             setError(err instanceof Error ? err.message : "Failed to load OID");
         } finally {
             setLoading(false);
         }
-    };
+    }, [decodedOid]);
 
     useEffect(() => {
         if (decodedOid) {
             load();
         }
-    }, [decodedOid]);
+    }, [decodedOid, load]);
 
     const handleGovernance = async (action: OidGovernanceAction) => {
-        if (!record) return;
+        if (!record || isSubmitting || inFlightRef.current) return;
 
         try {
+            inFlightRef.current = true;
             setIsSubmitting(true);
+            setActionError(null);
             await submitOidGovernance(record.oid, action);
 
             // ✅ Re-fetch after successful transition
             await load();
-        } catch (err: any) {
-            console.error("Governance action failed", err);
-
-            alert(
-                err?.response?.data?.detail ??
-                "Invalid governance transition"
+        } catch (err) {
+            const responseDetail =
+                typeof err === "object" && err && "response" in err
+                    ? (err as { response?: { data?: { detail?: string } } }).response
+                          ?.data?.detail
+                    : undefined;
+            setActionError(
+                responseDetail ??
+                (err instanceof Error ? err.message : "Invalid governance transition")
             );
         } finally {
             setIsSubmitting(false);
+            inFlightRef.current = false;
         }
     };
 
@@ -65,20 +86,54 @@ const OidDetail = () => {
         return <div className="p-6">Loading OID…</div>;
     }
 
-    if (!record || error) {
-        return <div className="p-6 text-red-600">{error}</div>;
+    if (!decodedOid) {
+        return (
+            <div className="p-6 text-sm text-gray-600">
+                No OID was provided.
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="p-6 space-y-3">
+                <button
+                    onClick={() => navigate("/oids")}
+                    className="text-sm text-blue-600 hover:underline"
+                >
+                    ← Back to OID Directory
+                </button>
+                <div className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                    {error}
+                </div>
+            </div>
+        );
+    }
+
+    if (!record) {
+        return (
+            <div className="p-6 text-sm text-gray-600">
+                No OID record available.
+            </div>
+        );
     }
 
     return (
         <div className="p-6 space-y-4">
             <button
                 onClick={() => navigate("/oids")}
-                className="text-blue-600 text-sm"
+                className="text-sm text-blue-600 hover:underline"
             >
                 ← Back to OID Directory
             </button>
 
             <h1 className="text-2xl font-semibold font-mono">{record.oid}</h1>
+
+            {actionError && (
+                <div className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                    {actionError}
+                </div>
+            )}
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <OidSummaryCard record={record} />

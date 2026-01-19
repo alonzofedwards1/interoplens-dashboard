@@ -1,15 +1,18 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { FaArrowLeft } from 'react-icons/fa';
 
 import { useServerData } from '../../lib/ServerDataContext';
 import { TransactionLink } from '../../components/TransactionLink';
 import { Finding } from '../../types/findings';
+import Pagination from '../../components/Pagination';
 
 const TransactionDetailPage: React.FC = () => {
     const navigate = useNavigate();
     const { id } = useParams<{ id: string }>();
     const { pdExecutions, telemetryEvents, findings } = useServerData();
+    const [page, setPage] = useState(1);
+    const pageSize = 10;
 
     const transaction = useMemo(
         () => pdExecutions.find(exec => exec.requestId === id),
@@ -25,6 +28,19 @@ const TransactionDetailPage: React.FC = () => {
     const relatedTelemetry = useMemo(() => {
         return telemetryEvents.filter(event => event.requestId === id);
     }, [id, telemetryEvents]);
+
+    const totalPages = Math.max(1, Math.ceil(relatedTelemetry.length / pageSize));
+
+    useEffect(() => {
+        if (page > totalPages) {
+            setPage(totalPages);
+        }
+    }, [page, totalPages]);
+
+    const pagedTelemetry = useMemo(() => {
+        const start = (page - 1) * pageSize;
+        return relatedTelemetry.slice(start, start + pageSize);
+    }, [page, relatedTelemetry]);
 
     return (
         <div className="p-6 space-y-6">
@@ -148,7 +164,7 @@ const TransactionDetailPage: React.FC = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {relatedTelemetry.map(event => (
+                                {pagedTelemetry.map(event => (
                                     <tr key={event.eventId} className="border-t text-sm">
                                         <td className="p-3 font-mono text-xs text-gray-700">
                                             {event.eventId}
@@ -167,6 +183,11 @@ const TransactionDetailPage: React.FC = () => {
                         </table>
                     </div>
                 )}
+                <Pagination
+                    page={page}
+                    totalPages={totalPages}
+                    onPageChange={setPage}
+                />
             </section>
         </div>
     );

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Filters, { FiltersState } from "../../components/Filters";
 import {
@@ -12,6 +12,7 @@ import {
 import { Finding } from "../../types/findings";
 import { useServerData } from "../../lib/ServerDataContext";
 import { TransactionLink } from "../../components/TransactionLink";
+import Pagination from "../../components/Pagination";
 
 /* ============================
    Local Types
@@ -84,6 +85,8 @@ const ViewAllFindingsPage: React.FC = () => {
     const [expandedId, setExpandedId] = useState<string | null>(null);
     const [sortKey, setSortKey] = useState<SortKey>("lastSeenAt");
     const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+    const [page, setPage] = useState(1);
+    const pageSize = 10;
 
     const [filters, setFilters] = useState<FiltersState>({
         organization: "",
@@ -179,6 +182,19 @@ const ViewAllFindingsPage: React.FC = () => {
         });
     }, [filteredFindings, sortKey, sortDirection]);
 
+    const totalPages = Math.max(1, Math.ceil(sortedFindings.length / pageSize));
+
+    useEffect(() => {
+        if (page > totalPages) {
+            setPage(totalPages);
+        }
+    }, [page, totalPages]);
+
+    const pagedFindings = useMemo(() => {
+        const start = (page - 1) * pageSize;
+        return sortedFindings.slice(start, start + pageSize);
+    }, [page, sortedFindings]);
+
     return (
         <div className="p-6 space-y-4">
             <button
@@ -220,7 +236,7 @@ const ViewAllFindingsPage: React.FC = () => {
                     </thead>
 
                     <tbody>
-                    {sortedFindings.map((finding) => {
+                    {pagedFindings.map((finding) => {
                         const isExpanded = expandedId === finding.id;
 
                         return (
@@ -293,6 +309,11 @@ const ViewAllFindingsPage: React.FC = () => {
                     </tbody>
                 </table>
             </div>
+            <Pagination
+                page={page}
+                totalPages={totalPages}
+                onPageChange={setPage}
+            />
         </div>
     );
 };
