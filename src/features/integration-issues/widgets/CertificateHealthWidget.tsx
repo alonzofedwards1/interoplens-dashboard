@@ -1,7 +1,7 @@
-import { CertificateHealthSummary } from "../../../types/pdExecutions";
+import { IntegrationHealthResponse } from "../../../api/integrationHealth";
 
 interface Props {
-    data?: CertificateHealthSummary;
+    data?: IntegrationHealthResponse["certificateHealth"];
     errorMessage?: string | null;
     onViewDetails?: () => void;
 }
@@ -36,7 +36,9 @@ const CertificateHealthWidget: React.FC<Props> = ({
                     <div className="h-4 bg-gray-100 rounded w-1/2" />
                     <div className="h-4 bg-gray-100 rounded w-3/4" />
                 </div>
-            ) : data.expired + data.expiringSoon + data.valid === 0 ? (
+            ) : data.expired === 0 &&
+              data.expiringSoon === 0 &&
+              data.valid === 0 ? (
                 <p className="text-sm text-gray-500">
                     No certificate health data available yet.
                 </p>
@@ -59,7 +61,9 @@ const CertificateHealthWidget: React.FC<Props> = ({
 
                         <div className="flex justify-between">
                             <span className="text-green-600">🟢 Valid</span>
-                            <span className="font-medium">{data.valid}</span>
+                            <span className="font-medium">
+                                {data.valid ?? "—"}
+                            </span>
                         </div>
                     </div>
 
