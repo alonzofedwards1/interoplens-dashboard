@@ -76,10 +76,8 @@ const derivePdMetrics = (executions: PdExecution[]) => {
     ).length;
 
     const averagePdLatencyMs = Math.round(
-        executions.reduce(
-            (sum, e) => sum + (e.executionTimeMs ?? e.durationMs ?? 0),
-            0
-        ) / Math.max(totalPDExecutions, 1)
+        executions.reduce((sum, e) => sum + (e.durationMs ?? 0), 0) /
+            Math.max(totalPDExecutions, 1)
     );
 
     return {

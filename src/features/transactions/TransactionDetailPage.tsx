@@ -82,7 +82,7 @@ const TransactionDetailPage: React.FC = () => {
                     </div>
                     <div>
                         <dt className="text-gray-500">Environment</dt>
-                        <dd>{transaction?.environment ?? '—'}</dd>
+                        <dd>{transaction?.sourceEnvironment ?? '—'}</dd>
                     </div>
                 </dl>
             </div>
