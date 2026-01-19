@@ -82,6 +82,12 @@ const OidQueue = () => {
 
     return (
         <div className="p-6">
+            <button
+                onClick={() => navigate("/dashboard")}
+                className="mb-4 text-sm text-blue-600 hover:underline"
+            >
+                Back to Dashboard
+            </button>
             <h1 className="text-2xl font-semibold mb-4">OID Directory</h1>
 
             {/* Filters */}

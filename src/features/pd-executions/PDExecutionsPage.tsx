@@ -65,26 +65,71 @@ const PDExecutions: React.FC = () => {
         defaultExecutionPreferences
     );
     const [telemetryCounts, setTelemetryCounts] = useState<Record<string, number | null>>({});
+    const [timeRange, setTimeRange] = useState<'1h' | '24h' | '7d' | 'custom'>('24h');
+    const [customStart, setCustomStart] = useState('');
+    const [customEnd, setCustomEnd] = useState('');
     const missingTelemetryApiLogged = useRef(false);
     const missingChartDataLogged = useRef(false);
 
     const { outcomeFilter, search, sortDirection, sortKey } = preferences;
+
+    const timeRangeBounds = useMemo(() => {
+        const now = new Date();
+        let startTime: number | undefined;
+        let endTime: number | undefined;
+
+        if (timeRange === 'custom') {
+            if (customStart) {
+                const startDate = new Date(customStart);
+                startTime = Number.isNaN(startDate.getTime())
+                    ? undefined
+                    : startDate.getTime();
+            }
+            if (customEnd) {
+                const endDate = new Date(customEnd);
+                endTime = Number.isNaN(endDate.getTime())
+                    ? undefined
+                    : endDate.getTime();
+            }
+        } else {
+            const ranges = {
+                '1h': 1,
+                '24h': 24,
+                '7d': 24 * 7,
+            };
+            const hours = ranges[timeRange];
+            startTime = now.getTime() - hours * 60 * 60 * 1000;
+            endTime = now.getTime();
+        }
+
+        return { startTime, endTime };
+    }, [customEnd, customStart, timeRange]);
 
     const filteredExecutions = useMemo(() => {
         return pdExecutions.filter(exec => {
             const outcome = (exec.outcome ?? '').toLowerCase();
             const matchesOutcome = outcomeFilter === 'all' || outcome === outcomeFilter;
 
-            if (!search.trim()) return matchesOutcome;
+            const completedAtMs = exec.completedAt
+                ? new Date(exec.completedAt).getTime()
+                : NaN;
+            const matchesStart =
+                timeRangeBounds.startTime === undefined ||
+                (!Number.isNaN(completedAtMs) && completedAtMs >= timeRangeBounds.startTime);
+            const matchesEnd =
+                timeRangeBounds.endTime === undefined ||
+                (!Number.isNaN(completedAtMs) && completedAtMs <= timeRangeBounds.endTime);
+
+            if (!search.trim()) return matchesOutcome && matchesStart && matchesEnd;
 
             const query = search.toLowerCase();
             const matchesText =
                 (exec.requestId ?? '').toLowerCase().includes(query) ||
                 (exec.channelId ?? '').toLowerCase().includes(query);
 
-            return matchesOutcome && matchesText;
+            return matchesOutcome && matchesText && matchesStart && matchesEnd;
         });
-    }, [outcomeFilter, pdExecutions, search]);
+    }, [outcomeFilter, pdExecutions, search, timeRangeBounds]);
 
     const sortedExecutions = useMemo(() => {
         return [...filteredExecutions].sort((a, b) => {
@@ -299,6 +344,49 @@ const PDExecutions: React.FC = () => {
             {/* Execution Table */}
             <div className="bg-white rounded-lg shadow overflow-x-auto">
                 <div className="flex flex-wrap gap-3 items-center justify-between p-3 border-b text-sm">
+                    <div className="flex flex-wrap gap-2 items-center">
+                        <label htmlFor="pd-time-range" className="text-gray-700">
+                            Time Range
+                        </label>
+                        <select
+                            id="pd-time-range"
+                            value={timeRange}
+                            onChange={event =>
+                                setTimeRange(event.target.value as typeof timeRange)
+                            }
+                            className="border rounded px-2 py-1"
+                        >
+                            <option value="1h">Last 1h</option>
+                            <option value="24h">Last 24h</option>
+                            <option value="7d">Last 7d</option>
+                            <option value="custom">Custom</option>
+                        </select>
+                    </div>
+
+                    {timeRange === 'custom' && (
+                        <div className="flex flex-wrap gap-2 items-center">
+                            <label htmlFor="pd-start" className="text-gray-700">
+                                Start
+                            </label>
+                            <input
+                                id="pd-start"
+                                type="datetime-local"
+                                value={customStart}
+                                onChange={event => setCustomStart(event.target.value)}
+                                className="border rounded px-2 py-1"
+                            />
+                            <label htmlFor="pd-end" className="text-gray-700">
+                                End
+                            </label>
+                            <input
+                                id="pd-end"
+                                type="datetime-local"
+                                value={customEnd}
+                                onChange={event => setCustomEnd(event.target.value)}
+                                className="border rounded px-2 py-1"
+                            />
+                        </div>
+                    )}
                     <div className="flex gap-2 items-center">
                         <label htmlFor="pd-outcome" className="text-gray-700">
                             Outcome

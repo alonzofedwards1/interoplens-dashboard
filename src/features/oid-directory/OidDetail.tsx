@@ -99,7 +99,7 @@ const OidDetail = () => {
             <div className="p-6 space-y-3">
                 <button
                     onClick={() => navigate("/oids")}
-                    className="text-blue-600 text-sm"
+                    className="text-sm text-blue-600 hover:underline"
                 >
                     ← Back to OID Directory
                 </button>
@@ -122,7 +122,7 @@ const OidDetail = () => {
         <div className="p-6 space-y-4">
             <button
                 onClick={() => navigate("/oids")}
-                className="text-blue-600 text-sm"
+                className="text-sm text-blue-600 hover:underline"
             >
                 ← Back to OID Directory
             </button>
