@@ -1,8 +1,8 @@
 // src/types/oids.ts
 
-export type OidStatus = "provisional" | "approved" | "deprecated";
+export type OidStatus = "UNKNOWN" | "PENDING" | "ACTIVE" | "DEPRECATED";
 
-export type OidConfidence = "HIGH" | "MEDIUM" | "LOW";
+export type OidConfidence = "HIGH" | "MEDIUM" | "LOW" | "UNKNOWN";
 
 /** ✅ GOVERNANCE ACTIONS (single source of truth) */
 export type OidGovernanceAction =

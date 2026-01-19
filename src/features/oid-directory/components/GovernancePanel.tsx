@@ -15,8 +15,7 @@ const GovernancePanel = ({ record, onAction, isSubmitting }: Props) => {
     const status: OidStatus = record.status;
 
     // ✅ readonly-safe
-    const actions: readonly OidGovernanceAction[] =
-        OID_STATUS_ACTIONS[status] ?? [];
+    const actions = OID_STATUS_ACTIONS[status] ?? [];
 
     return (
         <div className="border rounded p-4 bg-white">
@@ -28,14 +27,14 @@ const GovernancePanel = ({ record, onAction, isSubmitting }: Props) => {
                 </div>
             ) : (
                 <div className="flex gap-2 flex-wrap">
-                    {actions.map((action) => (
+                    {actions.map((actionConfig) => (
                         <button
-                            key={action}
+                            key={actionConfig.action}
                             disabled={isSubmitting}
-                            onClick={() => onAction(action)}
+                            onClick={() => onAction(actionConfig.action)}
                             className="px-3 py-1 border rounded text-sm bg-gray-100 hover:bg-gray-200 disabled:opacity-50"
                         >
-                            {action.replace(/_/g, " ")}
+                            {actionConfig.label}
                         </button>
                     ))}
                 </div>
