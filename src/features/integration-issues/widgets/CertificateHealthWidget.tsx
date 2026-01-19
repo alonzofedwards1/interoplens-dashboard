@@ -1,15 +1,18 @@
 import { IntegrationHealthResponse } from "../../../api/integrationHealth";
+import { Link } from "react-router-dom";
 
 interface Props {
     data?: IntegrationHealthResponse["certificateHealth"];
     errorMessage?: string | null;
     onViewDetails?: () => void;
+    impactedLink?: string;
 }
 
 const CertificateHealthWidget: React.FC<Props> = ({
     data,
     errorMessage,
     onViewDetails,
+    impactedLink,
 }) => {
     return (
         <div className="rounded-lg border bg-white p-4 shadow-sm space-y-3">
@@ -70,6 +73,14 @@ const CertificateHealthWidget: React.FC<Props> = ({
                     <p className="text-xs text-gray-500">
                         Expiring Soon = within 30 days
                     </p>
+                    {impactedLink && (
+                        <Link
+                            to={impactedLink}
+                            className="text-xs text-blue-600 hover:underline"
+                        >
+                            View impacted executions
+                        </Link>
+                    )}
                 </>
             )}
         </div>

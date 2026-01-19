@@ -105,6 +105,7 @@ const ExecutiveSummary = () => {
                     data={certificateHealth}
                     errorMessage={error ? "Unable to load certificate health." : null}
                     onViewDetails={() => setShowCertModal(true)}
+                    impactedLink="/pd-executions?certStatus=EXPIRED,EXPIRING_SOON"
                 />
 
                 {/* Action Required */}
