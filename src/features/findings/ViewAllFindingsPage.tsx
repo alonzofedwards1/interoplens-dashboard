@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import Filters, { FiltersState } from "../../components/Filters";
 import {
     FaChevronDown,
@@ -80,6 +80,7 @@ type SortDirection = "asc" | "desc";
 
 const ViewAllFindingsPage: React.FC = () => {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
     const { findings: rawFindings } = useServerData();
 
     const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -88,6 +89,11 @@ const ViewAllFindingsPage: React.FC = () => {
     const [page, setPage] = useState(1);
     const pageSize = 10;
 
+    const severityParam = searchParams.get("severity");
+    const severityFilter =
+        severityParam === "warning" || severityParam === "critical"
+            ? severityParam
+            : "";
     const [filters, setFilters] = useState<FiltersState>({
         organization: "",
         status: "",
@@ -136,9 +142,13 @@ const ViewAllFindingsPage: React.FC = () => {
                 return false;
             }
 
+            if (severityFilter && f.severity !== severityFilter) {
+                return false;
+            }
+
             return true;
         });
-    }, [findings, filters]);
+    }, [findings, filters, severityFilter]);
 
     /* ============================
        SORT
