@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import Pagination from '../../../components/Pagination';
 
 interface LinkedFinding {
     id: string;
@@ -15,6 +16,8 @@ const LinkedFindingsTable: React.FC<LinkedFindingsTableProps> = ({ findings }) =
     const [query, setQuery] = useState('');
     const [sortKey, setSortKey] = useState<'date' | 'severity' | 'id'>('date');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+    const [page, setPage] = useState(1);
+    const pageSize = 5;
 
     const filteredAndSorted = useMemo(() => {
         const filtered = findings.filter(f => {
@@ -41,6 +44,19 @@ const LinkedFindingsTable: React.FC<LinkedFindingsTableProps> = ({ findings }) =
             return 0;
         });
     }, [findings, query, sortDirection, sortKey]);
+
+    const totalPages = Math.max(1, Math.ceil(filteredAndSorted.length / pageSize));
+
+    useEffect(() => {
+        if (page > totalPages) {
+            setPage(totalPages);
+        }
+    }, [page, totalPages]);
+
+    const pagedFindings = useMemo(() => {
+        const start = (page - 1) * pageSize;
+        return filteredAndSorted.slice(start, start + pageSize);
+    }, [filteredAndSorted, page]);
 
     return (
         <section className="bg-white rounded-lg shadow p-5 space-y-3">
@@ -89,7 +105,7 @@ const LinkedFindingsTable: React.FC<LinkedFindingsTableProps> = ({ findings }) =
                 </tr>
                 </thead>
                 <tbody>
-                {filteredAndSorted.map((f) => (
+                {pagedFindings.map((f) => (
                     <tr key={f.id} className="border-b">
                         <td className="py-2 font-mono">{f.id}</td>
                         <td>{f.type}</td>
@@ -106,6 +122,11 @@ const LinkedFindingsTable: React.FC<LinkedFindingsTableProps> = ({ findings }) =
                 )}
                 </tbody>
             </table>
+            <Pagination
+                page={page}
+                totalPages={totalPages}
+                onPageChange={setPage}
+            />
         </section>
     );
 };

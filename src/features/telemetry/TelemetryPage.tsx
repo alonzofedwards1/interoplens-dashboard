@@ -3,8 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { FaArrowLeft, FaChartBar, FaClock, FaTimesCircle, FaCheckCircle } from 'react-icons/fa';
 
 import { TelemetryEvent } from '../../telemetry/TelemetryEvent';
-import { fetchTelemetryEvents } from '../../lib/telemetryClient';
+import { fetchTelemetryEvents, TelemetryFilterParams } from '../../lib/telemetryClient';
 import { TransactionLink } from '../../components/TransactionLink';
+import Pagination from '../../components/Pagination';
 
 const formatStatus = (status?: string) => {
     const normalized = (status || 'UNKNOWN').toUpperCase();
@@ -65,17 +66,83 @@ const TelemetryPage: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string>();
 
+    const [timeRange, setTimeRange] = useState<'1h' | '24h' | '7d' | 'custom'>('24h');
+    const [customStart, setCustomStart] = useState('');
+    const [customEnd, setCustomEnd] = useState('');
+    const [organizationFilter, setOrganizationFilter] = useState<'all' | string>('all');
+    const [transactionTypeFilter, setTransactionTypeFilter] = useState<'all' | string>('all');
+
     const [statusFilter, setStatusFilter] = useState<TelemetryStatus | 'all'>('all');
     const [environmentFilter, setEnvironmentFilter] = useState<TelemetryEnvironment | 'all'>(
         'all'
     );
     const [search, setSearch] = useState('');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+    const [page, setPage] = useState(1);
+    const pageSize = 25;
 
-    const loadTelemetry = React.useCallback(async () => {
+    const filterParams = useMemo<TelemetryFilterParams>(() => {
+        const now = new Date();
+        let startTime: string | undefined;
+        let endTime: string | undefined;
+
+        if (timeRange === 'custom') {
+            if (customStart) {
+                const startDate = new Date(customStart);
+                startTime = Number.isNaN(startDate.getTime())
+                    ? undefined
+                    : startDate.toISOString();
+            }
+            if (customEnd) {
+                const endDate = new Date(customEnd);
+                endTime = Number.isNaN(endDate.getTime())
+                    ? undefined
+                    : endDate.toISOString();
+            }
+        } else {
+            const ranges = {
+                '1h': 1,
+                '24h': 24,
+                '7d': 24 * 7,
+            };
+            const hours = ranges[timeRange];
+            const startDate = new Date(now.getTime() - hours * 60 * 60 * 1000);
+            startTime = startDate.toISOString();
+            endTime = now.toISOString();
+        }
+
+        return {
+            startTime,
+            endTime,
+            organization: organizationFilter === 'all' ? undefined : organizationFilter,
+            transactionType:
+                transactionTypeFilter === 'all' ? undefined : transactionTypeFilter,
+        };
+    }, [customEnd, customStart, organizationFilter, timeRange, transactionTypeFilter]);
+
+    const loadTelemetry = React.useCallback(async (filters?: TelemetryFilterParams) => {
         setLoading(true);
         setError(undefined);
         try {
+            const shouldAttemptFiltered =
+                Boolean(filters?.startTime) ||
+                Boolean(filters?.endTime) ||
+                Boolean(filters?.organization) ||
+                Boolean(filters?.transactionType);
+
+            if (shouldAttemptFiltered) {
+                try {
+                    const events = await fetchTelemetryEvents(filters);
+                    setTelemetryEvents(events);
+                    return;
+                } catch (err) {
+                    console.warn(
+                        '[Phase0][TelemetryFilters] Backend filter not supported',
+                        err
+                    );
+                }
+            }
+
             const events = await fetchTelemetryEvents();
             setTelemetryEvents(events);
         } catch (err) {
@@ -86,21 +153,68 @@ const TelemetryPage: React.FC = () => {
     }, []);
 
     useEffect(() => {
-        loadTelemetry();
-    }, [loadTelemetry]);
+        loadTelemetry(filterParams);
+    }, [filterParams, loadTelemetry]);
+
+    const organizationOptions = useMemo(() => {
+        const values = new Set<string>();
+        telemetryEvents.forEach(event => {
+            if (event.channelId) {
+                values.add(event.channelId);
+            }
+        });
+
+        return Array.from(values).sort((a, b) => a.localeCompare(b));
+    }, [telemetryEvents]);
+
+    const transactionTypeOptions = useMemo(() => {
+        const values = new Set<string>();
+        telemetryEvents.forEach(event => {
+            if (event.eventType) {
+                values.add(event.eventType);
+            }
+        });
+
+        return Array.from(values).sort((a, b) => a.localeCompare(b));
+    }, [telemetryEvents]);
 
     const filteredEvents = useMemo(() => {
         const query = search.trim().toLowerCase();
+        const startTime = filterParams.startTime
+            ? Date.parse(filterParams.startTime)
+            : undefined;
+        const endTime = filterParams.endTime
+            ? Date.parse(filterParams.endTime)
+            : undefined;
 
         return telemetryEvents.filter(event => {
             const outcomeStatus = (event.status || 'UNKNOWN').toUpperCase();
+            const eventTime = event.timestamp ? Date.parse(event.timestamp) : NaN;
 
             const matchesStatus =
                 statusFilter === 'all' || outcomeStatus === statusFilter?.toUpperCase();
             const matchesEnvironment =
                 environmentFilter === 'all' || event.environment === environmentFilter;
+            const matchesOrganization =
+                organizationFilter === 'all' || event.channelId === organizationFilter;
+            const matchesTransactionType =
+                transactionTypeFilter === 'all' || event.eventType === transactionTypeFilter;
 
-            if (!matchesStatus || !matchesEnvironment) return false;
+            const matchesStart =
+                startTime === undefined || (!Number.isNaN(eventTime) && eventTime >= startTime);
+            const matchesEnd =
+                endTime === undefined || (!Number.isNaN(eventTime) && eventTime <= endTime);
+
+            if (
+                !matchesStatus ||
+                !matchesEnvironment ||
+                !matchesOrganization ||
+                !matchesTransactionType ||
+                !matchesStart ||
+                !matchesEnd
+            ) {
+                return false;
+            }
             if (!query) return true;
 
             return (
@@ -110,7 +224,15 @@ const TelemetryPage: React.FC = () => {
                 (event.eventId || '').toLowerCase().includes(query)
             );
         });
-    }, [environmentFilter, search, statusFilter, telemetryEvents]);
+    }, [
+        environmentFilter,
+        filterParams,
+        organizationFilter,
+        search,
+        statusFilter,
+        telemetryEvents,
+        transactionTypeFilter,
+    ]);
 
     const sortedEvents = useMemo(() => {
         return [...filteredEvents].sort((a, b) => {
@@ -119,6 +241,19 @@ const TelemetryPage: React.FC = () => {
             return sortDirection === 'asc' ? aTime - bTime : bTime - aTime;
         });
     }, [filteredEvents, sortDirection]);
+
+    const totalPages = Math.max(1, Math.ceil(sortedEvents.length / pageSize));
+
+    useEffect(() => {
+        if (page > totalPages) {
+            setPage(totalPages);
+        }
+    }, [page, totalPages]);
+
+    const pagedEvents = useMemo(() => {
+        const start = (page - 1) * pageSize;
+        return sortedEvents.slice(start, start + pageSize);
+    }, [page, sortedEvents]);
 
     const metrics = useMemo(() => {
         const total = telemetryEvents.length;
@@ -161,7 +296,7 @@ const TelemetryPage: React.FC = () => {
                     <div className="text-red-600 font-semibold">{error}</div>
                     <p className="text-gray-600">Unable to load telemetry events.</p>
                     <button
-                        onClick={loadTelemetry}
+                        onClick={() => loadTelemetry(filterParams)}
                         className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
                     >
                         Retry
@@ -188,11 +323,17 @@ const TelemetryPage: React.FC = () => {
                         </p>
                     </div>
                 </div>
+                <span
+                    className="inline-flex items-center gap-1 rounded bg-emerald-100 px-2 py-0.5 text-xs text-emerald-700"
+                    title="Statuses shown here are normalized across systems into a standard taxonomy (Success, Warning, Failure). Raw vendor logs are not displayed."
+                >
+                    Normalized Status View
+                </span>
                 <span className="inline-flex items-center gap-1 rounded bg-blue-100 px-2 py-0.5 text-xs text-blue-700">
                     🔗 Traceable
                 </span>
                 <button
-                    onClick={loadTelemetry}
+                    onClick={() => loadTelemetry(filterParams)}
                     className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
                 >
                     Refresh
@@ -204,6 +345,98 @@ const TelemetryPage: React.FC = () => {
                 <SummaryCard label="Success rate" value={`${metrics.successRate}%`} />
                 <SummaryCard label="Errors" value={metrics.errors} />
                 <SummaryCard label="Avg duration" value={`${metrics.averageDuration} ms`} />
+            </div>
+
+            <div className="bg-white rounded-lg shadow p-4 flex flex-wrap gap-3 items-center justify-between text-sm">
+                <div className="flex flex-wrap gap-2 items-center">
+                    <label htmlFor="telemetry-time-range" className="text-gray-700">
+                        Time Range
+                    </label>
+                    <select
+                        id="telemetry-time-range"
+                        value={timeRange}
+                        onChange={event =>
+                            setTimeRange(event.target.value as typeof timeRange)
+                        }
+                        className="border rounded px-2 py-1"
+                    >
+                        <option value="1h">Last 1h</option>
+                        <option value="24h">Last 24h</option>
+                        <option value="7d">Last 7d</option>
+                        <option value="custom">Custom</option>
+                    </select>
+                </div>
+
+                {timeRange === 'custom' && (
+                    <div className="flex flex-wrap gap-2 items-center">
+                        <label htmlFor="telemetry-start" className="text-gray-700">
+                            Start
+                        </label>
+                        <input
+                            id="telemetry-start"
+                            type="datetime-local"
+                            value={customStart}
+                            onChange={event => setCustomStart(event.target.value)}
+                            className="border rounded px-2 py-1"
+                        />
+                        <label htmlFor="telemetry-end" className="text-gray-700">
+                            End
+                        </label>
+                        <input
+                            id="telemetry-end"
+                            type="datetime-local"
+                            value={customEnd}
+                            onChange={event => setCustomEnd(event.target.value)}
+                            className="border rounded px-2 py-1"
+                        />
+                    </div>
+                )}
+
+                <div className="flex flex-wrap gap-2 items-center">
+                    <label htmlFor="telemetry-org" className="text-gray-700">
+                        Organization / Channel
+                    </label>
+                    <select
+                        id="telemetry-org"
+                        value={organizationFilter}
+                        onChange={event => setOrganizationFilter(event.target.value)}
+                        className="border rounded px-2 py-1"
+                    >
+                        <option value="all">All</option>
+                        {organizationOptions.length ? (
+                            organizationOptions.map(value => (
+                                <option key={value} value={value}>
+                                    {value}
+                                </option>
+                            ))
+                        ) : (
+                            <option value="all">Unavailable</option>
+                        )}
+                    </select>
+                </div>
+
+                <div className="flex flex-wrap gap-2 items-center">
+                    <label htmlFor="telemetry-transaction" className="text-gray-700">
+                        Transaction Type
+                    </label>
+                    <select
+                        id="telemetry-transaction"
+                        value={transactionTypeFilter}
+                        onChange={event => setTransactionTypeFilter(event.target.value)}
+                        className="border rounded px-2 py-1"
+                    >
+                        <option value="all">All</option>
+                        {transactionTypeOptions.length ? (
+                            transactionTypeOptions.map(value => (
+                                <option key={value} value={value}>
+                                    {value}
+                                </option>
+                            ))
+                        ) : (
+                            <option value="all">Unavailable</option>
+                        )}
+                    </select>
+                </div>
             </div>
 
             <div className="bg-white rounded-lg shadow p-4 flex flex-wrap gap-3 items-center justify-between">
@@ -277,7 +510,7 @@ const TelemetryPage: React.FC = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {sortedEvents.map(event => {
+                        {pagedEvents.map(event => {
                             const statusValue = event.status || 'UNKNOWN';
                             const status = formatStatus(statusValue);
                             return (
@@ -324,6 +557,11 @@ const TelemetryPage: React.FC = () => {
                         )}
                     </tbody>
                 </table>
+                <Pagination
+                    page={page}
+                    totalPages={totalPages}
+                    onPageChange={setPage}
+                />
             </div>
         </div>
     );

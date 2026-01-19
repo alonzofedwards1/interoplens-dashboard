@@ -1,8 +1,9 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { committeeQueueData } from './data/committeeQueue.data';
 import { committeeStatusStyles } from './data/committeeStatus';
+import Pagination from '../../components/Pagination';
 
 const CommitteeQueue: React.FC = () => {
     const navigate = useNavigate();
@@ -10,6 +11,8 @@ const CommitteeQueue: React.FC = () => {
     const [statusFilter, setStatusFilter] = useState<'all' | string>('all');
     const [sortKey, setSortKey] = useState<'decisionTarget' | 'severity' | 'organization'>('decisionTarget');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+    const [page, setPage] = useState(1);
+    const pageSize = 10;
 
     const filteredAndSorted = useMemo(() => {
         const filtered = committeeQueueData.filter(item => {
@@ -34,6 +37,19 @@ const CommitteeQueue: React.FC = () => {
             return 0;
         });
     }, [query, sortDirection, sortKey, statusFilter]);
+
+    const totalPages = Math.max(1, Math.ceil(filteredAndSorted.length / pageSize));
+
+    useEffect(() => {
+        if (page > totalPages) {
+            setPage(totalPages);
+        }
+    }, [page, totalPages]);
+
+    const pagedCases = useMemo(() => {
+        const start = (page - 1) * pageSize;
+        return filteredAndSorted.slice(start, start + pageSize);
+    }, [filteredAndSorted, page]);
 
     return (
         <div className="p-6 space-y-6">
@@ -111,7 +127,7 @@ const CommitteeQueue: React.FC = () => {
                     </tr>
                     </thead>
                     <tbody>
-                    {filteredAndSorted.map((item) => (
+                    {pagedCases.map((item) => (
                         <tr
                             key={item.id}
                             className="border-t hover:bg-gray-50"
@@ -146,6 +162,11 @@ const CommitteeQueue: React.FC = () => {
                     ))}
                     </tbody>
                 </table>
+                <Pagination
+                    page={page}
+                    totalPages={totalPages}
+                    onPageChange={setPage}
+                />
             </div>
         </div>
     );

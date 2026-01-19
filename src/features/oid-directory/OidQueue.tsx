@@ -1,18 +1,23 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { fetchOids } from "../../lib/api/oids";
-import { Oid } from "@/types";
+import type { Oid, OidConfidence, OidStatus } from "@/types";
+import { OID_STATUS_LABELS } from "./data/oidStatus.data";
+import { normalizeOid } from "./utils/normalizeOid";
+import Pagination from "../../components/Pagination";
 
 const OidQueue = () => {
     const navigate = useNavigate();
 
-    const [statusFilter, setStatusFilter] = useState<string | "ALL">("ALL");
-    const [confidenceFilter, setConfidenceFilter] = useState<"ALL" | "HIGH" | "MEDIUM" | "LOW">("ALL");
+    const [statusFilter, setStatusFilter] = useState<OidStatus | "ALL">("ALL");
+    const [confidenceFilter, setConfidenceFilter] = useState<OidConfidence | "ALL">("ALL");
     const [sortKey, setSortKey] = useState<"lastSeen" | "oid" | "status" | "displayName">("lastSeen");
     const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
     const [oids, setOids] = useState<Oid[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [page, setPage] = useState(1);
+    const pageSize = 10;
 
     useEffect(() => {
         let isMounted = true;
@@ -20,7 +25,7 @@ const OidQueue = () => {
             try {
                 const data = await fetchOids();
                 if (isMounted) {
-                    setOids(data);
+                    setOids(Array.isArray(data) ? data : []);
                     setError(null);
                 }
             } catch (err) {
@@ -40,30 +45,65 @@ const OidQueue = () => {
         };
     }, []);
 
+    // Normalize to avoid rendering crashes from partial/legacy backend payloads.
+    const normalizedOids = useMemo(
+        () => oids.map((item, index) => normalizeOid(item, `unknown-${index}`)),
+        [oids]
+    );
+
     const filteredAndSorted = useMemo(() => {
-        const filtered = oids.filter(item => {
+        const filtered = normalizedOids.filter(item => {
             if (statusFilter !== "ALL" && item.status !== statusFilter) return false;
             if (confidenceFilter !== "ALL" && item.confidence !== confidenceFilter) return false;
             return true;
         });
 
-        return filtered.sort((a, b) => {
-            if (sortKey === "lastSeen") {
-                const aDate = new Date(a.lastSeen).getTime();
-                const bDate = new Date(b.lastSeen).getTime();
-                return sortDirection === "asc" ? aDate - bDate : bDate - aDate;
-            }
+        const sorted = filtered
+            .map((item, index) => ({ item, index }))
+            .sort((a, b) => {
+                if (sortKey === "lastSeen") {
+                    const aDate = Date.parse(a.item.lastSeen);
+                    const bDate = Date.parse(b.item.lastSeen);
+                    const aValue = Number.isNaN(aDate) ? 0 : aDate;
+                    const bValue = Number.isNaN(bDate) ? 0 : bDate;
+                    const diff = aValue - bValue;
+                    return sortDirection === "asc" ? diff : -diff;
+                }
 
-            const aVal = a[sortKey];
-            const bVal = b[sortKey];
-            if (aVal < bVal) return sortDirection === "asc" ? -1 : 1;
-            if (aVal > bVal) return sortDirection === "asc" ? 1 : -1;
-            return 0;
-        });
-    }, [confidenceFilter, oids, sortDirection, sortKey, statusFilter]);
+                const aVal = String(a.item[sortKey] ?? "");
+                const bVal = String(b.item[sortKey] ?? "");
+                const diff = aVal.localeCompare(bVal);
+                if (diff !== 0) {
+                    return sortDirection === "asc" ? diff : -diff;
+                }
+                return a.index - b.index;
+            })
+            .map(({ item }) => item);
+
+        return sorted;
+    }, [confidenceFilter, normalizedOids, sortDirection, sortKey, statusFilter]);
+
+    const totalPages = Math.max(1, Math.ceil(filteredAndSorted.length / pageSize));
+
+    useEffect(() => {
+        if (page > totalPages) {
+            setPage(totalPages);
+        }
+    }, [page, totalPages]);
+
+    const pagedOids = useMemo(() => {
+        const start = (page - 1) * pageSize;
+        return filteredAndSorted.slice(start, start + pageSize);
+    }, [filteredAndSorted, page]);
 
     return (
         <div className="p-6">
+            <button
+                onClick={() => navigate("/dashboard")}
+                className="mb-4 text-sm text-blue-600 hover:underline"
+            >
+                Back to Dashboard
+            </button>
             <h1 className="text-2xl font-semibold mb-4">OID Directory</h1>
 
             {/* Filters */}
@@ -71,8 +111,9 @@ const OidQueue = () => {
                 <select
                     className="border p-2 rounded"
                     value={statusFilter}
-                    onChange={e => setStatusFilter(e.target.value as any)}
+                    onChange={e => setStatusFilter(e.target.value as OidStatus | "ALL")}
                 >
+                    <option value="ALL">All Statuses</option>
                     <option value="UNKNOWN">Unknown</option>
                     <option value="PENDING">Pending</option>
                     <option value="ACTIVE">Active</option>
@@ -82,12 +123,15 @@ const OidQueue = () => {
                 <select
                     className="border p-2 rounded"
                     value={confidenceFilter}
-                    onChange={e => setConfidenceFilter(e.target.value as any)}
+                    onChange={e =>
+                        setConfidenceFilter(e.target.value as OidConfidence | "ALL")
+                    }
                 >
                     <option value="ALL">All Confidence</option>
                     <option value="HIGH">High</option>
                     <option value="MEDIUM">Medium</option>
                     <option value="LOW">Low</option>
+                    <option value="UNKNOWN">Unknown</option>
                 </select>
 
                 <div className="flex items-center gap-2 text-sm">
@@ -139,7 +183,7 @@ const OidQueue = () => {
                         </tr>
                         </thead>
                         <tbody>
-                        {filteredAndSorted.map(oid => (
+                        {pagedOids.map(oid => (
                             <tr
                                 key={oid.oid}
                                 className="border-t cursor-pointer hover:bg-gray-50"
@@ -148,7 +192,7 @@ const OidQueue = () => {
                                 <td className="p-2 font-mono">{oid.oid}</td>
                                 <td className="p-2">{oid.displayName}</td>
                                 <td className="p-2">{oid.ownerOrg}</td>
-                                <td className="p-2">{oid.status}</td>
+                                <td className="p-2">{OID_STATUS_LABELS[oid.status]}</td>
                                 <td className="p-2">{oid.confidence}</td>
                                 <td className="p-2">{oid.lastSeen}</td>
                             </tr>
@@ -156,14 +200,19 @@ const OidQueue = () => {
                         {filteredAndSorted.length === 0 && (
                             <tr>
                                 <td colSpan={6} className="p-4 text-center text-gray-500">
-                                    {oids.length === 0
-                                        ? "No OIDs observed yet."
-                                        : "No OIDs match the selected filters"}
+                                {normalizedOids.length === 0
+                                    ? "No OIDs observed yet."
+                                    : "No OIDs match the selected filters"}
                                 </td>
                             </tr>
                         )}
                         </tbody>
                     </table>
+                    <Pagination
+                        page={page}
+                        totalPages={totalPages}
+                        onPageChange={setPage}
+                    />
                 </div>
             )}
         </div>
