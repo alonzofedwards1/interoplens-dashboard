@@ -40,8 +40,26 @@ const normalizeTelemetryEvent = (event: RawTelemetryEvent): TelemetryEvent => ({
     interactionId: event.protocol?.interactionId ?? '',
 });
 
-export async function fetchTelemetryEvents(): Promise<TelemetryEvent[]> {
-    const res = await fetch(`${TELEMETRY_BASE_URL}/api/telemetry/events`, {
+export type TelemetryFilterParams = {
+    startTime?: string;
+    endTime?: string;
+    organization?: string;
+    transactionType?: string;
+};
+
+export async function fetchTelemetryEvents(
+    filters?: TelemetryFilterParams
+): Promise<TelemetryEvent[]> {
+    const params = new URLSearchParams();
+
+    if (filters?.startTime) params.set('startTime', filters.startTime);
+    if (filters?.endTime) params.set('endTime', filters.endTime);
+    if (filters?.organization) params.set('organization', filters.organization);
+    if (filters?.transactionType) params.set('transactionType', filters.transactionType);
+
+    const query = params.toString();
+    const url = `${TELEMETRY_BASE_URL}/api/telemetry/events${query ? `?${query}` : ''}`;
+    const res = await fetch(url, {
         credentials: 'include',
     });
 
