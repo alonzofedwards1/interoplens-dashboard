@@ -20,21 +20,32 @@ export async function fetchOids(): Promise<Oid[]> {
         throw new Error(text || "Failed to fetch OIDs");
     }
 
-    return safeJson(res) as Promise<Oid[]>;
+    const data = await safeJson(res);
+    return Array.isArray(data) ? (data as Oid[]) : [];
 }
 
 /* ============================
    GET /api/oids/{oid}
 ============================ */
-export async function fetchOidDetail(oid: string): Promise<OidDetail> {
+export async function fetchOidDetail(oid: string): Promise<OidDetail | null> {
     const res = await authFetch(`${BASE}/${encodeURIComponent(oid)}`);
 
     if (!res.ok) {
         const text = await res.text();
+        if (res.status === 404) {
+            throw new Error(text || "OID not found.");
+        }
+        if (res.status === 400) {
+            throw new Error(text || "Invalid OID request.");
+        }
         throw new Error(text || "Failed to fetch OID detail");
     }
 
-    return safeJson(res) as Promise<OidDetail>;
+    const data = await safeJson(res);
+    if (!data || typeof data !== "object") {
+        return null;
+    }
+    return data as OidDetail;
 }
 
 /* ============================
