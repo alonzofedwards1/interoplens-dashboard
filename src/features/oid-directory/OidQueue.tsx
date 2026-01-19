@@ -4,6 +4,7 @@ import { fetchOids } from "../../lib/api/oids";
 import type { Oid, OidConfidence, OidStatus } from "@/types";
 import { OID_STATUS_LABELS } from "./data/oidStatus.data";
 import { normalizeOid } from "./utils/normalizeOid";
+import Pagination from "../../components/Pagination";
 
 const OidQueue = () => {
     const navigate = useNavigate();
@@ -15,6 +16,8 @@ const OidQueue = () => {
     const [oids, setOids] = useState<Oid[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [page, setPage] = useState(1);
+    const pageSize = 10;
 
     useEffect(() => {
         let isMounted = true;
@@ -79,6 +82,19 @@ const OidQueue = () => {
 
         return sorted;
     }, [confidenceFilter, normalizedOids, sortDirection, sortKey, statusFilter]);
+
+    const totalPages = Math.max(1, Math.ceil(filteredAndSorted.length / pageSize));
+
+    useEffect(() => {
+        if (page > totalPages) {
+            setPage(totalPages);
+        }
+    }, [page, totalPages]);
+
+    const pagedOids = useMemo(() => {
+        const start = (page - 1) * pageSize;
+        return filteredAndSorted.slice(start, start + pageSize);
+    }, [filteredAndSorted, page]);
 
     return (
         <div className="p-6">
@@ -167,7 +183,7 @@ const OidQueue = () => {
                         </tr>
                         </thead>
                         <tbody>
-                        {filteredAndSorted.map(oid => (
+                        {pagedOids.map(oid => (
                             <tr
                                 key={oid.oid}
                                 className="border-t cursor-pointer hover:bg-gray-50"
@@ -192,6 +208,11 @@ const OidQueue = () => {
                         )}
                         </tbody>
                     </table>
+                    <Pagination
+                        page={page}
+                        totalPages={totalPages}
+                        onPageChange={setPage}
+                    />
                 </div>
             )}
         </div>

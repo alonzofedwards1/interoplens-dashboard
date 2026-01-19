@@ -1,9 +1,10 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { Finding } from '../types/findings';
 import { TransactionLink } from './TransactionLink';
 import { useUserPreference } from '../lib/userPreferences';
+import Pagination from './Pagination';
 
 /* ============================
    Helpers
@@ -16,8 +17,7 @@ const buildRecentFindings = (findings: Finding[]) =>
             (a, b) =>
                 new Date(b.detectedAt ?? 0).getTime() -
                 new Date(a.detectedAt ?? 0).getTime()
-        )
-        .slice(0, 5);
+        );
 
 const getSeverityLabel = (severity?: Finding['severity']) => {
     switch (severity) {
@@ -87,6 +87,8 @@ const FindingsTable: React.FC<FindingsTableProps> = ({ findings }) => {
         'findings.dashboard.table',
         defaultFindingsPreferences
     );
+    const [page, setPage] = useState(1);
+    const pageSize = 5;
 
     const { query, sortKey, sortDirection } = preferences;
 
@@ -137,6 +139,19 @@ const FindingsTable: React.FC<FindingsTableProps> = ({ findings }) => {
         });
     }, [filteredFindings, sortKey, sortDirection]);
 
+    const totalPages = Math.max(1, Math.ceil(sortedFindings.length / pageSize));
+
+    useEffect(() => {
+        if (page > totalPages) {
+            setPage(totalPages);
+        }
+    }, [page, totalPages]);
+
+    const pagedFindings = useMemo(() => {
+        const start = (page - 1) * pageSize;
+        return sortedFindings.slice(start, start + pageSize);
+    }, [page, sortedFindings]);
+
     /* ============================
        RENDER
     ============================ */
@@ -179,7 +194,7 @@ const FindingsTable: React.FC<FindingsTableProps> = ({ findings }) => {
                 </thead>
 
                 <tbody>
-                {sortedFindings.map(f => (
+                {pagedFindings.map(f => (
                     <tr key={f.id} className="border-b last:border-b-0">
                         <td className="py-2">{getSeverityLabel(f.severity)}</td>
                         <td className="py-2 font-medium">
@@ -211,6 +226,11 @@ const FindingsTable: React.FC<FindingsTableProps> = ({ findings }) => {
                 )}
                 </tbody>
             </table>
+            <Pagination
+                page={page}
+                totalPages={totalPages}
+                onPageChange={setPage}
+            />
         </div>
     );
 };

@@ -5,6 +5,7 @@ import { FaArrowLeft, FaChartBar, FaClock, FaTimesCircle, FaCheckCircle } from '
 import { TelemetryEvent } from '../../telemetry/TelemetryEvent';
 import { fetchTelemetryEvents, TelemetryFilterParams } from '../../lib/telemetryClient';
 import { TransactionLink } from '../../components/TransactionLink';
+import Pagination from '../../components/Pagination';
 
 const formatStatus = (status?: string) => {
     const normalized = (status || 'UNKNOWN').toUpperCase();
@@ -77,6 +78,8 @@ const TelemetryPage: React.FC = () => {
     );
     const [search, setSearch] = useState('');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+    const [page, setPage] = useState(1);
+    const pageSize = 25;
 
     const filterParams = useMemo<TelemetryFilterParams>(() => {
         const now = new Date();
@@ -238,6 +241,19 @@ const TelemetryPage: React.FC = () => {
             return sortDirection === 'asc' ? aTime - bTime : bTime - aTime;
         });
     }, [filteredEvents, sortDirection]);
+
+    const totalPages = Math.max(1, Math.ceil(sortedEvents.length / pageSize));
+
+    useEffect(() => {
+        if (page > totalPages) {
+            setPage(totalPages);
+        }
+    }, [page, totalPages]);
+
+    const pagedEvents = useMemo(() => {
+        const start = (page - 1) * pageSize;
+        return sortedEvents.slice(start, start + pageSize);
+    }, [page, sortedEvents]);
 
     const metrics = useMemo(() => {
         const total = telemetryEvents.length;
@@ -494,7 +510,7 @@ const TelemetryPage: React.FC = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {sortedEvents.map(event => {
+                        {pagedEvents.map(event => {
                             const statusValue = event.status || 'UNKNOWN';
                             const status = formatStatus(statusValue);
                             return (
@@ -541,6 +557,11 @@ const TelemetryPage: React.FC = () => {
                         )}
                     </tbody>
                 </table>
+                <Pagination
+                    page={page}
+                    totalPages={totalPages}
+                    onPageChange={setPage}
+                />
             </div>
         </div>
     );

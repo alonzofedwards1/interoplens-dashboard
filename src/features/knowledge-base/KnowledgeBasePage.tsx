@@ -6,6 +6,7 @@ import {
     KnowledgeBaseStatus,
 } from './data/knowledgeBase.data';
 import { readKnowledgeBase } from './knowledgeBaseStore';
+import Pagination from '../../components/Pagination';
 
 const statusLabels: Record<KnowledgeBaseStatus, string> = {
     queued: 'Queued',
@@ -27,6 +28,8 @@ const KnowledgeBasePage: React.FC = () => {
     const [articles, setArticles] = useState<KnowledgeBaseArticle[]>([]);
     const [sortKey, setSortKey] = useState<'updatedAt' | 'title' | 'status'>('updatedAt');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+    const [page, setPage] = useState(1);
+    const pageSize = 10;
 
     useEffect(() => {
         setArticles(readKnowledgeBase());
@@ -52,6 +55,19 @@ const KnowledgeBasePage: React.FC = () => {
             return 0;
         });
     }, [filteredArticles, sortDirection, sortKey]);
+
+    const totalPages = Math.max(1, Math.ceil(sortedArticles.length / pageSize));
+
+    useEffect(() => {
+        if (page > totalPages) {
+            setPage(totalPages);
+        }
+    }, [page, totalPages]);
+
+    const pagedArticles = useMemo(() => {
+        const start = (page - 1) * pageSize;
+        return sortedArticles.slice(start, start + pageSize);
+    }, [page, sortedArticles]);
 
     return (
         <div className="p-6 space-y-4">
@@ -132,7 +148,7 @@ const KnowledgeBasePage: React.FC = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {sortedArticles.map((article) => (
+                        {pagedArticles.map((article) => (
                             <tr
                                 key={article.id}
                                 className="border-t hover:bg-gray-50"
@@ -190,6 +206,11 @@ const KnowledgeBasePage: React.FC = () => {
                         )}
                     </tbody>
                 </table>
+                <Pagination
+                    page={page}
+                    totalPages={totalPages}
+                    onPageChange={setPage}
+                />
             </div>
         </div>
     );

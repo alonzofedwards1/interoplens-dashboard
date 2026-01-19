@@ -15,6 +15,7 @@ import { PdExecution } from '../../types/pdExecutions';
 import { useUserPreference } from '../../lib/userPreferences';
 import { useServerData } from '../../lib/ServerDataContext';
 import { TransactionLink } from '../../components/TransactionLink';
+import Pagination from '../../components/Pagination';
 import { Finding } from '../../types/findings';
 import { fetchPdExecutionTelemetry } from '../../lib/api/pdExecutions';
 
@@ -68,6 +69,8 @@ const PDExecutions: React.FC = () => {
     const [timeRange, setTimeRange] = useState<'1h' | '24h' | '7d' | 'custom'>('24h');
     const [customStart, setCustomStart] = useState('');
     const [customEnd, setCustomEnd] = useState('');
+    const [page, setPage] = useState(1);
+    const pageSize = 10;
     const missingTelemetryApiLogged = useRef(false);
     const missingChartDataLogged = useRef(false);
 
@@ -148,6 +151,19 @@ const PDExecutions: React.FC = () => {
             return 0;
         });
     }, [filteredExecutions, sortDirection, sortKey]);
+
+    const totalPages = Math.max(1, Math.ceil(sortedExecutions.length / pageSize));
+
+    useEffect(() => {
+        if (page > totalPages) {
+            setPage(totalPages);
+        }
+    }, [page, totalPages]);
+
+    const pagedExecutions = useMemo(() => {
+        const start = (page - 1) * pageSize;
+        return sortedExecutions.slice(start, start + pageSize);
+    }, [page, sortedExecutions]);
 
     useEffect(() => {
         let isMounted = true;
@@ -465,7 +481,7 @@ const PDExecutions: React.FC = () => {
                     </tr>
                     </thead>
                     <tbody>
-                    {sortedExecutions.map(exec => {
+                    {pagedExecutions.map(exec => {
                         const outcome = formatOutcome(exec.outcome);
                         const findingsCount = findingsByRequestId[exec.requestId] ?? 0;
                         const telemetryCount = exec.requestId
@@ -557,6 +573,11 @@ const PDExecutions: React.FC = () => {
                     )}
                     </tbody>
                 </table>
+                <Pagination
+                    page={page}
+                    totalPages={totalPages}
+                    onPageChange={setPage}
+                />
             </div>
         </div>
     );
