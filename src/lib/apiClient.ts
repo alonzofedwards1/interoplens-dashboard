@@ -1,7 +1,7 @@
 import { CommitteeQueueItem } from '../features/committee/data/committeeQueue.data';
 import { FindingsCountResponse, FindingsListResponse } from '../types/findings';
 import type { Oid } from '../types';
-import { PdExecutionCountResponse, PdExecutionsResponse } from '../types/pdExecutions';
+import { PdExecutionCounts, PdExecutionsResponse } from '../types/pdExecutions';
 import { TelemetryEvent } from '../types/telemetry';
 import { API_BASE_URL } from '../config/api';
 import { authFetch } from './api/auth';
@@ -37,7 +37,7 @@ export class ApiClient {
         return apiGet(buildUrl(API_BASE_URL, '/api/pd-executions'));
     }
 
-    async getPdExecutionsCount(): Promise<PdExecutionCountResponse> {
+    async getPdExecutionsCount(): Promise<PdExecutionCounts> {
         return apiGet(buildUrl(API_BASE_URL, '/api/pd-executions/count'));
     }
 

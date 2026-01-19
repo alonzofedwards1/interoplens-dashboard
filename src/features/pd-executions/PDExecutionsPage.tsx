@@ -29,6 +29,8 @@ const formatOutcome = (outcome?: string) => {
             return { label: 'Success', color: 'bg-green-100 text-green-800' };
         case 'failure':
             return { label: 'Failure', color: 'bg-red-100 text-red-800' };
+        case 'partial':
+            return { label: 'Partial', color: 'bg-yellow-100 text-yellow-800' };
         default:
             return { label: 'Unknown', color: 'bg-gray-100 text-gray-700' };
     }
@@ -42,7 +44,7 @@ type ExecutionSortKey =
     | 'completedAt'
     | 'requestId'
     | 'outcome'
-    | 'executionTimeMs';
+    | 'durationMs';
 
 type ExecutionPreferences = {
     search: string;
@@ -128,7 +130,7 @@ const PDExecutions: React.FC = () => {
             const query = search.toLowerCase();
             const matchesText =
                 (exec.requestId ?? '').toLowerCase().includes(query) ||
-                (exec.channelId ?? '').toLowerCase().includes(query);
+                (exec.qhinName ?? '').toLowerCase().includes(query);
 
             return matchesOutcome && matchesText && matchesStart && matchesEnd;
         });
@@ -433,7 +435,7 @@ const PDExecutions: React.FC = () => {
                                 search: event.target.value,
                             }))
                         }
-                        placeholder="Filter by request ID or channel"
+                        placeholder="Filter by request ID or QHIN"
                         className="border rounded px-3 py-2 w-full sm:w-72"
                     />
 
@@ -455,7 +457,7 @@ const PDExecutions: React.FC = () => {
                             <option value="completedAt">Completed At</option>
                             <option value="requestId">Request ID</option>
                             <option value="outcome">Outcome</option>
-                            <option value="executionTimeMs">Response Time</option>
+                            <option value="durationMs">Response Time</option>
                         </select>
                         <button
                             onClick={() => toggleSort(sortKey)}
@@ -474,10 +476,10 @@ const PDExecutions: React.FC = () => {
                         <th className="p-3 cursor-pointer" onClick={() => toggleSort('requestId')}>Request ID</th>
                         <th className="p-3">Traceability</th>
                         <th className="p-3">Telemetry Events</th>
-                        <th className="p-3">Channel ID</th>
+                        <th className="p-3">QHIN</th>
                         <th className="p-3">Environment</th>
                         <th className="p-3 cursor-pointer" onClick={() => toggleSort('outcome')}>Outcome</th>
-                        <th className="p-3 cursor-pointer" onClick={() => toggleSort('executionTimeMs')}>Response Time</th>
+                        <th className="p-3 cursor-pointer" onClick={() => toggleSort('durationMs')}>Response Time</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -544,10 +546,10 @@ const PDExecutions: React.FC = () => {
                                     </div>
                                 </td>
                                 <td className="p-3">
-                                    {exec.channelId ?? '—'}
+                                    {exec.qhinName ?? '—'}
                                 </td>
                                 <td className="p-3">
-                                    {exec.environment ?? '—'}
+                                    {exec.sourceEnvironment ?? '—'}
                                 </td>
                                 <td className="p-3">
                                     <span
@@ -557,9 +559,7 @@ const PDExecutions: React.FC = () => {
                                     </span>
                                 </td>
                                 <td className="p-3">
-                                    {exec.executionTimeMs ?? exec.durationMs
-                                        ? `${exec.executionTimeMs ?? exec.durationMs} ms`
-                                        : '—'}
+                                    {exec.durationMs ? `${exec.durationMs} ms` : '—'}
                                 </td>
                             </tr>
                         );
