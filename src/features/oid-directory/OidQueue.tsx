@@ -97,19 +97,24 @@ const OidQueue = () => {
     }, [filteredAndSorted, page]);
 
     return (
-        <div className="p-6">
+        <div className="p-6 space-y-4">
             <button
                 onClick={() => navigate("/dashboard")}
-                className="mb-4 text-sm text-blue-600 hover:underline"
+                className="text-sm text-blue-600 hover:underline"
             >
                 Back to Dashboard
             </button>
-            <h1 className="text-2xl font-semibold mb-4">OID Directory</h1>
+            <div>
+                <h1 className="text-2xl font-semibold">OID Directory</h1>
+                <p className="text-sm text-gray-500">
+                    Review observed object identifiers and governance status
+                </p>
+            </div>
 
             {/* Filters */}
-            <div className="flex flex-wrap gap-4 mb-4 items-center">
+            <div className="flex flex-wrap gap-4 items-center text-sm">
                 <select
-                    className="border p-2 rounded"
+                    className="border rounded px-2 py-1"
                     value={statusFilter}
                     onChange={e => setStatusFilter(e.target.value as OidStatus | "ALL")}
                 >
@@ -121,7 +126,7 @@ const OidQueue = () => {
                 </select>
 
                 <select
-                    className="border p-2 rounded"
+                    className="border rounded px-2 py-1"
                     value={confidenceFilter}
                     onChange={e =>
                         setConfidenceFilter(e.target.value as OidConfidence | "ALL")
@@ -134,11 +139,11 @@ const OidQueue = () => {
                     <option value="UNKNOWN">Unknown</option>
                 </select>
 
-                <div className="flex items-center gap-2 text-sm">
+                <div className="flex items-center gap-2">
                     <label htmlFor="oid-sort">Sort</label>
                     <select
                         id="oid-sort"
-                        className="border p-2 rounded"
+                        className="border rounded px-2 py-1"
                         value={sortKey}
                         onChange={e => setSortKey(e.target.value as typeof sortKey)}
                     >
@@ -170,16 +175,16 @@ const OidQueue = () => {
                     Loading OID directory...
                 </div>
             ) : (
-                <div className="overflow-x-auto">
-                    <table className="min-w-full border text-sm">
+                <div className="bg-white rounded-lg shadow overflow-x-auto">
+                    <table className="min-w-full border-collapse text-sm">
                         <thead className="bg-gray-100">
-                        <tr>
-                            <th className="p-2 text-left">OID</th>
-                            <th className="p-2 text-left">Display Name</th>
-                            <th className="p-2 text-left">Owner</th>
-                            <th className="p-2 text-left">Status</th>
-                            <th className="p-2 text-left">Confidence</th>
-                            <th className="p-2 text-left">Last Seen</th>
+                        <tr className="text-xs font-semibold uppercase tracking-wide text-gray-600">
+                            <th className="p-3 text-left">OID</th>
+                            <th className="p-3 text-left">Display Name</th>
+                            <th className="p-3 text-left">Owner</th>
+                            <th className="p-3 text-left">Status</th>
+                            <th className="p-3 text-left">Confidence</th>
+                            <th className="p-3 text-left">Last Seen</th>
                         </tr>
                         </thead>
                         <tbody>
@@ -189,12 +194,12 @@ const OidQueue = () => {
                                 className="border-t cursor-pointer hover:bg-gray-50"
                                 onClick={() => navigate(`/oids/${encodeURIComponent(oid.oid)}`)}
                             >
-                                <td className="p-2 font-mono">{oid.oid}</td>
-                                <td className="p-2">{oid.displayName}</td>
-                                <td className="p-2">{oid.ownerOrg}</td>
-                                <td className="p-2">{OID_STATUS_LABELS[oid.status]}</td>
-                                <td className="p-2">{oid.confidence}</td>
-                                <td className="p-2">{oid.lastSeen}</td>
+                                <td className="p-3 font-mono">{oid.oid}</td>
+                                <td className="p-3 text-gray-700">{oid.displayName}</td>
+                                <td className="p-3">{oid.ownerOrg}</td>
+                                <td className="p-3">{OID_STATUS_LABELS[oid.status]}</td>
+                                <td className="p-3">{oid.confidence}</td>
+                                <td className="p-3 text-gray-600">{oid.lastSeen}</td>
                             </tr>
                         ))}
                         {filteredAndSorted.length === 0 && (
