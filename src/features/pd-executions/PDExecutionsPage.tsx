@@ -21,6 +21,7 @@ import {
     getCertificateStatusBadge,
     getExecutionCertificateDetails,
 } from '../../lib/certificates';
+import { Download } from 'lucide-react';
 
 /* ============================
    Helpers
@@ -63,6 +64,30 @@ const defaultExecutionPreferences: ExecutionPreferences = {
     certStatusFilter: 'all',
     sortKey: 'completedAt',
     sortDirection: 'desc',
+};
+
+const buildCsvRow = (values: Array<string | number | undefined | null>) =>
+    values
+        .map(value => {
+            if (value === undefined || value === null) return '';
+            const stringValue = String(value);
+            if (/["\n,]/.test(stringValue)) {
+                return `"${stringValue.replace(/"/g, '""')}"`;
+            }
+            return stringValue;
+        })
+        .join(',');
+
+const triggerDownload = (payload: BlobPart, filename: string, mimeType: string) => {
+    const blob = new Blob([payload], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = filename;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
 };
 
 const PDExecutions: React.FC = () => {
@@ -338,6 +363,27 @@ const PDExecutions: React.FC = () => {
         }
     }, [pdExecutions.length]);
 
+    const exportRows = useMemo(() => {
+        return sortedExecutions.map(exec => {
+            const certificateDetails = getExecutionCertificateDetails(exec);
+            return {
+                completedAt: exec.completedAt
+                    ? new Date(exec.completedAt).toISOString()
+                    : '',
+                requestId: exec.requestId ?? '',
+                qhinName: exec.qhinName ?? '',
+                environment: exec.sourceEnvironment ?? '',
+                outcome: exec.outcome ?? '',
+                durationMs: exec.durationMs ?? '',
+                certificateStatus: certificateDetails.status ?? '',
+                certificateThumbprint: certificateDetails.thumbprint ?? '',
+                failureStage: certificateDetails.failureStage ?? '',
+                rootCause: certificateDetails.rootCause ?? '',
+                httpStatus: certificateDetails.httpStatus ?? '',
+            };
+        });
+    }, [sortedExecutions]);
+
     if (loading) {
         return (
             <div className="flex min-h-screen items-center justify-center text-gray-700">
@@ -379,6 +425,143 @@ const PDExecutions: React.FC = () => {
             params.set('certStatus', 'EXPIRED');
         }
         setSearchParams(params);
+    };
+
+    const handleExportCsv = () => {
+        const headers = [
+            'Completed At',
+            'Request ID',
+            'QHIN',
+            'Environment',
+            'Outcome',
+            'Response Time (ms)',
+            'Certificate Status',
+            'Certificate Thumbprint',
+            'Failure Stage',
+            'Root Cause',
+            'HTTP Status',
+        ];
+        const rows = exportRows.map(row =>
+            buildCsvRow([
+                row.completedAt,
+                row.requestId,
+                row.qhinName,
+                row.environment,
+                row.outcome,
+                row.durationMs,
+                row.certificateStatus,
+                row.certificateThumbprint,
+                row.failureStage,
+                row.rootCause,
+                row.httpStatus,
+            ])
+        );
+        const csv = [buildCsvRow(headers), ...rows].join('\n');
+        triggerDownload(csv, 'pd-executions.csv', 'text/csv;charset=utf-8;');
+    };
+
+    const handleExportXls = () => {
+        const headerCells = [
+            'Completed At',
+            'Request ID',
+            'QHIN',
+            'Environment',
+            'Outcome',
+            'Response Time (ms)',
+            'Certificate Status',
+            'Certificate Thumbprint',
+            'Failure Stage',
+            'Root Cause',
+            'HTTP Status',
+        ];
+        const rows = exportRows
+            .map(
+                row => `
+                <tr>
+                    <td>${row.completedAt}</td>
+                    <td>${row.requestId}</td>
+                    <td>${row.qhinName}</td>
+                    <td>${row.environment}</td>
+                    <td>${row.outcome}</td>
+                    <td>${row.durationMs}</td>
+                    <td>${row.certificateStatus}</td>
+                    <td>${row.certificateThumbprint}</td>
+                    <td>${row.failureStage}</td>
+                    <td>${row.rootCause}</td>
+                    <td>${row.httpStatus}</td>
+                </tr>`
+            )
+            .join('');
+        const table = `
+            <table>
+                <thead>
+                    <tr>
+                        ${headerCells.map(cell => `<th>${cell}</th>`).join('')}
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+            </table>`;
+        triggerDownload(
+            table,
+            'pd-executions.xls',
+            'application/vnd.ms-excel'
+        );
+    };
+
+    const handleExportPdf = () => {
+        const headerCells = [
+            'Completed At',
+            'Request ID',
+            'QHIN',
+            'Environment',
+            'Outcome',
+            'Response Time (ms)',
+            'Certificate Status',
+        ];
+        const rows = exportRows
+            .map(
+                row => `
+                <tr>
+                    <td>${row.completedAt}</td>
+                    <td>${row.requestId}</td>
+                    <td>${row.qhinName}</td>
+                    <td>${row.environment}</td>
+                    <td>${row.outcome}</td>
+                    <td>${row.durationMs}</td>
+                    <td>${row.certificateStatus}</td>
+                </tr>`
+            )
+            .join('');
+        const html = `
+            <html>
+                <head>
+                    <title>PD Executions</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; margin: 24px; }
+                        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+                        th, td { border: 1px solid #e5e7eb; padding: 6px; text-align: left; }
+                        th { background: #f3f4f6; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
+                        h1 { font-size: 16px; margin-bottom: 12px; }
+                    </style>
+                </head>
+                <body>
+                    <h1>PD Executions</h1>
+                    <table>
+                        <thead>
+                            <tr>
+                                ${headerCells.map(cell => `<th>${cell}</th>`).join('')}
+                            </tr>
+                        </thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </body>
+            </html>`;
+        const printWindow = window.open('', '_blank', 'noopener,noreferrer');
+        if (!printWindow) return;
+        printWindow.document.write(html);
+        printWindow.document.close();
+        printWindow.focus();
+        printWindow.print();
     };
 
     return (
@@ -436,7 +619,7 @@ const PDExecutions: React.FC = () => {
 
             {/* Execution Table */}
                 <div className="bg-white rounded-lg shadow overflow-x-auto">
-                    <div className="flex flex-wrap gap-3 items-center justify-between p-3 border-b text-sm">
+                <div className="flex flex-wrap gap-3 items-center justify-between p-3 border-b text-sm">
                     <div className="flex flex-wrap gap-2 items-center">
                         <label htmlFor="pd-time-range" className="text-gray-700">
                             Time Range
@@ -562,6 +745,33 @@ const PDExecutions: React.FC = () => {
                         >
                             {sortDirection === 'asc' ? 'Asc' : 'Desc'}
                         </button>
+                    </div>
+
+                    <div className="relative group">
+                        <button className="flex items-center gap-2 border rounded px-3 py-2 text-sm hover:bg-gray-50">
+                            <Download size={14} />
+                            Export
+                        </button>
+                        <div className="absolute right-0 mt-1 hidden group-hover:block bg-white border rounded shadow z-10 w-44">
+                            <button
+                                onClick={handleExportCsv}
+                                className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
+                            >
+                                Export CSV
+                            </button>
+                            <button
+                                onClick={handleExportXls}
+                                className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
+                            >
+                                Export Excel
+                            </button>
+                            <button
+                                onClick={handleExportPdf}
+                                className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
+                            >
+                                Export PDF
+                            </button>
+                        </div>
                     </div>
                 </div>
 
