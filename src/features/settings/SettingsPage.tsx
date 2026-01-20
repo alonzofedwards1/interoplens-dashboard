@@ -4,10 +4,7 @@ import {
     FaShieldAlt,
     FaChartBar,
     FaPlug,
-    FaBell,
     FaPaintBrush,
-    FaClipboardCheck,
-    FaInfoCircle,
     FaArrowLeft
 } from "react-icons/fa";
 import { Link } from "react-router-dom";
@@ -17,10 +14,7 @@ import AccountSettings from "../../components/settings/AccountSettings";
 import SecuritySettings from "../../components/settings/SecuritySettings";
 import DashboardPreferencesSettings from "../../components/settings/DashboardPreferencesSettings";
 import InteroperabilitySettings from "../../components/settings/InteroperabilitySettings";
-import NotificationsSettings from "../../components/settings/NotificationsSettings";
 import AppearanceSettings from "../../components/settings/AppearanceSettings";
-import AuditComplianceSettings from "../../components/settings/AuditComplianceSettings";
-import AboutSettings from "../../components/settings/AboutSettings";
 import UserManagementSettings from "../../components/settings/UserManagementSettings";
 import { UserRole } from "../../types/auth";
 
@@ -34,10 +28,7 @@ const sections = [
     { id: "users", label: "User Management", icon: <FaUser /> },
     { id: "dashboard", label: "Dashboard Preferences", icon: <FaChartBar /> },
     { id: "interop", label: "Interoperability Configuration", icon: <FaPlug /> },
-    { id: "notifications", label: "Notifications", icon: <FaBell /> },
-    { id: "appearance", label: "Appearance", icon: <FaPaintBrush /> },
-    { id: "audit", label: "Audit & Compliance", icon: <FaClipboardCheck /> },
-    { id: "about", label: "About", icon: <FaInfoCircle /> }
+    { id: "appearance", label: "Appearance", icon: <FaPaintBrush /> }
 ];
 
 /* ----------------------------------
@@ -82,7 +73,7 @@ export type SettingsProps = {
     role?: UserRole | null;
 };
 
-const SettingsPage: React.FC<SettingsProps> = ({ role }) => {
+const SettingsPage: React.FC<SettingsProps> = () => {
     return (
         <div className="p-8 bg-base-200 min-h-screen">
             {/* Header */}
@@ -138,9 +129,9 @@ const SettingsPage: React.FC<SettingsProps> = ({ role }) => {
                     <SettingsSection
                         id="users"
                         title="User Management"
-                        description="Invite administrators, analysts, and committee members"
+                        description="Role counts and active directory"
                     >
-                        <UserManagementSettings role={role} />
+                        <UserManagementSettings />
                     </SettingsSection>
 
                     <SettingsSection
@@ -154,17 +145,9 @@ const SettingsPage: React.FC<SettingsProps> = ({ role }) => {
                     <SettingsSection
                         id="interop"
                         title="Interoperability Configuration"
-                        description="QHINs, transaction types, and normalization rules"
+                        description="Phase 0 interoperability behavior"
                     >
                         <InteroperabilitySettings />
-                    </SettingsSection>
-
-                    <SettingsSection
-                        id="notifications"
-                        title="Notifications"
-                        description="Alerts, summaries, and delivery preferences"
-                    >
-                        <NotificationsSettings />
                     </SettingsSection>
 
                     <SettingsSection
@@ -173,22 +156,6 @@ const SettingsPage: React.FC<SettingsProps> = ({ role }) => {
                         description="Theme, density, and user interface options"
                     >
                         <AppearanceSettings />
-                    </SettingsSection>
-
-                    <SettingsSection
-                        id="audit"
-                        title="Audit & Compliance"
-                        description="Logging, retention policies, and compliance status"
-                    >
-                        <AuditComplianceSettings />
-                    </SettingsSection>
-
-                    <SettingsSection
-                        id="about"
-                        title="About"
-                        description="Application version and environment details"
-                    >
-                        <AboutSettings />
                     </SettingsSection>
                 </div>
             </div>

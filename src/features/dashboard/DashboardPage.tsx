@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import Sidebar from "../../components/Sidebar";
@@ -13,6 +13,7 @@ import AlertSummaryCards from "./components/AlertSummaryCards";
 import OperationalInsights from "./components/OperationalInsights";
 import useDashboardMetrics from "./hooks/useDashboardMetrics";
 import { Finding } from "../../types/findings";
+import { useUserPreferences } from "../../lib/useUserPreferences";
 
 /* ============================
    Types
@@ -31,6 +32,7 @@ interface DashboardProps {
 
 const Dashboard: React.FC<DashboardProps> = ({ role, onLogout }) => {
     const navigate = useNavigate();
+    const { preferences } = useUserPreferences();
 
     const {
         findings,
@@ -50,6 +52,12 @@ const Dashboard: React.FC<DashboardProps> = ({ role, onLogout }) => {
         organization: "",
         status: "",
     });
+    const [dateRange, setDateRange] = useState(
+        preferences.dashboard.defaultDateRange
+    );
+    const [timeGrouping, setTimeGrouping] = useState(
+        preferences.dashboard.timeGrouping
+    );
 
     /**
      * Dashboard does NOT need org filtering yet,
@@ -74,6 +82,31 @@ const Dashboard: React.FC<DashboardProps> = ({ role, onLogout }) => {
 
     const [complianceStandard, setComplianceStandard] =
         useState<"TEFCA" | "IHE" | "HL7">("TEFCA");
+
+    useEffect(() => {
+        setDateRange(preferences.dashboard.defaultDateRange);
+        setTimeGrouping(preferences.dashboard.timeGrouping);
+    }, [
+        preferences.dashboard.defaultDateRange,
+        preferences.dashboard.timeGrouping,
+    ]);
+
+    useEffect(() => {
+        if (!preferences.dashboard.persistFilters) return;
+        const stored = localStorage.getItem("dashboard.filters");
+        if (!stored) return;
+        try {
+            const parsed = JSON.parse(stored) as FiltersState;
+            setFilters(parsed);
+        } catch (error) {
+            console.warn("Failed to parse dashboard filters", error);
+        }
+    }, [preferences.dashboard.persistFilters]);
+
+    useEffect(() => {
+        if (!preferences.dashboard.persistFilters) return;
+        localStorage.setItem("dashboard.filters", JSON.stringify(filters));
+    }, [filters, preferences.dashboard.persistFilters]);
 
     /**
      * ✅ SINGLE SOURCE OF TRUTH
@@ -143,6 +176,14 @@ const Dashboard: React.FC<DashboardProps> = ({ role, onLogout }) => {
                     {/* ============================
                         Charts
                     ============================ */}
+                    <div className="text-xs text-gray-500">
+                        Showing {dateRange === "24h"
+                            ? "the last 24 hours"
+                            : dateRange === "7d"
+                                ? "the last 7 days"
+                                : "the last 30 days"}{" "}
+                        grouped {timeGrouping === "hourly" ? "hourly" : "daily"}.
+                    </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <BarChart findings={findings} />
                         <PieChart findings={findings} />
