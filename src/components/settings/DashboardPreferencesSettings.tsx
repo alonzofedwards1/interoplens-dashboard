@@ -74,23 +74,6 @@ const DashboardPreferencesSettings: React.FC = () => {
                     defaultChecked
                 />
             </SettingsRow>
-
-            <SettingsRow
-                label="Auto-refresh Dashboard"
-                description="Periodically refresh dashboard data"
-            >
-                <div className="flex items-center gap-3">
-                    <input
-                        type="checkbox"
-                        className="toggle"
-                        disabled
-                    />
-                    <span className="badge badge-outline text-xs">
-                        Coming Soon
-                    </span>
-                </div>
-            </SettingsRow>
-
         </div>
     );
 };

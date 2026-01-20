@@ -97,31 +97,6 @@ const InteroperabilitySettings: React.FC = () => {
                     defaultChecked
                 />
             </SettingsRow>
-
-            {/* Demo Data */}
-            <SettingsRow
-                label="Demo Data Mode"
-                description="Use simulated interoperability data for demonstration purposes"
-            >
-                <div className="flex items-center gap-3">
-                    <input
-                        type="checkbox"
-                        className="toggle"
-                        disabled
-                    />
-                    <span className="badge badge-outline text-xs">
-                        Demo Only
-                    </span>
-                </div>
-            </SettingsRow>
-
-            {/* Compliance Indicator */}
-            <div className="pt-2">
-                <span className="badge badge-success badge-outline">
-                    TEFCA-Aligned Configuration
-                </span>
-            </div>
-
         </div>
     );
 };
