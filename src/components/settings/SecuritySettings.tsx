@@ -23,16 +23,6 @@ const SettingsRow = ({ label, description, children }: SettingsRowProps) => (
 const SecuritySettings: React.FC = () => {
     return (
         <div className="space-y-6">
-
-            <SettingsRow
-                label="Change Password"
-                description="Update your account password"
-            >
-                <button className="btn btn-outline btn-sm" disabled>
-                    Change Password
-                </button>
-            </SettingsRow>
-
             <SettingsRow
                 label="Session Timeout"
                 description="Automatically log out after inactivity"
@@ -55,23 +45,6 @@ const SecuritySettings: React.FC = () => {
                     defaultChecked
                 />
             </SettingsRow>
-
-            <SettingsRow
-                label="Multi-Factor Authentication (MFA)"
-                description="Add an extra layer of security to your account"
-            >
-                <div className="flex items-center gap-3">
-                    <input
-                        type="checkbox"
-                        className="toggle"
-                        disabled
-                    />
-                    <span className="badge badge-outline text-xs">
-                        Coming Soon
-                    </span>
-                </div>
-            </SettingsRow>
-
         </div>
     );
 };

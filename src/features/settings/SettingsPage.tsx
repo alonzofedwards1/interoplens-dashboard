@@ -6,8 +6,6 @@ import {
     FaPlug,
     FaBell,
     FaPaintBrush,
-    FaClipboardCheck,
-    FaInfoCircle,
     FaArrowLeft
 } from "react-icons/fa";
 import { Link } from "react-router-dom";
@@ -19,8 +17,6 @@ import DashboardPreferencesSettings from "../../components/settings/DashboardPre
 import InteroperabilitySettings from "../../components/settings/InteroperabilitySettings";
 import NotificationsSettings from "../../components/settings/NotificationsSettings";
 import AppearanceSettings from "../../components/settings/AppearanceSettings";
-import AuditComplianceSettings from "../../components/settings/AuditComplianceSettings";
-import AboutSettings from "../../components/settings/AboutSettings";
 import UserManagementSettings from "../../components/settings/UserManagementSettings";
 import { UserRole } from "../../types/auth";
 
@@ -35,9 +31,7 @@ const sections = [
     { id: "dashboard", label: "Dashboard Preferences", icon: <FaChartBar /> },
     { id: "interop", label: "Interoperability Configuration", icon: <FaPlug /> },
     { id: "notifications", label: "Notifications", icon: <FaBell /> },
-    { id: "appearance", label: "Appearance", icon: <FaPaintBrush /> },
-    { id: "audit", label: "Audit & Compliance", icon: <FaClipboardCheck /> },
-    { id: "about", label: "About", icon: <FaInfoCircle /> }
+    { id: "appearance", label: "Appearance", icon: <FaPaintBrush /> }
 ];
 
 /* ----------------------------------
@@ -173,22 +167,6 @@ const SettingsPage: React.FC<SettingsProps> = ({ role }) => {
                         description="Theme, density, and user interface options"
                     >
                         <AppearanceSettings />
-                    </SettingsSection>
-
-                    <SettingsSection
-                        id="audit"
-                        title="Audit & Compliance"
-                        description="Logging, retention policies, and compliance status"
-                    >
-                        <AuditComplianceSettings />
-                    </SettingsSection>
-
-                    <SettingsSection
-                        id="about"
-                        title="About"
-                        description="Application version and environment details"
-                    >
-                        <AboutSettings />
                     </SettingsSection>
                 </div>
             </div>

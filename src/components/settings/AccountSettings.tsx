@@ -31,34 +31,6 @@ const SettingsRow = ({ label, description, children }: SettingsRowProps) => (
 const AccountSettings: React.FC = () => {
     return (
         <div className="space-y-6">
-
-            <SettingsRow
-                label="Full Name"
-                description="Your display name"
-            >
-                <span className="text-sm text-base-content/80">
-                    Demo User
-                </span>
-            </SettingsRow>
-
-            <SettingsRow
-                label="Email Address"
-                description="Used for login and notifications"
-            >
-                <span className="text-sm text-base-content/80">
-                    demo.user@interoplens.com
-                </span>
-            </SettingsRow>
-
-            <SettingsRow
-                label="Role"
-                description="Assigned access level"
-            >
-                <span className="badge badge-outline badge-primary">
-                    Analyst
-                </span>
-            </SettingsRow>
-
             <SettingsRow
                 label="Timezone"
                 description="Used for dashboards, timestamps, and reports"
@@ -71,16 +43,6 @@ const AccountSettings: React.FC = () => {
                     <option>(UTC±00:00) UTC</option>
                 </select>
             </SettingsRow>
-
-            <SettingsRow
-                label="Last Login"
-                description="Most recent successful sign-in"
-            >
-                <span className="text-sm text-base-content/70">
-                    Sep 19, 2025 · 10:42 AM (Local)
-                </span>
-            </SettingsRow>
-
         </div>
     );
 };
