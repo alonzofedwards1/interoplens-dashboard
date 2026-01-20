@@ -86,7 +86,24 @@ const IntegrationIssuesPage: React.FC<Props> = ({role}) => {
 
             {/* Content */}
             <div>
-                {activeTab === "summary" && <ExecutiveSummary/>}
+                {activeTab === "summary" && (
+                    <ExecutiveSummary
+                        data={integrationHealth?.certificateHealth}
+                        errorMessage={
+                            loading
+                                ? null
+                                : integrationHealth
+                                    ? null
+                                    : "Integration health data unavailable"
+                        }
+                        impactedLink="/organizations"
+                        onViewDetails={() => {
+                            // later this can navigate to Findings filtered by CERT
+                            navigate('/findings?category=certificate');
+                        }}
+                    />
+                )}
+
                 {activeTab === "analysis" && <AnalystBreakdown/>}
                 {activeTab === "logs" && canViewLogs && <TechnicalLogs/>}
             </div>
