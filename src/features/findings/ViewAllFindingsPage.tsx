@@ -13,6 +13,9 @@ import { Finding } from "../../types/findings";
 import { useServerData } from "../../lib/ServerDataContext";
 import { TransactionLink } from "../../components/TransactionLink";
 import Pagination from "../../components/Pagination";
+import { buildCertificateFindingCopy } from "../../lib/certificates";
+import { useUserPreferences } from "../../lib/useUserPreferences";
+import { formatTimestamp } from "../../lib/dateTime";
 
 /* ============================
    Local Types
@@ -52,11 +55,6 @@ const getSeverityBadge = (severity?: Finding["severity"]) => {
 
 const safeUpper = (value?: string | null) => (value ? value.toUpperCase() : "—");
 
-const formatDateTime = (value?: string | null) => {
-    if (!value) return "—";
-    const date = new Date(value);
-    return Number.isNaN(date.getTime()) ? "—" : date.toLocaleString();
-};
 
 /* ============================
    Sorting Types
@@ -81,7 +79,8 @@ type SortDirection = "asc" | "desc";
 const ViewAllFindingsPage: React.FC = () => {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
-    const { findings: rawFindings } = useServerData();
+    const { findings: rawFindings, pdExecutions } = useServerData();
+    const { preferences } = useUserPreferences();
 
     const [expandedId, setExpandedId] = useState<string | null>(null);
     const [sortKey, setSortKey] = useState<SortKey>("lastSeenAt");
@@ -205,6 +204,11 @@ const ViewAllFindingsPage: React.FC = () => {
         return sortedFindings.slice(start, start + pageSize);
     }, [page, sortedFindings]);
 
+    const executionById = useMemo(
+        () => new Map(pdExecutions.map((exec) => [exec.requestId, exec])),
+        [pdExecutions]
+    );
+
     return (
         <div className="p-6 space-y-4">
             <button
@@ -248,6 +252,12 @@ const ViewAllFindingsPage: React.FC = () => {
                     <tbody>
                     {pagedFindings.map((finding) => {
                         const isExpanded = expandedId === finding.id;
+                        const certCopy = buildCertificateFindingCopy(
+                            finding,
+                            finding.executionId
+                                ? executionById.get(finding.executionId)
+                                : undefined
+                        );
 
                         return (
                             <React.Fragment key={finding.id}>
@@ -264,8 +274,8 @@ const ViewAllFindingsPage: React.FC = () => {
                                     <td className="p-3">
                                         {safeUpper(finding.category)}
                                     </td>
-                                    <td className="p-3">
-                                        {finding.summary}
+                                    <td className="p-3 text-gray-700">
+                                        {certCopy?.summary ?? finding.summary}
                                     </td>
                                     <td className="p-3">
                                         {finding.executionId ? (
@@ -280,8 +290,9 @@ const ViewAllFindingsPage: React.FC = () => {
                                         {safeUpper(finding.status)}
                                     </td>
                                     <td className="p-3">
-                                        {formatDateTime(
-                                            finding.lastSeenAt
+                                        {formatTimestamp(
+                                            finding.lastSeenAt,
+                                            preferences.timezone
                                         )}
                                     </td>
                                     <td className="p-3 text-right">
@@ -309,7 +320,37 @@ const ViewAllFindingsPage: React.FC = () => {
                                             colSpan={9}
                                             className="p-4 text-sm text-gray-700"
                                         >
-                                            {finding.technicalDetail ?? "—"}
+                                            {certCopy ? (
+                                                <div className="space-y-2 text-gray-700">
+                                                    <p>
+                                                        <span className="font-semibold">
+                                                            Why this matters:
+                                                        </span>{" "}
+                                                        {certCopy.why}
+                                                    </p>
+                                                    <p>
+                                                        <span className="font-semibold">
+                                                            Recommended action:
+                                                        </span>{" "}
+                                                        {certCopy.action}
+                                                    </p>
+                                                    {certCopy.thumbprint && (
+                                                        <p className="text-xs text-gray-600">
+                                                            Affected certificate:{" "}
+                                                            <span className="font-mono">
+                                                                {certCopy.thumbprint}
+                                                            </span>
+                                                        </p>
+                                                    )}
+                                                    {finding.technicalDetail && (
+                                                        <p className="text-xs text-gray-500">
+                                                            {finding.technicalDetail}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                finding.technicalDetail ?? "—"
+                                            )}
                                         </td>
                                     </tr>
                                 )}

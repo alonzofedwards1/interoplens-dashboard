@@ -5,6 +5,10 @@ import { Finding } from '../types/findings';
 import { TransactionLink } from './TransactionLink';
 import { useUserPreference } from '../lib/userPreferences';
 import Pagination from './Pagination';
+import { useServerData } from '../lib/ServerDataContext';
+import { buildCertificateFindingCopy } from '../lib/certificates';
+import { useUserPreferences } from '../lib/useUserPreferences';
+import { formatTimestamp } from '../lib/dateTime';
 
 /* ============================
    Helpers
@@ -82,6 +86,8 @@ interface FindingsTableProps {
 
 const FindingsTable: React.FC<FindingsTableProps> = ({ findings }) => {
     const navigate = useNavigate();
+    const { pdExecutions } = useServerData();
+    const { preferences: userPreferences } = useUserPreferences();
 
     const [preferences, setPreferences] = useUserPreference(
         'findings.dashboard.table',
@@ -152,6 +158,12 @@ const FindingsTable: React.FC<FindingsTableProps> = ({ findings }) => {
         return sortedFindings.slice(start, start + pageSize);
     }, [page, sortedFindings]);
 
+    const executionById = useMemo(() => {
+        return new Map(
+            pdExecutions.map(exec => [exec.requestId, exec])
+        );
+    }, [pdExecutions]);
+
     /* ============================
        RENDER
     ============================ */
@@ -200,7 +212,14 @@ const FindingsTable: React.FC<FindingsTableProps> = ({ findings }) => {
                         <td className="py-2 font-medium">
                             {f.organization?.name ?? '—'}
                         </td>
-                        <td className="py-2">{f.summary ?? '—'}</td>
+                        <td className="py-2 text-gray-700">
+                            {buildCertificateFindingCopy(
+                                f,
+                                f.executionId
+                                    ? executionById.get(f.executionId)
+                                    : undefined
+                            )?.summary ?? f.summary ?? '—'}
+                        </td>
                         <td className="py-2">
                             {f.executionId ? (
                                 <TransactionLink id={f.executionId} />
@@ -209,9 +228,10 @@ const FindingsTable: React.FC<FindingsTableProps> = ({ findings }) => {
                             )}
                         </td>
                         <td className="py-2 text-gray-600">
-                            {f.detectedAt
-                                ? new Date(f.detectedAt).toLocaleString()
-                                : '—'}
+                            {formatTimestamp(
+                                f.detectedAt,
+                                userPreferences.timezone
+                            )}
                         </td>
                         <td className="py-2">{getStatusLabel(f.status)}</td>
                     </tr>

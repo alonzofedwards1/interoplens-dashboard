@@ -1,4 +1,5 @@
 import React from "react";
+import { useUserPreferences } from "../../lib/useUserPreferences";
 
 /* ----------------------------------
    Local SettingsRow
@@ -29,6 +30,8 @@ const SettingsRow = ({ label, description, children }: SettingsRowProps) => (
 ----------------------------------- */
 
 const AppearanceSettings: React.FC = () => {
+    const { preferences, setUiPreferences } = useUserPreferences();
+    const ui = preferences.ui;
     return (
         <div className="space-y-6">
 
@@ -36,10 +39,18 @@ const AppearanceSettings: React.FC = () => {
                 label="Theme"
                 description="Choose how the application looks"
             >
-                <select className="select select-bordered w-64">
-                    <option>Light</option>
-                    <option>Dark</option>
-                    <option>System</option>
+                <select
+                    className="select select-bordered w-64"
+                    value={ui.theme}
+                    onChange={event =>
+                        setUiPreferences({
+                            ...ui,
+                            theme: event.target.value as "light" | "dark",
+                        })
+                    }
+                >
+                    <option value="light">Light</option>
+                    <option value="dark">Dark</option>
                 </select>
             </SettingsRow>
 
@@ -47,31 +58,21 @@ const AppearanceSettings: React.FC = () => {
                 label="Layout Density"
                 description="Control spacing and information density"
             >
-                <select className="select select-bordered w-64">
-                    <option>Comfortable</option>
-                    <option>Compact</option>
+                <select
+                    className="select select-bordered w-64"
+                    value={ui.density}
+                    onChange={event =>
+                        setUiPreferences({
+                            ...ui,
+                            density: event.target.value as
+                                | "comfortable"
+                                | "compact",
+                        })
+                    }
+                >
+                    <option value="comfortable">Comfortable</option>
+                    <option value="compact">Compact</option>
                 </select>
-            </SettingsRow>
-
-            <SettingsRow
-                label="Show Tooltips"
-                description="Display contextual help throughout the interface"
-            >
-                <input
-                    type="checkbox"
-                    className="toggle toggle-primary"
-                    defaultChecked
-                />
-            </SettingsRow>
-
-            <SettingsRow
-                label="Animations"
-                description="Enable subtle UI animations and transitions"
-            >
-                <input
-                    type="checkbox"
-                    className="toggle"
-                />
             </SettingsRow>
 
         </div>

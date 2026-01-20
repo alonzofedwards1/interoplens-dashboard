@@ -22,17 +22,7 @@ import OidDetail from "./features/oid-directory/OidDetail";
 import { useAuth } from "./context/AuthContext";
 import { ServerDataProvider } from "./lib/ServerDataContext";
 import { UserRole } from "./types/auth";
-
-/* ============================
-   Helpers (future-ready)
-============================ */
-
-const normalizeRole = (role?: string): UserRole | null => {
-    if (role === "admin" || role === "analyst" || role === "committee") {
-        return role;
-    }
-    return null;
-};
+import { useUserPreferences } from "./lib/useUserPreferences";
 
 /* ============================
    Routes
@@ -40,6 +30,7 @@ const normalizeRole = (role?: string): UserRole | null => {
 
 const AppRoutes: React.FC = () => {
     const { logout } = useAuth();
+    const { preferences } = useUserPreferences();
 
     const handleLogout = () => {
         void logout();
@@ -52,10 +43,18 @@ const AppRoutes: React.FC = () => {
      */
     const role: UserRole | null = null;
 
+    const landingRouteMap: Record<string, string> = {
+        dashboard: "/dashboard",
+        "pd-executions": "/pd-executions",
+        findings: "/findings",
+    };
+    const landingRoute =
+        landingRouteMap[preferences.dashboard.defaultLandingView] ?? "/dashboard";
+
     return (
         <Routes>
             {/* Redirect root */}
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/" element={<Navigate to={landingRoute} replace />} />
 
             {/* Auth */}
             <Route path="/login" element={<LoginPage />} />
@@ -98,7 +97,7 @@ const AppRoutes: React.FC = () => {
 
             {/* Reports / Settings */}
             <Route path="/reports" element={<Reports />} />
-            <Route path="/settings" element={<Settings role={role} />} />
+            <Route path="/settings" element={<Settings />} />
 
             {/* Catch-all */}
             <Route path="*" element={<Navigate to="/" replace />} />
@@ -111,6 +110,19 @@ const AppRoutes: React.FC = () => {
 ============================ */
 
 const App: React.FC = () => {
+    const { preferences } = useUserPreferences();
+
+    React.useEffect(() => {
+        document.documentElement.setAttribute(
+            "data-theme",
+            preferences.ui.theme
+        );
+        document.documentElement.setAttribute(
+            "data-density",
+            preferences.ui.density
+        );
+    }, [preferences.ui.density, preferences.ui.theme]);
+
     return (
         <ServerDataProvider>
             <AppRoutes />

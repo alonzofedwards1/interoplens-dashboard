@@ -6,11 +6,20 @@ import { useServerData } from '../../lib/ServerDataContext';
 import { TransactionLink } from '../../components/TransactionLink';
 import { Finding } from '../../types/findings';
 import Pagination from '../../components/Pagination';
+import {
+    buildCertificateFindingCopy,
+    getCertificateStatusBadge,
+    getCertificateStatusDescription,
+    getExecutionCertificateDetails,
+} from '../../lib/certificates';
+import { useUserPreferences } from '../../lib/useUserPreferences';
+import { formatTimestamp } from '../../lib/dateTime';
 
 const TransactionDetailPage: React.FC = () => {
     const navigate = useNavigate();
     const { id } = useParams<{ id: string }>();
     const { pdExecutions, telemetryEvents, findings } = useServerData();
+    const { preferences } = useUserPreferences();
     const [page, setPage] = useState(1);
     const pageSize = 10;
 
@@ -28,6 +37,16 @@ const TransactionDetailPage: React.FC = () => {
     const relatedTelemetry = useMemo(() => {
         return telemetryEvents.filter(event => event.requestId === id);
     }, [id, telemetryEvents]);
+
+    const certificateDetails = useMemo(
+        () => getExecutionCertificateDetails(transaction),
+        [transaction]
+    );
+
+    const certificateBadge = useMemo(
+        () => getCertificateStatusBadge(certificateDetails.status),
+        [certificateDetails.status]
+    );
 
     const totalPages = Math.max(1, Math.ceil(relatedTelemetry.length / pageSize));
 
@@ -89,6 +108,53 @@ const TransactionDetailPage: React.FC = () => {
 
             <section className="space-y-3">
                 <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold">
+                        Transport Security (Certificate)
+                    </h3>
+                    <span
+                        className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${certificateBadge.className}`}
+                    >
+                        <span aria-hidden="true">{certificateBadge.icon}</span>
+                        {certificateBadge.label}
+                    </span>
+                </div>
+
+                <div className="rounded-lg border bg-white p-4 shadow-sm space-y-3 text-sm">
+                    <p className="text-gray-600">
+                        {getCertificateStatusDescription(certificateDetails.status)}
+                    </p>
+
+                    <dl className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <dt className="text-gray-500">Certificate Status</dt>
+                            <dd className="font-medium">
+                                {certificateDetails.status ?? '—'}
+                            </dd>
+                        </div>
+                        <div>
+                            <dt className="text-gray-500">Certificate Thumbprint</dt>
+                            <dd className="font-mono text-xs">
+                                {certificateDetails.thumbprint ?? '—'}
+                            </dd>
+                        </div>
+                        <div>
+                            <dt className="text-gray-500">Failure Stage</dt>
+                            <dd>{certificateDetails.failureStage ?? '—'}</dd>
+                        </div>
+                        <div>
+                            <dt className="text-gray-500">Root Cause</dt>
+                            <dd>{certificateDetails.rootCause ?? '—'}</dd>
+                        </div>
+                        <div>
+                            <dt className="text-gray-500">HTTP Status</dt>
+                            <dd>{certificateDetails.httpStatus ?? '—'}</dd>
+                        </div>
+                    </dl>
+                </div>
+            </section>
+
+            <section className="space-y-3">
+                <div className="flex items-center justify-between">
                     <h3 className="text-lg font-semibold">Related Findings</h3>
                     <span className="inline-flex items-center gap-1 rounded bg-blue-100 px-2 py-0.5 text-xs text-blue-700">
                         🔗 Traceable
@@ -103,33 +169,67 @@ const TransactionDetailPage: React.FC = () => {
                     </div>
                 ) : (
                     <div className="space-y-3">
-                        {relatedFindings.map(finding => (
-                            <div
-                                key={finding.id}
-                                className={`rounded border-l-4 p-3 ${
-                                    finding.severity === 'critical'
-                                        ? 'border-red-600 bg-red-50'
-                                        : 'border-yellow-500 bg-yellow-50'
-                                }`}
-                            >
-                                <div className="flex items-center justify-between">
-                                    <div className="font-medium">
-                                        {finding.summary ?? '—'}
+                        {relatedFindings.map(finding => {
+                            const certCopy = buildCertificateFindingCopy(
+                                finding,
+                                transaction
+                            );
+
+                            return (
+                                <div
+                                    key={finding.id}
+                                    className={`rounded-lg border border-l-4 bg-white p-4 shadow-sm ${
+                                        finding.severity === 'critical'
+                                            ? 'border-red-500'
+                                            : 'border-yellow-500'
+                                    }`}
+                                >
+                                    <div className="flex items-center justify-between">
+                                        <div className="font-semibold text-gray-800">
+                                            {certCopy?.summary ??
+                                                finding.summary ??
+                                                '—'}
+                                        </div>
+                                        <span className="text-xs text-gray-500 uppercase tracking-wide">
+                                            Related Transaction
+                                        </span>
                                     </div>
-                                    <span className="text-xs text-gray-500 uppercase tracking-wide">
-                                        Related Transaction
-                                    </span>
+                                    {certCopy ? (
+                                        <div className="mt-3 space-y-2 text-sm text-gray-700">
+                                            <p>
+                                                <span className="font-semibold">
+                                                    Why this matters:
+                                                </span>{' '}
+                                                {certCopy.why}
+                                            </p>
+                                            <p>
+                                                <span className="font-semibold">
+                                                    Recommended action:
+                                                </span>{' '}
+                                                {certCopy.action}
+                                            </p>
+                                            {certCopy.thumbprint && (
+                                                <p className="text-xs text-gray-500">
+                                                    Affected certificate:{' '}
+                                                    <span className="font-mono">
+                                                        {certCopy.thumbprint}
+                                                    </span>
+                                                </p>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <div className="mt-2 text-sm text-gray-600">
+                                            {finding.recommendedAction ?? '—'}
+                                        </div>
+                                    )}
+                                    {finding.executionId && (
+                                        <div className="mt-2">
+                                            <TransactionLink id={finding.executionId} />
+                                        </div>
+                                    )}
                                 </div>
-                                <div className="mt-1 text-sm text-gray-600">
-                                    {finding.recommendedAction ?? '—'}
-                                </div>
-                                {finding.executionId && (
-                                    <div className="mt-2">
-                                        <TransactionLink id={finding.executionId} />
-                                    </div>
-                                )}
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 )}
             </section>
@@ -170,9 +270,10 @@ const TransactionDetailPage: React.FC = () => {
                                             {event.eventId}
                                         </td>
                                         <td className="p-3">
-                                            {event.timestamp
-                                                ? new Date(event.timestamp).toLocaleString()
-                                                : '—'}
+                                            {formatTimestamp(
+                                                event.timestamp,
+                                                preferences.timezone
+                                            )}
                                         </td>
                                         <td className="p-3">{event.status ?? '—'}</td>
                                         <td className="p-3">{event.channelId ?? '—'}</td>

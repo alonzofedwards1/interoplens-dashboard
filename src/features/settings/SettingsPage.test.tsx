@@ -1,12 +1,8 @@
-import { webcrypto } from 'crypto';
-import { TextEncoder } from 'util';
 import React from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { render, screen, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 
 import Settings from './SettingsPage';
-import { resetUsers } from './data/usersStore';
 
 jest.mock(
     'react-router-dom',
@@ -20,52 +16,38 @@ jest.mock(
 );
 
 describe('SettingsPage user management', () => {
-    beforeAll(() => {
-        Object.defineProperty(global, 'crypto', { value: webcrypto });
-        Object.defineProperty(global, 'TextEncoder', { value: TextEncoder });
-    });
-
     beforeEach(() => {
         localStorage.clear();
-        resetUsers();
     });
 
-    const renderSettings = (role: 'admin' | 'analyst' | 'committee') =>
+    const renderSettings = () =>
         render(
             <MemoryRouter>
-                <Settings role={role} />
+                <Settings />
             </MemoryRouter>
         );
 
-    test('shows seeded users and invites a new analyst when admin adds them', async () => {
-        renderSettings('admin');
+    test('shows read-only user directory with role counts', async () => {
+        renderSettings();
 
-        expect(screen.getByText(/Interoplens Admin/)).toBeInTheDocument();
-
-        await userEvent.type(screen.getByLabelText(/full name/i), 'Alex Analyst');
-        await userEvent.type(screen.getByLabelText(/email/i), 'alex@example.com');
-        await userEvent.selectOptions(screen.getByLabelText(/role/i), ['analyst']);
-        await userEvent.type(screen.getByLabelText(/temporary password/i), 'Temp1234!');
-
-        await userEvent.click(screen.getByRole('button', { name: /invite user/i }));
-
-        expect(
-            await screen.findByText(/alex@example.com invited as Analyst/i)
-        ).toBeInTheDocument();
+        expect(await screen.findByText(/Interoplens Admin/)).toBeInTheDocument();
+        expect(screen.getByText(/Analyst User/)).toBeInTheDocument();
 
         const directory = within(screen.getByText(/Directory/).closest('.card-body')!);
-        expect(await directory.findByText(/alex@example.com/)).toBeInTheDocument();
-        expect(directory.getByText(/Invited/)).toBeInTheDocument();
+        expect(directory.getByText(/Admin/)).toBeInTheDocument();
+        expect(directory.getByText(/Analyst/)).toBeInTheDocument();
     });
 
-    test('disables invitation controls for non-admin roles', async () => {
-        renderSettings('analyst');
+    test('disables invitations with a phase notice', async () => {
+        renderSettings();
 
-        expect(
-            screen.getByText(/Only administrators can invite new users/i)
-        ).toBeInTheDocument();
-
-        expect(screen.getByLabelText(/email/i)).toBeDisabled();
-        expect(screen.getByRole('button', { name: /invite user/i })).toBeDisabled();
+        const addUserButton = await screen.findByRole('button', {
+            name: /add user/i,
+        });
+        expect(addUserButton).toBeDisabled();
+        expect(addUserButton).toHaveAttribute(
+            'title',
+            'User invitations available in Phase 1'
+        );
     });
 });

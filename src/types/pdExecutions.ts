@@ -10,6 +10,7 @@ export type PdExecution = {
     failureStage?: string;
     httpStatus?: number;
     retryCount: number;
+    certStatus?: 'VALID' | 'EXPIRING_SOON' | 'EXPIRED';
     certThumbprint?: string;
     sourceEnvironment: string;
     qhinName?: string;
