@@ -55,13 +55,13 @@ const ExecutiveSummary: React.FC<Props> = ({
                     Certificate Health Summary
                 </h2>
 
-                <button
-                    onClick={onViewDetails}
-                    className="text-sm text-blue-600 hover:underline"
-                >
-                    View findings
-                </button>
-            </div>
+                {/* Certificate Health */}
+                <CertificateHealthWidget
+                    data={certificateHealth}
+                    errorMessage={error ? "Unable to load certificate health." : null}
+                    onViewDetails={() => setShowCertModal(true)}
+                    impactedLink="/pd-executions?certStatus=EXPIRED,EXPIRING_SOON"
+                />
 
             {/* Summary Cards */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">

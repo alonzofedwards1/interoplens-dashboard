@@ -22,6 +22,8 @@ import {
     getExecutionCertificateDetails,
 } from '../../lib/certificates';
 import { Download } from 'lucide-react';
+import { useUserPreferences } from '../../lib/useUserPreferences';
+import { formatTimestamp } from '../../lib/dateTime';
 
 /* ============================
    Helpers
@@ -94,6 +96,7 @@ const PDExecutions: React.FC = () => {
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
     const { pdExecutions, loading, findings } = useServerData();
+    const { preferences: userPreferences } = useUserPreferences();
     const [preferences, setPreferences] = useUserPreference(
         'pd.executions.table',
         defaultExecutionPreferences
@@ -367,9 +370,11 @@ const PDExecutions: React.FC = () => {
         return sortedExecutions.map(exec => {
             const certificateDetails = getExecutionCertificateDetails(exec);
             return {
-                completedAt: exec.completedAt
-                    ? new Date(exec.completedAt).toISOString()
-                    : '',
+                completedAt: formatTimestamp(
+                    exec.completedAt,
+                    userPreferences.timezone,
+                    ''
+                ),
                 requestId: exec.requestId ?? '',
                 qhinName: exec.qhinName ?? '',
                 environment: exec.sourceEnvironment ?? '',
@@ -382,7 +387,7 @@ const PDExecutions: React.FC = () => {
                 httpStatus: certificateDetails.httpStatus ?? '',
             };
         });
-    }, [sortedExecutions]);
+    }, [sortedExecutions, userPreferences.timezone]);
 
     if (loading) {
         return (
@@ -802,9 +807,10 @@ const PDExecutions: React.FC = () => {
                         return (
                             <tr key={exec.requestId} className="border-t text-sm">
                                 <td className="p-3 font-mono">
-                                    {exec.completedAt
-                                        ? new Date(exec.completedAt).toUTCString()
-                                        : '—'}
+                                    {formatTimestamp(
+                                        exec.completedAt,
+                                        userPreferences.timezone
+                                    )}
                                 </td>
                                 <td className="p-3">
                                     <span className="font-mono text-xs">{exec.requestId ?? '—'}</span>

@@ -27,23 +27,12 @@ const SecuritySettings: React.FC = () => {
                 label="Session Timeout"
                 description="Automatically log out after inactivity"
             >
-                <select className="select select-bordered w-64">
-                    <option>15 minutes</option>
-                    <option>30 minutes</option>
-                    <option>1 hour</option>
-                    <option>4 hours</option>
-                </select>
-            </SettingsRow>
-
-            <SettingsRow
-                label="Re-authentication"
-                description="Require password re-entry for sensitive actions"
-            >
-                <input
-                    type="checkbox"
-                    className="toggle toggle-primary"
-                    defaultChecked
-                />
+                <span
+                    className="text-sm text-base-content/80"
+                    title="Session timeout is enforced globally"
+                >
+                    15 minutes
+                </span>
             </SettingsRow>
         </div>
     );

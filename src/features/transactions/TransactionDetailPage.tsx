@@ -12,11 +12,14 @@ import {
     getCertificateStatusDescription,
     getExecutionCertificateDetails,
 } from '../../lib/certificates';
+import { useUserPreferences } from '../../lib/useUserPreferences';
+import { formatTimestamp } from '../../lib/dateTime';
 
 const TransactionDetailPage: React.FC = () => {
     const navigate = useNavigate();
     const { id } = useParams<{ id: string }>();
     const { pdExecutions, telemetryEvents, findings } = useServerData();
+    const { preferences } = useUserPreferences();
     const [page, setPage] = useState(1);
     const pageSize = 10;
 
@@ -267,9 +270,10 @@ const TransactionDetailPage: React.FC = () => {
                                             {event.eventId}
                                         </td>
                                         <td className="p-3">
-                                            {event.timestamp
-                                                ? new Date(event.timestamp).toLocaleString()
-                                                : '—'}
+                                            {formatTimestamp(
+                                                event.timestamp,
+                                                preferences.timezone
+                                            )}
                                         </td>
                                         <td className="p-3">{event.status ?? '—'}</td>
                                         <td className="p-3">{event.channelId ?? '—'}</td>

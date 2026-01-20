@@ -1,4 +1,5 @@
 import React from "react";
+import { useUserPreferences } from "../../lib/useUserPreferences";
 
 /* ----------------------------------
    Local SettingsRow
@@ -29,6 +30,8 @@ const SettingsRow = ({ label, description, children }: SettingsRowProps) => (
 ----------------------------------- */
 
 const DashboardPreferencesSettings: React.FC = () => {
+    const { preferences, setDashboardPreferences } = useUserPreferences();
+    const dashboard = preferences.dashboard;
     return (
         <div className="space-y-6">
 
@@ -36,10 +39,22 @@ const DashboardPreferencesSettings: React.FC = () => {
                 label="Default Landing View"
                 description="Select the initial dashboard view after login"
             >
-                <select className="select select-bordered w-64">
-                    <option>Summary</option>
-                    <option>Patient Discovery Outcomes</option>
-                    <option>Findings Table</option>
+                <select
+                    className="select select-bordered w-64"
+                    value={dashboard.defaultLandingView}
+                    onChange={event =>
+                        setDashboardPreferences({
+                            ...dashboard,
+                            defaultLandingView: event.target.value as
+                                | "dashboard"
+                                | "pd-executions"
+                                | "findings",
+                        })
+                    }
+                >
+                    <option value="dashboard">Summary</option>
+                    <option value="pd-executions">Patient Discovery Outcomes</option>
+                    <option value="findings">Findings Table</option>
                 </select>
             </SettingsRow>
 
@@ -47,10 +62,22 @@ const DashboardPreferencesSettings: React.FC = () => {
                 label="Default Date Range"
                 description="Time range applied when the dashboard loads"
             >
-                <select className="select select-bordered w-64">
-                    <option>Last 24 hours</option>
-                    <option>Last 7 days</option>
-                    <option>Last 30 days</option>
+                <select
+                    className="select select-bordered w-64"
+                    value={dashboard.defaultDateRange}
+                    onChange={event =>
+                        setDashboardPreferences({
+                            ...dashboard,
+                            defaultDateRange: event.target.value as
+                                | "24h"
+                                | "7d"
+                                | "30d",
+                        })
+                    }
+                >
+                    <option value="24h">Last 24 hours</option>
+                    <option value="7d">Last 7 days</option>
+                    <option value="30d">Last 30 days</option>
                 </select>
             </SettingsRow>
 
@@ -58,9 +85,20 @@ const DashboardPreferencesSettings: React.FC = () => {
                 label="Time Grouping"
                 description="How data is grouped in charts"
             >
-                <select className="select select-bordered w-64">
-                    <option>Hourly</option>
-                    <option>Daily</option>
+                <select
+                    className="select select-bordered w-64"
+                    value={dashboard.timeGrouping}
+                    onChange={event =>
+                        setDashboardPreferences({
+                            ...dashboard,
+                            timeGrouping: event.target.value as
+                                | "hourly"
+                                | "daily",
+                        })
+                    }
+                >
+                    <option value="hourly">Hourly</option>
+                    <option value="daily">Daily</option>
                 </select>
             </SettingsRow>
 
@@ -71,7 +109,13 @@ const DashboardPreferencesSettings: React.FC = () => {
                 <input
                     type="checkbox"
                     className="toggle toggle-primary"
-                    defaultChecked
+                    checked={dashboard.persistFilters}
+                    onChange={event =>
+                        setDashboardPreferences({
+                            ...dashboard,
+                            persistFilters: event.target.checked,
+                        })
+                    }
                 />
             </SettingsRow>
         </div>

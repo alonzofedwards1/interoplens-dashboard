@@ -14,6 +14,8 @@ import { useServerData } from "../../lib/ServerDataContext";
 import { TransactionLink } from "../../components/TransactionLink";
 import Pagination from "../../components/Pagination";
 import { buildCertificateFindingCopy } from "../../lib/certificates";
+import { useUserPreferences } from "../../lib/useUserPreferences";
+import { formatTimestamp } from "../../lib/dateTime";
 
 /* ============================
    Local Types
@@ -53,11 +55,6 @@ const getSeverityBadge = (severity?: Finding["severity"]) => {
 
 const safeUpper = (value?: string | null) => (value ? value.toUpperCase() : "—");
 
-const formatDateTime = (value?: string | null) => {
-    if (!value) return "—";
-    const date = new Date(value);
-    return Number.isNaN(date.getTime()) ? "—" : date.toLocaleString();
-};
 
 /* ============================
    Sorting Types
@@ -83,6 +80,7 @@ const ViewAllFindingsPage: React.FC = () => {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const { findings: rawFindings, pdExecutions } = useServerData();
+    const { preferences } = useUserPreferences();
 
     const [expandedId, setExpandedId] = useState<string | null>(null);
     const [sortKey, setSortKey] = useState<SortKey>("lastSeenAt");
@@ -292,8 +290,9 @@ const ViewAllFindingsPage: React.FC = () => {
                                         {safeUpper(finding.status)}
                                     </td>
                                     <td className="p-3">
-                                        {formatDateTime(
-                                            finding.lastSeenAt
+                                        {formatTimestamp(
+                                            finding.lastSeenAt,
+                                            preferences.timezone
                                         )}
                                     </td>
                                     <td className="p-3 text-right">
