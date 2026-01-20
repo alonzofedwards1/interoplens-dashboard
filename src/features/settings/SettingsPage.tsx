@@ -16,7 +16,6 @@ import DashboardPreferencesSettings from "../../components/settings/DashboardPre
 import InteroperabilitySettings from "../../components/settings/InteroperabilitySettings";
 import AppearanceSettings from "../../components/settings/AppearanceSettings";
 import UserManagementSettings from "../../components/settings/UserManagementSettings";
-import { UserRole } from "../../types/auth";
 
 /* ----------------------------------
    Section Config
@@ -69,11 +68,7 @@ const SettingsSection = ({
    Page
 ----------------------------------- */
 
-export type SettingsProps = {
-    role?: UserRole | null;
-};
-
-const SettingsPage: React.FC<SettingsProps> = () => {
+const SettingsPage: React.FC = () => {
     return (
         <div className="p-8 bg-base-200 min-h-screen">
             {/* Header */}

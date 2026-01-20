@@ -25,17 +25,6 @@ import { UserRole } from "./types/auth";
 import { useUserPreferences } from "./lib/useUserPreferences";
 
 /* ============================
-   Helpers (future-ready)
-============================ */
-
-const normalizeRole = (role?: string): UserRole | null => {
-    if (role === "admin" || role === "analyst" || role === "committee") {
-        return role;
-    }
-    return null;
-};
-
-/* ============================
    Routes
 ============================ */
 
@@ -108,7 +97,7 @@ const AppRoutes: React.FC = () => {
 
             {/* Reports / Settings */}
             <Route path="/reports" element={<Reports />} />
-            <Route path="/settings" element={<Settings role={role} />} />
+            <Route path="/settings" element={<Settings />} />
 
             {/* Catch-all */}
             <Route path="*" element={<Navigate to="/" replace />} />

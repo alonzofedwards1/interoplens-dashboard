@@ -20,15 +20,15 @@ describe('SettingsPage user management', () => {
         localStorage.clear();
     });
 
-    const renderSettings = (role: 'admin' | 'analyst' | 'committee') =>
+    const renderSettings = () =>
         render(
             <MemoryRouter>
-                <Settings role={role} />
+                <Settings />
             </MemoryRouter>
         );
 
     test('shows read-only user directory with role counts', async () => {
-        renderSettings('admin');
+        renderSettings();
 
         expect(await screen.findByText(/Interoplens Admin/)).toBeInTheDocument();
         expect(screen.getByText(/Analyst User/)).toBeInTheDocument();
@@ -39,7 +39,7 @@ describe('SettingsPage user management', () => {
     });
 
     test('disables invitations with a phase notice', async () => {
-        renderSettings('analyst');
+        renderSettings();
 
         const addUserButton = await screen.findByRole('button', {
             name: /add user/i,
