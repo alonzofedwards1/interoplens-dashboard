@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { FaArrowLeft } from 'react-icons/fa';
 import {
     Bar,
@@ -11,13 +11,17 @@ import {
     YAxis,
 } from 'recharts';
 
-import { PdExecution } from '../../types/pdExecutions';
 import { useUserPreference } from '../../lib/userPreferences';
 import { useServerData } from '../../lib/ServerDataContext';
 import { TransactionLink } from '../../components/TransactionLink';
 import Pagination from '../../components/Pagination';
 import { Finding } from '../../types/findings';
 import { fetchPdExecutionTelemetry } from '../../lib/api/pdExecutions';
+import {
+    getCertificateStatusBadge,
+    getExecutionCertificateDetails,
+} from '../../lib/certificates';
+import { Download } from 'lucide-react';
 
 /* ============================
    Helpers
@@ -49,6 +53,7 @@ type ExecutionSortKey =
 type ExecutionPreferences = {
     search: string;
     outcomeFilter: 'success' | 'failure' | 'all';
+    certStatusFilter: 'all' | 'valid' | 'expiring' | 'expired' | 'impacted';
     sortKey: ExecutionSortKey;
     sortDirection: 'asc' | 'desc';
 };
@@ -56,12 +61,38 @@ type ExecutionPreferences = {
 const defaultExecutionPreferences: ExecutionPreferences = {
     search: '',
     outcomeFilter: 'all',
+    certStatusFilter: 'all',
     sortKey: 'completedAt',
     sortDirection: 'desc',
 };
 
+const buildCsvRow = (values: Array<string | number | undefined | null>) =>
+    values
+        .map(value => {
+            if (value === undefined || value === null) return '';
+            const stringValue = String(value);
+            if (/["\n,]/.test(stringValue)) {
+                return `"${stringValue.replace(/"/g, '""')}"`;
+            }
+            return stringValue;
+        })
+        .join(',');
+
+const triggerDownload = (payload: BlobPart, filename: string, mimeType: string) => {
+    const blob = new Blob([payload], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = filename;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+};
+
 const PDExecutions: React.FC = () => {
     const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
     const { pdExecutions, loading, findings } = useServerData();
     const [preferences, setPreferences] = useUserPreference(
         'pd.executions.table',
@@ -76,7 +107,39 @@ const PDExecutions: React.FC = () => {
     const missingTelemetryApiLogged = useRef(false);
     const missingChartDataLogged = useRef(false);
 
-    const { outcomeFilter, search, sortDirection, sortKey } = preferences;
+    const { outcomeFilter, search, sortDirection, sortKey, certStatusFilter } =
+        preferences;
+
+    const certStatusParam = searchParams.get('certStatus');
+
+    useEffect(() => {
+        if (!certStatusParam) return;
+        const normalized = certStatusParam
+            .split(',')
+            .map(value => value.trim().toUpperCase())
+            .filter(Boolean);
+
+        const hasExpired = normalized.includes('EXPIRED');
+        const hasExpiring = normalized.includes('EXPIRING_SOON');
+        const hasValid = normalized.includes('VALID');
+
+        let nextFilter: ExecutionPreferences['certStatusFilter'] = 'all';
+        if (hasExpired && hasExpiring) {
+            nextFilter = 'impacted';
+        } else if (hasExpired) {
+            nextFilter = 'expired';
+        } else if (hasExpiring) {
+            nextFilter = 'expiring';
+        } else if (hasValid) {
+            nextFilter = 'valid';
+        }
+
+        setPreferences(prev =>
+            prev.certStatusFilter === nextFilter
+                ? prev
+                : { ...prev, certStatusFilter: nextFilter }
+        );
+    }, [certStatusParam, setPreferences]);
 
     const timeRangeBounds = useMemo(() => {
         const now = new Date();
@@ -114,6 +177,21 @@ const PDExecutions: React.FC = () => {
         return pdExecutions.filter(exec => {
             const outcome = (exec.outcome ?? '').toLowerCase();
             const matchesOutcome = outcomeFilter === 'all' || outcome === outcomeFilter;
+            const certificateStatus = getExecutionCertificateDetails(exec).status;
+
+            const matchesCertStatus = (() => {
+                if (certStatusFilter === 'all') return true;
+                if (certStatusFilter === 'valid') return certificateStatus === 'VALID';
+                if (certStatusFilter === 'expiring') {
+                    return certificateStatus === 'EXPIRING_SOON';
+                }
+                if (certStatusFilter === 'expired') return certificateStatus === 'EXPIRED';
+                return (
+                    certStatusFilter === 'impacted' &&
+                    (certificateStatus === 'EXPIRED' ||
+                        certificateStatus === 'EXPIRING_SOON')
+                );
+            })();
 
             const completedAtMs = exec.completedAt
                 ? new Date(exec.completedAt).getTime()
@@ -125,16 +203,18 @@ const PDExecutions: React.FC = () => {
                 timeRangeBounds.endTime === undefined ||
                 (!Number.isNaN(completedAtMs) && completedAtMs <= timeRangeBounds.endTime);
 
-            if (!search.trim()) return matchesOutcome && matchesStart && matchesEnd;
+            if (!search.trim()) {
+                return matchesOutcome && matchesCertStatus && matchesStart && matchesEnd;
+            }
 
             const query = search.toLowerCase();
             const matchesText =
                 (exec.requestId ?? '').toLowerCase().includes(query) ||
                 (exec.qhinName ?? '').toLowerCase().includes(query);
 
-            return matchesOutcome && matchesText && matchesStart && matchesEnd;
+            return matchesOutcome && matchesCertStatus && matchesText && matchesStart && matchesEnd;
         });
-    }, [outcomeFilter, pdExecutions, search, timeRangeBounds]);
+    }, [certStatusFilter, outcomeFilter, pdExecutions, search, timeRangeBounds]);
 
     const sortedExecutions = useMemo(() => {
         return [...filteredExecutions].sort((a, b) => {
@@ -283,6 +363,27 @@ const PDExecutions: React.FC = () => {
         }
     }, [pdExecutions.length]);
 
+    const exportRows = useMemo(() => {
+        return sortedExecutions.map(exec => {
+            const certificateDetails = getExecutionCertificateDetails(exec);
+            return {
+                completedAt: exec.completedAt
+                    ? new Date(exec.completedAt).toISOString()
+                    : '',
+                requestId: exec.requestId ?? '',
+                qhinName: exec.qhinName ?? '',
+                environment: exec.sourceEnvironment ?? '',
+                outcome: exec.outcome ?? '',
+                durationMs: exec.durationMs ?? '',
+                certificateStatus: certificateDetails.status ?? '',
+                certificateThumbprint: certificateDetails.thumbprint ?? '',
+                failureStage: certificateDetails.failureStage ?? '',
+                rootCause: certificateDetails.rootCause ?? '',
+                httpStatus: certificateDetails.httpStatus ?? '',
+            };
+        });
+    }, [sortedExecutions]);
+
     if (loading) {
         return (
             <div className="flex min-h-screen items-center justify-center text-gray-700">
@@ -304,6 +405,163 @@ const PDExecutions: React.FC = () => {
                 sortDirection: 'asc',
             }));
         }
+    };
+
+    const updateCertStatusFilter = (
+        nextValue: ExecutionPreferences['certStatusFilter']
+    ) => {
+        setPreferences(prev => ({ ...prev, certStatusFilter: nextValue }));
+
+        const params = new URLSearchParams(searchParams);
+        if (nextValue === 'all') {
+            params.delete('certStatus');
+        } else if (nextValue === 'impacted') {
+            params.set('certStatus', 'EXPIRED,EXPIRING_SOON');
+        } else if (nextValue === 'valid') {
+            params.set('certStatus', 'VALID');
+        } else if (nextValue === 'expiring') {
+            params.set('certStatus', 'EXPIRING_SOON');
+        } else if (nextValue === 'expired') {
+            params.set('certStatus', 'EXPIRED');
+        }
+        setSearchParams(params);
+    };
+
+    const handleExportCsv = () => {
+        const headers = [
+            'Completed At',
+            'Request ID',
+            'QHIN',
+            'Environment',
+            'Outcome',
+            'Response Time (ms)',
+            'Certificate Status',
+            'Certificate Thumbprint',
+            'Failure Stage',
+            'Root Cause',
+            'HTTP Status',
+        ];
+        const rows = exportRows.map(row =>
+            buildCsvRow([
+                row.completedAt,
+                row.requestId,
+                row.qhinName,
+                row.environment,
+                row.outcome,
+                row.durationMs,
+                row.certificateStatus,
+                row.certificateThumbprint,
+                row.failureStage,
+                row.rootCause,
+                row.httpStatus,
+            ])
+        );
+        const csv = [buildCsvRow(headers), ...rows].join('\n');
+        triggerDownload(csv, 'pd-executions.csv', 'text/csv;charset=utf-8;');
+    };
+
+    const handleExportXls = () => {
+        const headerCells = [
+            'Completed At',
+            'Request ID',
+            'QHIN',
+            'Environment',
+            'Outcome',
+            'Response Time (ms)',
+            'Certificate Status',
+            'Certificate Thumbprint',
+            'Failure Stage',
+            'Root Cause',
+            'HTTP Status',
+        ];
+        const rows = exportRows
+            .map(
+                row => `
+                <tr>
+                    <td>${row.completedAt}</td>
+                    <td>${row.requestId}</td>
+                    <td>${row.qhinName}</td>
+                    <td>${row.environment}</td>
+                    <td>${row.outcome}</td>
+                    <td>${row.durationMs}</td>
+                    <td>${row.certificateStatus}</td>
+                    <td>${row.certificateThumbprint}</td>
+                    <td>${row.failureStage}</td>
+                    <td>${row.rootCause}</td>
+                    <td>${row.httpStatus}</td>
+                </tr>`
+            )
+            .join('');
+        const table = `
+            <table>
+                <thead>
+                    <tr>
+                        ${headerCells.map(cell => `<th>${cell}</th>`).join('')}
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+            </table>`;
+        triggerDownload(
+            table,
+            'pd-executions.xls',
+            'application/vnd.ms-excel'
+        );
+    };
+
+    const handleExportPdf = () => {
+        const headerCells = [
+            'Completed At',
+            'Request ID',
+            'QHIN',
+            'Environment',
+            'Outcome',
+            'Response Time (ms)',
+            'Certificate Status',
+        ];
+        const rows = exportRows
+            .map(
+                row => `
+                <tr>
+                    <td>${row.completedAt}</td>
+                    <td>${row.requestId}</td>
+                    <td>${row.qhinName}</td>
+                    <td>${row.environment}</td>
+                    <td>${row.outcome}</td>
+                    <td>${row.durationMs}</td>
+                    <td>${row.certificateStatus}</td>
+                </tr>`
+            )
+            .join('');
+        const html = `
+            <html>
+                <head>
+                    <title>PD Executions</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; margin: 24px; }
+                        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+                        th, td { border: 1px solid #e5e7eb; padding: 6px; text-align: left; }
+                        th { background: #f3f4f6; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
+                        h1 { font-size: 16px; margin-bottom: 12px; }
+                    </style>
+                </head>
+                <body>
+                    <h1>PD Executions</h1>
+                    <table>
+                        <thead>
+                            <tr>
+                                ${headerCells.map(cell => `<th>${cell}</th>`).join('')}
+                            </tr>
+                        </thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </body>
+            </html>`;
+        const printWindow = window.open('', '_blank', 'noopener,noreferrer');
+        if (!printWindow) return;
+        printWindow.document.write(html);
+        printWindow.document.close();
+        printWindow.focus();
+        printWindow.print();
     };
 
     return (
@@ -360,7 +618,7 @@ const PDExecutions: React.FC = () => {
             </div>
 
             {/* Execution Table */}
-            <div className="bg-white rounded-lg shadow overflow-x-auto">
+                <div className="bg-white rounded-lg shadow overflow-x-auto">
                 <div className="flex flex-wrap gap-3 items-center justify-between p-3 border-b text-sm">
                     <div className="flex flex-wrap gap-2 items-center">
                         <label htmlFor="pd-time-range" className="text-gray-700">
@@ -425,6 +683,27 @@ const PDExecutions: React.FC = () => {
                             <option value="failure">Failure</option>
                         </select>
                     </div>
+                    <div className="flex gap-2 items-center">
+                        <label htmlFor="pd-cert-status" className="text-gray-700">
+                            Certificate Status
+                        </label>
+                        <select
+                            id="pd-cert-status"
+                            value={certStatusFilter}
+                            onChange={event =>
+                                updateCertStatusFilter(
+                                    event.target.value as ExecutionPreferences['certStatusFilter']
+                                )
+                            }
+                            className="border rounded px-2 py-1"
+                        >
+                            <option value="all">All</option>
+                            <option value="valid">Valid</option>
+                            <option value="expiring">Expiring Soon</option>
+                            <option value="expired">Expired</option>
+                            <option value="impacted">Impacted</option>
+                        </select>
+                    </div>
 
                     <input
                         type="search"
@@ -467,17 +746,45 @@ const PDExecutions: React.FC = () => {
                             {sortDirection === 'asc' ? 'Asc' : 'Desc'}
                         </button>
                     </div>
+
+                    <div className="relative group">
+                        <button className="flex items-center gap-2 border rounded px-3 py-2 text-sm hover:bg-gray-50">
+                            <Download size={14} />
+                            Export
+                        </button>
+                        <div className="absolute right-0 mt-1 hidden group-hover:block bg-white border rounded shadow z-10 w-44">
+                            <button
+                                onClick={handleExportCsv}
+                                className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
+                            >
+                                Export CSV
+                            </button>
+                            <button
+                                onClick={handleExportXls}
+                                className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
+                            >
+                                Export Excel
+                            </button>
+                            <button
+                                onClick={handleExportPdf}
+                                className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
+                            >
+                                Export PDF
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 <table className="min-w-full border-collapse">
                     <thead className="bg-gray-100">
-                    <tr className="text-left text-sm text-gray-700">
+                    <tr className="text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
                         <th className="p-3 cursor-pointer" onClick={() => toggleSort('completedAt')}>Completed At</th>
                         <th className="p-3 cursor-pointer" onClick={() => toggleSort('requestId')}>Request ID</th>
                         <th className="p-3">Traceability</th>
                         <th className="p-3">Telemetry Events</th>
                         <th className="p-3">QHIN</th>
                         <th className="p-3">Environment</th>
+                        <th className="p-3">Certificate Status</th>
                         <th className="p-3 cursor-pointer" onClick={() => toggleSort('outcome')}>Outcome</th>
                         <th className="p-3 cursor-pointer" onClick={() => toggleSort('durationMs')}>Response Time</th>
                     </tr>
@@ -489,6 +796,8 @@ const PDExecutions: React.FC = () => {
                         const telemetryCount = exec.requestId
                             ? telemetryCounts[exec.requestId]
                             : null;
+                        const certificateStatus = getExecutionCertificateDetails(exec).status;
+                        const badge = getCertificateStatusBadge(certificateStatus);
 
                         return (
                             <tr key={exec.requestId} className="border-t text-sm">
@@ -552,6 +861,19 @@ const PDExecutions: React.FC = () => {
                                     {exec.sourceEnvironment ?? '—'}
                                 </td>
                                 <td className="p-3">
+                                    {certificateStatus ? (
+                                        <span
+                                            title={badge.tooltip}
+                                            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${badge.className}`}
+                                        >
+                                            <span aria-hidden="true">{badge.icon}</span>
+                                            {badge.label}
+                                        </span>
+                                    ) : (
+                                        <span className="text-gray-500">—</span>
+                                    )}
+                                </td>
+                                <td className="p-3">
                                     <span
                                         className={`px-2 py-1 rounded text-xs ${outcome.color}`}
                                     >
@@ -566,7 +888,7 @@ const PDExecutions: React.FC = () => {
                     })}
                     {!sortedExecutions.length && (
                         <tr>
-                            <td colSpan={8} className="p-4 text-center text-gray-500">
+                            <td colSpan={9} className="p-4 text-center text-gray-500">
                                 No executions match the current filters.
                             </td>
                         </tr>
