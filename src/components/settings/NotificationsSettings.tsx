@@ -76,39 +76,6 @@ const NotificationsSettings: React.FC = () => {
                     <option>Email & In-app</option>
                 </select>
             </SettingsRow>
-
-            {/* Threshold Configuration */}
-            <SettingsRow
-                label="Alert Threshold Configuration"
-                description="Customize thresholds that trigger alerts"
-            >
-                <div className="flex items-center gap-3">
-                    <button className="btn btn-outline btn-sm" disabled>
-                        Configure Thresholds
-                    </button>
-                    <span className="badge badge-outline text-xs">
-                        Coming Soon
-                    </span>
-                </div>
-            </SettingsRow>
-
-            {/* Quiet Hours */}
-            <SettingsRow
-                label="Quiet Hours"
-                description="Suppress non-critical alerts during specific hours"
-            >
-                <div className="flex items-center gap-3">
-                    <input
-                        type="checkbox"
-                        className="toggle"
-                        disabled
-                    />
-                    <span className="badge badge-outline text-xs">
-                        Coming Soon
-                    </span>
-                </div>
-            </SettingsRow>
-
         </div>
     );
 };
