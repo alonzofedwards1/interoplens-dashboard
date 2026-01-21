@@ -6,7 +6,7 @@ import {
     FaFileAlt,
     FaCog,
     FaBook,
-    FaWaveSquare
+    FaWaveSquare,
 } from "react-icons/fa";
 
 const iconClass =
@@ -40,9 +40,9 @@ const Sidebar = () => {
                 <FaHeartbeat />
             </NavLink>
 
-            {/* Telemetry */}
+            {/* Telemetry (Derived views live under here) */}
             <NavLink
-                to="/pd-executions"
+                to="/telemetry"
                 className={({ isActive }) =>
                     `${iconClass} ${isActive ? activeClass : inactiveClass}`
                 }

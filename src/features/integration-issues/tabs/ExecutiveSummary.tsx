@@ -49,21 +49,21 @@ const ExecutiveSummary: React.FC<Props> = ({
 
     return (
         <div className="space-y-4">
-            {/* Headline */}
+            {/* Header */}
             <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-gray-800">
                     Certificate Health Summary
                 </h2>
 
-                {/* Certificate Health */}
-                <CertificateHealthWidget
-                    data={certificateHealth}
-                    errorMessage={error ? "Unable to load certificate health." : null}
-                    onViewDetails={() => setShowCertModal(true)}
-                    impactedLink="/pd-executions?certStatus=EXPIRED,EXPIRING_SOON"
-                />
+                <button
+                    onClick={onViewDetails}
+                    className="text-sm font-medium text-blue-600 hover:underline"
+                >
+                    View details
+                </button>
+            </div>
 
-            {/* Summary Cards */}
+            {/* Metrics */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <div className="rounded border bg-white p-4">
                     <div className="text-sm text-gray-500">Expired</div>
