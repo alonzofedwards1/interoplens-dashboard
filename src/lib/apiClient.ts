@@ -4,20 +4,13 @@ import type { Oid } from '../types';
 import { PdExecutionCounts, PdExecutionsResponse } from '../types/pdExecutions';
 import { TelemetryEvent } from '../types/telemetry';
 import { API_BASE_URL } from '../config/api';
-import { authFetch } from './api/auth';
-import { safeJson } from './api/utils';
+import { requestJson } from './api/request';
 import { fetchTelemetryEvents } from './telemetryClient';
 
 const buildUrl = (base: string, path: string) => `${base}${path}`;
 
 export async function apiGet<T>(url: string): Promise<T> {
-    const res = await authFetch(url);
-
-    if (!res.ok) {
-        throw new Error(`${res.status} ${res.statusText}`);
-    }
-
-    return safeJson(res) as T;
+    return requestJson<T>(url);
 }
 
 /* ============================================================

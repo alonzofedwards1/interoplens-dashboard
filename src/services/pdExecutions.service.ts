@@ -5,8 +5,7 @@ import {
     PdExecutionHealthSummary,
     PdExecutionsResponse,
 } from '../types/pdExecutions';
-import { authFetch } from '../lib/api/auth';
-import { safeJson } from '../lib/api/utils';
+import { requestJson } from '../lib/api/request';
 
 type FetchParams = Record<string, string | number | boolean | undefined>;
 
@@ -23,40 +22,19 @@ const buildQueryString = (params?: FetchParams) => {
     return `?${searchParams.toString()}`;
 };
 
-const assertOk = async (response: Response) => {
-    if (!response.ok) {
-        let message = `${response.status} ${response.statusText}`;
-        try {
-            const data = await safeJson(response.clone());
-            if (data && typeof data === 'object' && 'message' in data) {
-                message = String(
-                    (data as { message?: string }).message ?? message
-                );
-            }
-        } catch {
-            // Ignore JSON parsing errors
-        }
-        throw new Error(message);
-    }
-};
-
 export const fetchPdExecutions = async (
     params?: FetchParams
 ): Promise<PdExecutionsResponse> => {
-    const response = await authFetch(
+    return requestJson<PdExecutionsResponse>(
         `/api/pd-executions${buildQueryString(params)}`,
         { method: 'GET' }
     );
-    await assertOk(response);
-    return (await safeJson(response)) as PdExecutionsResponse;
 };
 
 export const fetchPdExecutionCounts = async (): Promise<PdExecutionCounts> => {
-    const response = await authFetch('/api/pd-executions/count', {
+    return requestJson<PdExecutionCounts>('/api/pd-executions/count', {
         method: 'GET',
     });
-    await assertOk(response);
-    return (await safeJson(response)) as PdExecutionCounts;
 };
 
 export const fetchExecutionHealthSummary = async (

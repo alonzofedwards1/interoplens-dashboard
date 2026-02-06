@@ -1,3 +1,5 @@
+import { requestJson } from '../lib/api/request';
+
 export interface IntegrationHealthResponse {
     totalExecutions: number;
     successRate: number;
@@ -10,13 +12,5 @@ export interface IntegrationHealthResponse {
 }
 
 export async function fetchIntegrationHealth(): Promise<IntegrationHealthResponse> {
-    const res = await fetch('/api/health/integrations', {
-        credentials: 'include',
-    });
-
-    if (!res.ok) {
-        throw new Error('Failed to load integration health');
-    }
-
-    return res.json();
+    return requestJson<IntegrationHealthResponse>('/api/health/integrations');
 }

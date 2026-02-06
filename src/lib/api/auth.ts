@@ -1,5 +1,6 @@
 import { API_BASE_URL } from '../../config/api';
 import { safeJson } from './utils';
+import { requestOk } from './request';
 
 export type User = {
     userId: number;
@@ -28,47 +29,26 @@ const readJsonIfAvailable = async (response: Response) => {
     return safeJson(response);
 };
 
-const readErrorMessage = async (response: Response, fallback: string) => {
-    const data = await readJsonIfAvailable(response.clone());
-    if (data && typeof data === 'object' && 'message' in data) {
-        const message = (data as { message?: string }).message;
-        if (message) return message;
-    }
-    return fallback;
-};
-
 export const login = async (username: string, password: string): Promise<void> => {
-    const res = await authFetch('/api/auth/login', {
+    await requestOk('/api/auth/login', {
         method: 'POST',
         body: JSON.stringify({ username, password }),
     });
-
-    if (!res.ok) {
-        const message = await readErrorMessage(res, `Login failed (${res.status})`);
-        throw new Error(message);
-    }
 };
 
 export const logout = async (): Promise<void> => {
-    const res = await authFetch('/api/auth/logout', {
+    await requestOk('/api/auth/logout', {
         method: 'POST',
     });
-
-    if (!res.ok) {
-        const message = await readErrorMessage(res, `Logout failed (${res.status})`);
-        throw new Error(message);
-    }
 };
 
 export const me = async (): Promise<User | null> => {
-    const res = await authFetch('/api/auth/me', {
-        method: 'GET',
-    });
+    const res = await authFetch('/api/auth/me', { method: 'GET' });
 
     if (res.status === 401) return null;
 
     if (!res.ok) {
-        const message = await readErrorMessage(res, `Session check failed (${res.status})`);
+        const message = `Session check failed (${res.status})`;
         throw new Error(message);
     }
 
