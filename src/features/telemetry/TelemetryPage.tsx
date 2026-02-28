@@ -1,4 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import CertInspectorModal from '../integration-issues/modals/CertInspectorModal';
+import { useCertificateDetails } from '../../hooks/useCertificateDetails';
 import { useNavigate } from 'react-router-dom';
 import { FaArrowLeft, FaChartBar, FaClock, FaTimesCircle, FaCheckCircle } from 'react-icons/fa';
 
@@ -79,7 +81,14 @@ const TelemetryPage: React.FC = () => {
     const [search, setSearch] = useState('');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
     const [page, setPage] = useState(1);
+    const [selectedTransactionId, setSelectedTransactionId] = useState<string | null>(null);
     const pageSize = 25;
+
+    const {
+        data: selectedCertificate,
+        loading: certificateLoading,
+        error: certificateError,
+    } = useCertificateDetails(selectedTransactionId);
 
     const filterParams = useMemo<TelemetryFilterParams>(() => {
         const now = new Date();
@@ -494,6 +503,42 @@ const TelemetryPage: React.FC = () => {
                 </button>
             </div>
 
+            {selectedTransactionId && (
+                <>
+                    {certificateLoading && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+                            <div className="rounded bg-white px-4 py-3 text-sm text-gray-700 shadow">
+                                Loading certificate details...
+                            </div>
+                        </div>
+                    )}
+
+                    {!certificateLoading && certificateError && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+                            <div className="w-full max-w-md rounded bg-white p-4 shadow">
+                                <p className="text-sm text-red-600">{certificateError}</p>
+                                <div className="mt-4 text-right">
+                                    <button
+                                        type="button"
+                                        onClick={() => setSelectedTransactionId(null)}
+                                        className="rounded bg-slate-100 px-3 py-1 text-sm hover:bg-slate-200"
+                                    >
+                                        Close
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {!certificateLoading && !certificateError && selectedCertificate && (
+                        <CertInspectorModal
+                            cert={selectedCertificate}
+                            onClose={() => setSelectedTransactionId(null)}
+                        />
+                    )}
+                </>
+            )}
+
             <div className="bg-white rounded-lg shadow overflow-x-auto">
                 <table className="min-w-full border-collapse">
                     <thead className="bg-gray-100 text-left text-sm text-gray-700">
@@ -507,6 +552,7 @@ const TelemetryPage: React.FC = () => {
                             <th className="p-3">Interaction ID</th>
                             <th className="p-3">Duration (ms)</th>
                             <th className="p-3">Environment</th>
+                            <th className="p-3">Certificate</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -545,12 +591,25 @@ const TelemetryPage: React.FC = () => {
                                     </td>
                                     <td className="p-3">{Number(event.durationMs ?? 0)}</td>
                                     <td className="p-3">{formatEnvironment(event.environment)}</td>
+                                    <td className="p-3">
+                                        {event.requestId ? (
+                                            <button
+                                                type="button"
+                                                onClick={() => setSelectedTransactionId(event.requestId || null)}
+                                                className="rounded bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-200"
+                                            >
+                                                View Certificate
+                                            </button>
+                                        ) : (
+                                            '—'
+                                        )}
+                                    </td>
                                 </tr>
                             );
                         })}
                         {!sortedEvents.length && (
                             <tr>
-                                <td colSpan={9} className="p-4 text-center text-gray-500">
+                                <td colSpan={10} className="p-4 text-center text-gray-500">
                                     No telemetry events available.
                                 </td>
                             </tr>
