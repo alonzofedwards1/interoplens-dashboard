@@ -1,12 +1,4 @@
-interface CertificateDetails {
-    subject: string;
-    issuer: string;
-    thumbprint: string;
-    notBefore: string;
-    notAfter: string;
-    status: "Valid" | "Expiring Soon" | "Expired";
-    detectedVia: "Live Transaction" | "Trust Metadata";
-}
+import type { CertificateDetails } from '../../../types';
 
 interface Props {
     cert: CertificateDetails;

@@ -265,9 +265,9 @@ const TransactionDetailPage: React.FC = () => {
                             </thead>
                             <tbody>
                                 {pagedTelemetry.map(event => (
-                                    <tr key={event.eventId} className="border-t text-sm">
+                                    <tr key={event.id} className="border-t text-sm">
                                         <td className="p-3 font-mono text-xs text-gray-700">
-                                            {event.eventId}
+                                            {event.id}
                                         </td>
                                         <td className="p-3">
                                             {formatTimestamp(

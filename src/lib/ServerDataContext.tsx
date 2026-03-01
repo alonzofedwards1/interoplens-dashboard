@@ -1,7 +1,7 @@
 import React from 'react';
 import { Finding } from '../types/findings';
 import { PdExecution } from '../types/pdExecutions';
-import { TelemetryEvent } from '../types/telemetry';
+import type { MessageEvent } from '../types/messages';
 import { CommitteeQueueItem } from '../features/committee/data/committeeQueue.data';
 import { apiClient, ApiClient, IntegrationHealthResponse } from './apiClient';
 
@@ -9,7 +9,7 @@ interface ServerDataContextValue {
     findings: Finding[];
     pdExecutions: PdExecution[];
     committeeQueue: CommitteeQueueItem[];
-    telemetryEvents: TelemetryEvent[];
+    telemetryEvents: MessageEvent[];
 
     // ✅ Integration Health (REAL DATA)
     integrationHealth?: IntegrationHealthResponse;
@@ -114,7 +114,7 @@ export const ServerDataProvider: React.FC<{ children: React.ReactNode }> = ({
         findings: [] as Finding[],
         pdExecutions: [] as PdExecution[],
         committeeQueue: [] as CommitteeQueueItem[],
-        telemetryEvents: [] as TelemetryEvent[],
+        telemetryEvents: [] as MessageEvent[],
         integrationHealth: undefined as IntegrationHealthResponse | undefined,
         loading: true,
         error: undefined as string | undefined,

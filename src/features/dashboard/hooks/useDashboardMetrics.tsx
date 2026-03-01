@@ -9,7 +9,7 @@ import {
 
 import { Finding } from '../../../types/findings';
 import { PdExecution } from '../../../types/pdExecutions';
-import { TelemetryEvent } from '../../../types/telemetry';
+import type { MessageEvent } from '../../../types/messages';
 
 /* ============================
    Types
@@ -153,7 +153,7 @@ const buildInsightCards = (
     findingsMetrics: ReturnType<typeof deriveFindingsMetrics>,
     pdMetrics: ReturnType<typeof derivePdMetrics>,
     pdExecutions: PdExecution[],
-    telemetryEvents: TelemetryEvent[],
+    telemetryEvents: MessageEvent[],
     complianceStandard: ComplianceStandard
 ): InsightCard[] => {
     const complianceCategories: Record<ComplianceStandard, string[]> = {
@@ -257,7 +257,7 @@ const buildInsightCards = (
 const useDashboardMetrics = (
     findings: Finding[],
     pdExecutions: PdExecution[],
-    telemetryEvents: TelemetryEvent[],
+    telemetryEvents: MessageEvent[],
     complianceStandard: ComplianceStandard
 ) => {
     const findingsMetrics = React.useMemo(

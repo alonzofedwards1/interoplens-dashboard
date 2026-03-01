@@ -22,16 +22,10 @@ Build for production:
 npm run build
 ```
 
-## Environment Variables
+## API Routing
 
-Copy `.env.example` to `.env.development` (or your preferred env file) and set hosts for the APIs the dashboard should call. These variables are read at build time.
-
-```bash
-REACT_APP_API_BASE_URL=http://control.interop.100.48.218.100.nip.io \
-REACT_APP_TELEMETRY_BASE_URL=http://telemetry.interop.100.48.218.100.nip.io npm start
-```
-
-The telemetry page issues `GET /api/telemetry/events` to retrieve telemetry events and displays them as-is. No additional setup is required beyond exposing that endpoint on the backend.
+The frontend uses relative API paths (for example, `/api/findings` and `/api/telemetry/events`).
+When running in Docker, nginx proxies `/api` requests to the backend container.
 
 ## API types and contracts
 
