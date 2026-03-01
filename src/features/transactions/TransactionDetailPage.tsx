@@ -74,9 +74,7 @@ const TransactionDetailPage: React.FC = () => {
 
     const relatedFindings = useMemo(() => {
         if (!Array.isArray(findings)) return [];
-        return (findings as Finding[]).filter(
-            finding => finding.executionId && finding.executionId === id
-        );
+        return findings.filter(finding => finding.executionId === id);
     }, [findings, id]);
 
     const fetchTelemetryPage = useCallback(async () => {

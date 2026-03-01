@@ -37,8 +37,10 @@ const EMPTY_SERVER_DATA: ServerDataPayload = {
 const ServerDataContext =
     React.createContext<ServerDataContextType | undefined>(undefined);
 
-const fetchMessages = async (): Promise<MessageMonitorRow[]> => {
-    return fetchMessageEvents({ limit: 1000, offset: 0 });
+const MESSAGE_EVENTS_LIMIT = 100;
+
+const loadMessageRows = async (): Promise<MessageMonitorRow[]> => {
+    return fetchMessageEvents({ limit: MESSAGE_EVENTS_LIMIT, offset: 0 });
 };
 
 const formatReason = (reason: unknown): string =>
@@ -65,7 +67,7 @@ const loadFromApi = async (
         client.getFindings(),
         client.getPdExecutions(),
         client.getCommitteeQueue(),
-        fetchMessages(),
+        loadMessageRows(),
         client.getIntegrationHealth(),
     ]);
 
