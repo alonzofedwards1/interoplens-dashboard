@@ -6,7 +6,7 @@ import type { MessageEvent } from '../types/messages';
 import { PdExecution } from '../types/pdExecutions';
 import { apiClient, ApiClient, IntegrationHealthResponse } from './apiClient';
 
-interface ServerDataContextValue {
+interface ServerDataContextType {
     findings: Finding[];
     pdExecutions: PdExecution[];
     committeeQueue: CommitteeQueueItem[];
@@ -15,13 +15,12 @@ interface ServerDataContextValue {
     integrationHealth?: IntegrationHealthResponse;
 
     loading: boolean;
-    error?: string;
-    messagesWarning?: string;
+    error: string | null;
     refresh: () => Promise<void>;
 }
 
 const ServerDataContext =
-    React.createContext<ServerDataContextValue | undefined>(undefined);
+    React.createContext<ServerDataContextType | undefined>(undefined);
 
 const fetchMessages = async (): Promise<MessageEvent[]> => {
     const token = localStorage.getItem('authToken') ?? localStorage.getItem('token') ?? '';
@@ -83,13 +82,6 @@ const loadFromApi = async (client: ApiClient) => {
         );
     }
 
-    const messagesWarning =
-        messagesResult.status === 'rejected'
-            ? messagesResult.reason instanceof Error
-                ? messagesResult.reason.message
-                : String(messagesResult.reason)
-            : undefined;
-
     const errors = [findingsResult, pdExecutionsResult].filter(
         r => r.status === 'rejected'
     ) as PromiseRejectedResult[];
@@ -100,7 +92,6 @@ const loadFromApi = async (client: ApiClient) => {
         committeeQueue,
         messages,
         integrationHealth,
-        messagesWarning,
         error:
             errors.length > 0
                 ? errors
@@ -109,8 +100,8 @@ const loadFromApi = async (client: ApiClient) => {
                             ? e.reason.message
                             : String(e.reason)
                     )
-                    .join(' | ')
-                : undefined,
+                .join(' | ')
+                : null,
     };
 };
 
@@ -124,13 +115,23 @@ export const ServerDataProvider: React.FC<{ children: React.ReactNode }> = ({
         messages: [] as MessageEvent[],
         integrationHealth: undefined as IntegrationHealthResponse | undefined,
         loading: true,
-        error: undefined as string | undefined,
-        messagesWarning: undefined as string | undefined,
+        error: null as string | null,
     });
 
     const refresh = React.useCallback(async () => {
-        const data = await loadFromApi(apiClient);
-        setState({ ...data, loading: false });
+        setState(prev => ({ ...prev, loading: true, error: null }));
+
+        try {
+            const data = await loadFromApi(apiClient);
+            setState(prev => ({ ...prev, ...data }));
+        } catch (error) {
+            setState(prev => ({
+                ...prev,
+                error: error instanceof Error ? error.message : String(error),
+            }));
+        } finally {
+            setState(prev => ({ ...prev, loading: false }));
+        }
     }, []);
 
     React.useEffect(() => {
