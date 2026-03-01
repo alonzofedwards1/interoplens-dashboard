@@ -2,9 +2,9 @@ import { CommitteeQueueItem } from '../features/committee/data/committeeQueue.da
 import { FindingsCountResponse, FindingsListResponse } from '../types/findings';
 import type { Oid } from '../types';
 import { PdExecutionCounts, PdExecutionsResponse } from '../types/pdExecutions';
-import { TelemetryEvent } from '../types/telemetry';
+import type { MessageEvent } from '../types/messages';
 import { requestJson } from './api/request';
-import { fetchTelemetryEvents } from './telemetryClient';
+import { fetchMessageEvents } from './telemetryClient';
 
 export async function apiGet<T>(url: string): Promise<T> {
     return requestJson<T>(url);
@@ -54,8 +54,8 @@ export class ApiClient {
         return apiGet('/api/committee-queue');
     }
 
-    async getTelemetryEvents(): Promise<TelemetryEvent[]> {
-        return fetchTelemetryEvents();
+    async getTelemetryEvents(): Promise<MessageEvent[]> {
+        return fetchMessageEvents();
     }
 
     async getOids(): Promise<Oid[]> {
