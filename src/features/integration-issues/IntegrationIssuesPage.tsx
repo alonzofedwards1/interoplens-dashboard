@@ -1,4 +1,4 @@
-import {useState} from "react";
+import {useMemo, useState} from "react";
 import {useNavigate} from "react-router-dom";
 
 import ExecutiveSummary from "./tabs/ExecutiveSummary";
@@ -7,6 +7,7 @@ import TechnicalLogs from "./tabs/TechnicalLogs";
 
 import {UserRole} from "../../types/auth";
 import {useServerData} from '../../lib/ServerDataContext';
+import { deriveCertificateHealth } from './utils/certificateHealth';
 
 /* ============================
    Types
@@ -34,13 +35,11 @@ const IntegrationIssuesPage: React.FC<Props> = ({role}) => {
 
     const canViewLogs = role === "admin" || role === "analyst";
 
-    // ✅ THIS IS CORRECT
-    const {integrationHealth, loading} = useServerData();
+    const {integrationHealth, loading, messages} = useServerData();
 
-    console.log(
-        '[IntegrationIssuesPage] integrationHealth',
-        integrationHealth
-    );
+    const fallbackCertificateHealth = useMemo(() => deriveCertificateHealth(messages), [messages]);
+
+    const certificateHealth = integrationHealth?.certificateHealth ?? fallbackCertificateHealth;
 
     return (
         <div className="p-6 space-y-6">
@@ -88,17 +87,16 @@ const IntegrationIssuesPage: React.FC<Props> = ({role}) => {
             <div>
                 {activeTab === "summary" && (
                     <ExecutiveSummary
-                        data={integrationHealth?.certificateHealth}
+                        data={certificateHealth}
                         errorMessage={
                             loading
                                 ? null
-                                : integrationHealth
+                                : certificateHealth
                                     ? null
                                     : "Integration health data unavailable"
                         }
                         impactedLink="/organizations"
                         onViewDetails={() => {
-                            // later this can navigate to Findings filtered by CERT
                             navigate('/findings?category=certificate');
                         }}
                     />
