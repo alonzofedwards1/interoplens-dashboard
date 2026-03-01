@@ -14,6 +14,8 @@ import { useUserPreferences } from '../../lib/useUserPreferences';
 import { formatTimestamp } from '../../lib/dateTime';
 import { fetchMessageMonitor } from '../../lib/telemetryClient';
 import type { MessageMonitorRow } from '../../types/messages';
+import { Finding } from '../../types/findings';
+import { buildCertificateFindingCopy } from '../../lib/certificates';
 
 const tablePageSize = 10;
 const certificateScanBatchSize = 100;
@@ -219,7 +221,7 @@ const TransactionDetailPage: React.FC = () => {
                     <div>
                         <dt className="text-gray-500">Transaction ID</dt>
                         <dd className="font-mono text-xs">
-                            <TransactionLink id={id} />
+                            <TransactionLink id={id ?? ''} />
                         </dd>
                     </div>
                     <div>

@@ -37,12 +37,16 @@ const EMPTY_SERVER_DATA: ServerDataPayload = {
 const ServerDataContext =
     React.createContext<ServerDataContextType | undefined>(undefined);
 
-const fetchMessages = async (): Promise<MessageMonitorRow[]> => {
-    return fetchMessageEvents({ limit: 1000, offset: 0 });
-};
-
 const formatReason = (reason: unknown): string =>
     reason instanceof Error ? reason.message : String(reason);
+
+/**
+ * SAFE MESSAGE FETCH
+ * Backend allows max limit = 100
+ */
+const fetchMessages = async (): Promise<MessageMonitorRow[]> => {
+    return fetchMessageEvents({ limit: 100, offset: 0 });
+};
 
 const loadFromApi = async (
     client: ApiClient
@@ -67,7 +71,10 @@ const loadFromApi = async (
 
     return {
         data: {
-            findings: findingsResult.status === 'fulfilled' ? findingsResult.value : [],
+            findings:
+                findingsResult.status === 'fulfilled'
+                    ? findingsResult.value
+                    : [],
             pdExecutions:
                 pdExecutionsResult.status === 'fulfilled'
                     ? pdExecutionsResult.value
@@ -76,7 +83,10 @@ const loadFromApi = async (
                 committeeQueueResult.status === 'fulfilled'
                     ? committeeQueueResult.value
                     : [],
-            messages: messagesResult.status === 'fulfilled' ? messagesResult.value : [],
+            messages:
+                messagesResult.status === 'fulfilled'
+                    ? messagesResult.value
+                    : [],
             integrationHealth:
                 integrationHealthResult.status === 'fulfilled'
                     ? integrationHealthResult.value
@@ -84,15 +94,18 @@ const loadFromApi = async (
         },
         error:
             errorSources.length > 0
-                ? errorSources.map(result => formatReason(result.reason)).join(' | ')
+                ? errorSources
+                    .map(result => formatReason(result.reason))
+                    .join(' | ')
                 : null,
     };
 };
 
-export const ServerDataProvider: React.FC<{ children: React.ReactNode }> = ({
-    children,
-}) => {
-    const [data, setData] = React.useState<ServerDataPayload>(EMPTY_SERVER_DATA);
+export const ServerDataProvider: React.FC<{
+    children: React.ReactNode;
+}> = ({ children }) => {
+    const [data, setData] =
+        React.useState<ServerDataPayload>(EMPTY_SERVER_DATA);
     const [loading, setLoading] = React.useState(true);
     const [error, setError] = React.useState<string | null>(null);
 
@@ -116,19 +129,28 @@ export const ServerDataProvider: React.FC<{ children: React.ReactNode }> = ({
     }, [refresh]);
 
     const value = React.useMemo(
-        () => ({ ...data, loading, error, refresh }),
+        () => ({
+            ...data,
+            loading,
+            error,
+            refresh,
+        }),
         [data, loading, error, refresh]
     );
 
     return (
-        <ServerDataContext.Provider value={value}>{children}</ServerDataContext.Provider>
+        <ServerDataContext.Provider value={value}>
+            {children}
+        </ServerDataContext.Provider>
     );
 };
 
 export const useServerData = () => {
     const ctx = React.useContext(ServerDataContext);
     if (!ctx) {
-        throw new Error('useServerData must be used within a ServerDataProvider');
+        throw new Error(
+            'useServerData must be used within a ServerDataProvider'
+        );
     }
     return ctx;
 };
