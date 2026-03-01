@@ -1,4 +1,8 @@
-import type { MessageMonitorResponse, MessageMonitorRow } from '../types/messages';
+import type {
+    CertificateStatus,
+    MessageMonitorResponse,
+    MessageMonitorRow,
+} from '../types/messages';
 
 export type MessageFilterParams = {
     startTime?: string;
@@ -20,15 +24,113 @@ const getAuthToken = () => {
 const isRecord = (value: unknown): value is Record<string, unknown> =>
     typeof value === 'object' && value !== null;
 
-const isMessageMonitorRow = (value: unknown): value is MessageMonitorRow => {
-    if (!isRecord(value)) return false;
+const toStringOrNull = (value: unknown): string | null => {
+    if (typeof value === 'string') {
+        const normalized = value.trim();
+        return normalized.length ? normalized : null;
+    }
 
-    return (
-        typeof value.transaction_id === 'string' &&
-        typeof value.channel === 'string' &&
-        typeof value.response_status === 'string' &&
-        typeof value.transport_timestamp === 'string'
-    );
+    if (value === null || value === undefined) {
+        return null;
+    }
+
+    return String(value);
+};
+
+const toRequiredString = (value: unknown): string => {
+    if (typeof value === 'string') {
+        return value;
+    }
+    if (value === null || value === undefined) {
+        return '';
+    }
+    return String(value);
+};
+
+const toNumberOrNull = (value: unknown): number | null => {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+        return value;
+    }
+
+    if (typeof value === 'string' && value.trim().length) {
+        const parsed = Number(value);
+        return Number.isFinite(parsed) ? parsed : null;
+    }
+
+    return null;
+};
+
+const toBooleanOrNull = (value: unknown): boolean | null => {
+    if (typeof value === 'boolean') {
+        return value;
+    }
+
+    if (typeof value === 'string') {
+        const normalized = value.trim().toLowerCase();
+        if (normalized === 'true') return true;
+        if (normalized === 'false') return false;
+    }
+
+    return null;
+};
+
+const toCertificateStatusOrNull = (value: unknown): CertificateStatus | null => {
+    if (value === 'Valid' || value === 'Expired' || value === 'Expiring Soon') {
+        return value;
+    }
+
+    return null;
+};
+
+const normalizeMessageMonitorRow = (value: unknown): MessageMonitorRow | null => {
+    if (!isRecord(value)) {
+        return null;
+    }
+
+    const transactionId = toStringOrNull(value.transaction_id);
+
+    if (!transactionId) {
+        return null;
+    }
+
+    return {
+        transaction_id: transactionId,
+        channel: toRequiredString(value.channel),
+        response_status: toRequiredString(value.response_status),
+        transport_timestamp: toRequiredString(value.transport_timestamp),
+        endpoint_id: toStringOrNull(value.endpoint_id),
+        host: toStringOrNull(value.host),
+        port: toNumberOrNull(value.port),
+        scheme: toStringOrNull(value.scheme),
+        cert_id: toStringOrNull(value.cert_id),
+        subject_cn: toStringOrNull(value.subject_cn),
+        issuer_cn: toStringOrNull(value.issuer_cn),
+        fingerprint_sha1: toStringOrNull(value.fingerprint_sha1),
+        not_before: toStringOrNull(value.not_before),
+        not_after: toStringOrNull(value.not_after),
+        first_seen_at: toStringOrNull(value.first_seen_at),
+        last_seen_at: toStringOrNull(value.last_seen_at),
+        is_self_signed: toBooleanOrNull(value.is_self_signed),
+        days_until_expiration: toNumberOrNull(value.days_until_expiration),
+        certificate_status: toCertificateStatusOrNull(value.certificate_status),
+        cert_age_years: toNumberOrNull(value.cert_age_years),
+        detected_via: toStringOrNull(value.detected_via),
+    };
+};
+
+const toPaginationNumber = (value: unknown): number => {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+        return value;
+    }
+
+    if (typeof value === 'string' && value.trim().length) {
+        const parsed = Number(value);
+        if (Number.isFinite(parsed)) {
+            return parsed;
+        }
+    }
+
+    return 0;
 };
 
 const parseMessageMonitorResponse = (value: unknown): MessageMonitorResponse => {
@@ -36,26 +138,14 @@ const parseMessageMonitorResponse = (value: unknown): MessageMonitorResponse => 
         throw new Error('Unexpected message monitor response format');
     }
 
-    if (!value.data.every(isMessageMonitorRow)) {
-        throw new Error('Unexpected message monitor row format');
-    }
-
-    const { total, limit, offset } = value.pagination;
-
-    if (
-        typeof total !== 'number' ||
-        typeof limit !== 'number' ||
-        typeof offset !== 'number'
-    ) {
-        throw new Error('Unexpected message monitor pagination format');
-    }
-
     return {
-        data: value.data,
+        data: value.data
+            .map(normalizeMessageMonitorRow)
+            .filter((row): row is MessageMonitorRow => row !== null),
         pagination: {
-            total,
-            limit,
-            offset,
+            total: toPaginationNumber(value.pagination.total),
+            limit: toPaginationNumber(value.pagination.limit),
+            offset: toPaginationNumber(value.pagination.offset),
         },
     };
 };
