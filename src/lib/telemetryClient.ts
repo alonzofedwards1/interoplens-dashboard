@@ -1,4 +1,3 @@
-import { TELEMETRY_BASE_URL } from '../config/api';
 import { TelemetryEvent } from '../telemetry/TelemetryEvent';
 import { safeJson } from './api/utils';
 
@@ -58,7 +57,7 @@ export async function fetchTelemetryEvents(
     if (filters?.transactionType) params.set('transactionType', filters.transactionType);
 
     const query = params.toString();
-    const url = `${TELEMETRY_BASE_URL}/api/telemetry/events${query ? `?${query}` : ''}`;
+    const url = `/api/telemetry/events${query ? `?${query}` : ''}`;
     const res = await fetch(url, {
         credentials: 'include',
     });

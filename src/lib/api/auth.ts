@@ -1,4 +1,3 @@
-import { API_BASE_URL } from '../../config/api';
 import { safeJson } from './utils';
 import { requestOk } from './request';
 
@@ -6,14 +5,8 @@ export type User = {
     userId: number;
 };
 
-const resolveAuthUrl = (url: string) => {
-    if (url.startsWith('http')) return url;
-    if (url.startsWith('/')) return `${API_BASE_URL}${url}`;
-    return `${API_BASE_URL}/${url}`;
-};
-
 export async function authFetch(url: string, options: RequestInit = {}) {
-    return fetch(resolveAuthUrl(url), {
+    return fetch(url, {
         ...options,
         credentials: 'include',
         headers: {

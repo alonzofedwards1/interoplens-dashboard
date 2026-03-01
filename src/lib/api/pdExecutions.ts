@@ -1,8 +1,7 @@
-import { API_BASE_URL } from '../../config/api';
 import { authFetch } from './auth';
 import { safeJson } from './utils';
 
-const BASE = `${API_BASE_URL}/api/pd-executions`;
+const BASE = '/api/pd-executions';
 
 export async function fetchPdExecutionTelemetry(executionId: string): Promise<unknown[]> {
     const res = await authFetch(`${BASE}/${encodeURIComponent(executionId)}/telemetry`);
