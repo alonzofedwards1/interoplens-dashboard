@@ -6,7 +6,6 @@ import { TransactionLink } from '../../components/TransactionLink';
 import Pagination from '../../components/Pagination';
 import BackButton from '../../components/navigation/BackButton';
 import {
-    buildCertificateFindingCopy,
     getCertificateStatusBadge,
     getCertificateStatusDescription,
 } from '../../lib/certificates';
@@ -200,37 +199,34 @@ const TransactionDetailPage: React.FC = () => {
                     className="text-gray-600 hover:text-gray-900"
                 />
                 <div>
-                    <h1 className="text-2xl font-semibold">Transaction Detail</h1>
-                    <p className="text-gray-600">Trace PD execution, findings, and telemetry</p>
+                    <h1 className="text-2xl font-semibold">
+                        Transaction Detail
+                    </h1>
+                    <p className="text-gray-600">
+                        Trace PD execution and telemetry
+                    </p>
                 </div>
             </div>
 
-            <div className="mb-6 rounded-lg border bg-white p-4 shadow-sm">
-                <div className="flex items-center justify-between">
-                    <h2 className="text-lg font-semibold">Transaction Overview</h2>
-                    <span className="inline-flex items-center gap-1 rounded bg-blue-100 px-2 py-0.5 text-xs text-blue-700">
-                        🔗 Traceable
-                    </span>
-                </div>
+            <div className="rounded-lg border bg-white p-4 shadow-sm">
+                <h2 className="text-lg font-semibold mb-4">
+                    Transaction Overview
+                </h2>
 
-                <dl className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <dl className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                     <div>
                         <dt className="text-gray-500">Transaction ID</dt>
                         <dd className="font-mono text-xs">
-                            {id ? <TransactionLink id={id} /> : '—'}
+                            <TransactionLink id={id ?? ''} />
                         </dd>
                     </div>
                     <div>
-                        <dt className="text-gray-500">Transaction Type</dt>
-                        <dd>Patient Discovery</dd>
-                    </div>
-                    <div>
                         <dt className="text-gray-500">Outcome</dt>
-                        <dd>{transaction?.outcome ?? '—'}</dd>
+                        <dd>{transaction?.outcome ?? 'Not reported'}</dd>
                     </div>
                     <div>
                         <dt className="text-gray-500">Environment</dt>
-                        <dd>{transaction?.sourceEnvironment ?? '—'}</dd>
+                        <dd>{transaction?.sourceEnvironment ?? 'Not reported'}</dd>
                     </div>
                 </dl>
             </div>
@@ -479,6 +475,7 @@ const TransactionDetailPage: React.FC = () => {
                         </table>
                     </div>
                 )}
+
                 <Pagination
                     page={page}
                     totalPages={totalPages}
