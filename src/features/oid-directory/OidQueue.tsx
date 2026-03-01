@@ -194,7 +194,7 @@ const OidQueue = () => {
                             <tr
                                 key={oid.oid}
                                 className="border-t cursor-pointer hover:bg-gray-50"
-                                onClick={() => navigate(`/oids/${encodeURIComponent(oid.oid)}`, { state: { from: location.pathname } })}
+                                onClick={() => navigate(`/oids/${encodeURIComponent(oid.oid)}`, { state: { from: `${location.pathname}${location.search}${location.hash}` } })}
                             >
                                 <td className="p-3 font-mono">{oid.oid}</td>
                                 <td className="p-3 text-gray-700">{oid.displayName}</td>

@@ -6,7 +6,7 @@ export const TransactionLink = ({ id }: { id: string }) => {
     return (
         <Link
             to={`/transactions/${id}`}
-            state={{ from: location.pathname }}
+            state={{ from: `${location.pathname}${location.search}${location.hash}` }}
             className="text-blue-600 hover:text-blue-800 underline underline-offset-2 font-mono"
         >
             {id}

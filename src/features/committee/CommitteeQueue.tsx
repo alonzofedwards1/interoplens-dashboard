@@ -154,7 +154,7 @@ const CommitteeQueue: React.FC = () => {
                             <td className="px-4 py-3">{item.decisionTarget}</td>
                             <td className="px-4 py-3 text-right">
                                 <button
-                                    onClick={() => navigate(`/committee/${item.id}`, { state: { from: location.pathname } })}
+                                    onClick={() => navigate(`/committee/${item.id}`, { state: { from: `${location.pathname}${location.search}${location.hash}` } })}
                                     className="text-blue-600 hover:underline font-medium"
                                 >
                                     Open Case →

@@ -30,15 +30,18 @@ const mapStatusToCertificateStatus = (
     return undefined;
 };
 
-const hasCertificateData = (row: MessageMonitorRow): boolean =>
-    row.cert_id !== null ||
-    row.fingerprint_sha1 !== null ||
-    row.certificate_status !== null ||
-    row.subject_cn !== null ||
-    row.issuer_cn !== null ||
-    row.days_until_expiration !== null ||
-    row.is_self_signed !== null ||
-    row.detected_via !== null;
+const hasCertificateData = (row: MessageMonitorRow): boolean => {
+    return (
+        row.cert_id !== null ||
+        row.fingerprint_sha1 !== null ||
+        row.certificate_status !== null ||
+        row.subject_cn !== null ||
+        row.issuer_cn !== null ||
+        row.days_until_expiration !== null ||
+        row.is_self_signed !== null ||
+        row.detected_via !== null
+    );
+};
 
 const getRowTime = (row: MessageMonitorRow): number => {
     const time = new Date(row.transport_timestamp).getTime();
@@ -62,10 +65,10 @@ const TransactionDetailPage: React.FC = () => {
     const [telemetryTotal, setTelemetryTotal] = useState(0);
     const [telemetryLoading, setTelemetryLoading] = useState(false);
     const [telemetryError, setTelemetryError] = useState<string | null>(null);
+
     const [latestCertificateEvent, setLatestCertificateEvent] =
         useState<MessageMonitorRow | null>(null);
 
-    // PD execution is optional now
     const transaction = useMemo(() => {
         if (!Array.isArray(pdExecutions)) return undefined;
         return pdExecutions.find(exec => exec.requestId === id);
@@ -79,7 +82,11 @@ const TransactionDetailPage: React.FC = () => {
     }, [findings, id]);
 
     const fetchTelemetryPage = useCallback(async () => {
-        if (!id) return;
+        if (!id) {
+            setTelemetryRows([]);
+            setTelemetryTotal(0);
+            return;
+        }
 
         setTelemetryLoading(true);
         setTelemetryError(null);
@@ -91,9 +98,79 @@ const TransactionDetailPage: React.FC = () => {
                 offset: (page - 1) * tablePageSize,
             });
 
-            const exactRows = response.data.filter(
-                row => row.transaction_id === id
+            const exactRows = response.data.filter(row => row.transaction_id === id);
+            setTelemetryRows(exactRows);
+            setTelemetryTotal(
+                response.pagination.total > 0
+                    ? response.pagination.total
+                    : exactRows.length
             );
+        } catch (error) {
+            console.error('Telemetry page fetch failed', error);
+            setTelemetryError(
+                error instanceof Error ? error.message : 'Failed to load telemetry events'
+            );
+            setTelemetryRows([]);
+            setTelemetryTotal(0);
+        } finally {
+            setTelemetryLoading(false);
+        }
+    }, [id, page]);
+
+    const fetchCertificateTelemetry = useCallback(async () => {
+        if (!id) {
+            setLatestCertificateEvent(null);
+            return;
+        }
+
+        try {
+            let offset = 0;
+            let total = 0;
+            let pageCount = 0;
+            const allRows: MessageMonitorRow[] = [];
+
+            do {
+                const response = await fetchMessageMonitor({
+                    search: id,
+                    limit: certificateScanBatchSize,
+                    offset,
+                });
+
+                const exactRows = response.data.filter(row => row.transaction_id === id);
+                allRows.push(...exactRows);
+
+                total = response.pagination.total;
+                const step =
+                    response.pagination.limit > 0
+                        ? response.pagination.limit
+                        : response.data.length > 0
+                            ? response.data.length
+                            : certificateScanBatchSize;
+
+                offset += Math.max(1, step);
+                pageCount += 1;
+            } while (offset < total && pageCount < maxCertificateFetchPages);
+
+            const latestCert = allRows
+                .filter(hasCertificateData)
+                .sort((a, b) => getRowTime(b) - getRowTime(a))[0] ?? null;
+
+            setLatestCertificateEvent(latestCert);
+        } catch (error) {
+            console.error('Certificate telemetry fetch failed', error);
+            setLatestCertificateEvent(null);
+        }
+    }, [id]);
+
+    useEffect(() => {
+        void fetchTelemetryPage();
+    }, [fetchTelemetryPage]);
+
+    useEffect(() => {
+        void fetchCertificateTelemetry();
+    }, [fetchCertificateTelemetry]);
+
+    const totalPages = Math.max(1, Math.ceil(telemetryTotal / tablePageSize));
 
             setTelemetryRows(exactRows);
             setTelemetryTotal(
@@ -177,20 +254,30 @@ const TransactionDetailPage: React.FC = () => {
     const certificateDescription =
         getCertificateStatusDescription(certificateStatus);
 
-    if (!id) {
-        return (
-            <div className="p-6">
-                <h1 className="text-xl font-semibold text-red-600">
-                    Invalid transaction route
-                </h1>
-            </div>
-        );
-    }
+    useEffect(() => {
+        setPage(1);
+    }, [id]);
+
+    const certificateStatus = mapStatusToCertificateStatus(
+        latestCertificateEvent?.certificate_status ?? null
+    );
+
+    const certificateBadge = getCertificateStatusBadge(certificateStatus);
+    const certificateDescription = getCertificateStatusDescription(certificateStatus);
+
+    const certificateThumbprint =
+        latestCertificateEvent?.fingerprint_sha1 ?? latestCertificateEvent?.cert_id;
+
+    const isSelfSigned = latestCertificateEvent?.is_self_signed;
 
     return (
         <div className="p-6 space-y-6">
             <div className="flex items-center space-x-4">
-                <BackButton defaultRoute="/pd-executions" />
+                <BackButton
+                    defaultRoute="/pd-executions"
+                    label=""
+                    className="text-gray-600 hover:text-gray-900"
+                />
                 <div>
                     <h1 className="text-2xl font-semibold">
                         Transaction Detail
@@ -238,16 +325,65 @@ const TransactionDetailPage: React.FC = () => {
                     </span>
                 </div>
 
-                <div className="rounded-lg border bg-white p-4 shadow-sm text-sm">
-                    {latestCertificateEvent ? (
-                        <p className="text-gray-600">
-                            {certificateDescription}
-                        </p>
-                    ) : (
-                        <p className="text-gray-500">
-                            No certificate data reported for this transaction.
-                        </p>
-                    )}
+                <div className="rounded-lg border bg-white p-4 shadow-sm space-y-3 text-sm">
+                    <p className="text-gray-600">
+                        {latestCertificateEvent
+                            ? certificateDescription
+                            : 'Certificate data was not reported in message monitor telemetry for this transaction.'}
+                    </p>
+
+                    <dl className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <dt className="text-gray-500">Certificate Status</dt>
+                            <dd className="font-medium">
+                                {latestCertificateEvent?.certificate_status ?? '—'}
+                            </dd>
+                        </div>
+                        <div>
+                            <dt className="text-gray-500">Certificate Thumbprint</dt>
+                            <dd className="font-mono text-xs break-all">
+                                {certificateThumbprint ?? 'Not reported'}
+                            </dd>
+                        </div>
+                        <div>
+                            <dt className="text-gray-500">Subject CN</dt>
+                            <dd>{latestCertificateEvent?.subject_cn ?? 'Not reported'}</dd>
+                        </div>
+                        <div>
+                            <dt className="text-gray-500">Issuer CN</dt>
+                            <dd>{latestCertificateEvent?.issuer_cn ?? 'Not reported'}</dd>
+                        </div>
+                        <div>
+                            <dt className="text-gray-500">Days Until Expiration</dt>
+                            <dd
+                                className={getDaysToExpirationClassName(
+                                    latestCertificateEvent?.days_until_expiration ?? null
+                                )}
+                            >
+                                {latestCertificateEvent?.days_until_expiration ?? 'Not reported'}
+                            </dd>
+                        </div>
+                        <div>
+                            <dt className="text-gray-500">Detection Source</dt>
+                            <dd>{latestCertificateEvent?.detected_via ?? 'Not reported'}</dd>
+                        </div>
+                        <div>
+                            <dt className="text-gray-500">Self-signed</dt>
+                            <dd
+                                className={
+                                    isSelfSigned
+                                        ? 'font-semibold text-yellow-700'
+                                        : 'text-gray-800'
+                                }
+                            >
+                                {isSelfSigned === null || isSelfSigned === undefined
+                                    ? 'Not reported'
+                                    : isSelfSigned
+                                        ? 'Yes (self-signed certificate)'
+                                        : 'No'}
+                            </dd>
+                        </div>
+                    </dl>
                 </div>
             </section>
 
@@ -261,48 +397,82 @@ const TransactionDetailPage: React.FC = () => {
                     </div>
                 )}
 
+                <div className="mb-3 rounded-md bg-gray-50 p-3 text-sm text-gray-700">
+                    These telemetry events are associated with transaction{' '}
+                    <span className="font-mono font-medium">{id ?? '—'}</span>
+                </div>
+
+                {telemetryError && (
+                    <div className="rounded border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                        {telemetryError}
+                    </div>
+                )}
+
                 {telemetryLoading ? (
-                    <div className="text-gray-500">
+                    <div className="rounded border border-dashed p-6 text-center text-gray-500">
                         Loading telemetry events...
                     </div>
                 ) : !telemetryRows.length ? (
-                    <div className="text-gray-500">
-                        No telemetry events found for this transaction.
+                    <div className="rounded border border-dashed p-6 text-center text-gray-500">
+                        No telemetry events detected for this transaction.
                     </div>
                 ) : (
                     <div className="bg-white rounded-lg shadow overflow-x-auto">
                         <table className="min-w-full border-collapse">
-                            <thead className="bg-gray-100 text-sm">
-                            <tr>
-                                <th className="p-3">Timestamp</th>
-                                <th className="p-3">Response</th>
-                                <th className="p-3">Channel</th>
-                                <th className="p-3">Host</th>
-                            </tr>
+                            <thead className="bg-gray-100 text-left text-sm text-gray-700">
+                                <tr>
+                                    <th className="p-3">Transaction ID</th>
+                                    <th className="p-3">Timestamp</th>
+                                    <th className="p-3">Response Status</th>
+                                    <th className="p-3">Channel</th>
+                                    <th className="p-3">Host</th>
+                                    <th className="p-3">Certificate Status</th>
+                                    <th className="p-3">Days until expiration</th>
+                                </tr>
                             </thead>
                             <tbody>
-                            {telemetryRows.map(event => (
-                                <tr
-                                    key={`${event.transaction_id}-${event.transport_timestamp}`}
-                                    className="border-t text-sm"
-                                >
-                                    <td className="p-3">
-                                        {formatTimestamp(
-                                            event.transport_timestamp,
-                                            preferences.timezone
-                                        )}
-                                    </td>
-                                    <td className="p-3">
-                                        {event.response_status}
-                                    </td>
-                                    <td className="p-3">
-                                        {event.channel}
-                                    </td>
-                                    <td className="p-3">
-                                        {event.host ?? '—'}
-                                    </td>
-                                </tr>
-                            ))}
+                                {telemetryRows.map(event => {
+                                    const rowBadge = getCertificateStatusBadge(
+                                        mapStatusToCertificateStatus(event.certificate_status)
+                                    );
+
+                                    return (
+                                        <tr
+                                            key={`${event.transaction_id}-${event.transport_timestamp}-${event.cert_id ?? 'no-cert'}`}
+                                            className="border-t text-sm"
+                                        >
+                                            <td className="p-3 font-mono text-xs text-gray-700">
+                                                {event.transaction_id}
+                                            </td>
+                                            <td className="p-3">
+                                                {formatTimestamp(
+                                                    event.transport_timestamp,
+                                                    preferences.timezone
+                                                )}
+                                            </td>
+                                            <td className="p-3">{event.response_status}</td>
+                                            <td className="p-3">{event.channel}</td>
+                                            <td className="p-3">{event.host ?? '—'}</td>
+                                            <td className="p-3">
+                                                <span
+                                                    className={`inline-flex items-center rounded px-2 py-1 text-xs ${rowBadge.className}`}
+                                                >
+                                                    <span aria-hidden="true" className="mr-1">
+                                                        {rowBadge.icon}
+                                                    </span>
+                                                    {event.certificate_status ?? '—'}
+                                                </span>
+                                            </td>
+                                            <td
+                                                className={`p-3 ${getDaysToExpirationClassName(
+                                                    event.days_until_expiration
+                                                )}`}
+                                            >
+                                                {event.days_until_expiration ?? '—'}
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
                             </tbody>
                         </table>
                     </div>
