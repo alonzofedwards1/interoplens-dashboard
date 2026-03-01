@@ -1,4 +1,4 @@
-export type CertificateStatus = 'Valid' | 'Expired' | 'Expiring Soon';
+import type { CertificateStatus } from './certificates';
 
 export interface MessageMonitorRow {
     transaction_id: string;

@@ -10,8 +10,8 @@ import {
     buildCertificateFindingCopy,
     getCertificateStatusBadge,
     getCertificateStatusDescription,
-    type CertificateStatus,
 } from '../../lib/certificates';
+import type { CertificateStatus } from '../../types/certificates';
 import { useUserPreferences } from '../../lib/useUserPreferences';
 import { formatTimestamp } from '../../lib/dateTime';
 import { fetchMessageMonitor } from '../../lib/telemetryClient';
@@ -23,9 +23,9 @@ const certificateScanBatchSize = 100;
 const mapStatusToCertificateStatus = (
     status: MessageMonitorRow['certificate_status']
 ): CertificateStatus | undefined => {
-    if (status === 'Valid') return 'VALID';
-    if (status === 'Expired') return 'EXPIRED';
-    if (status === 'Expiring Soon') return 'EXPIRING_SOON';
+    if (status === 'Valid') return 'Valid';
+    if (status === 'Expired') return 'Expired';
+    if (status === 'Expiring Soon') return 'Expiring Soon';
     return undefined;
 };
 

@@ -1,8 +1,5 @@
-import type {
-    CertificateStatus,
-    MessageMonitorResponse,
-    MessageMonitorRow,
-} from '../types/messages';
+import type { MessageMonitorResponse, MessageMonitorRow } from '../types/messages';
+import type { CertificateStatus } from '../types/certificates';
 
 export type MessageFilterParams = {
     startTime?: string;

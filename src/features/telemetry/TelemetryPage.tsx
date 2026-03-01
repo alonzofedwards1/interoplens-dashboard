@@ -1,13 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import CertInspectorModal from '../integration-issues/modals/CertInspectorModal';
-import { useCertificateDetails } from '../../hooks/useCertificateDetails';
 import { useNavigate } from 'react-router-dom';
 import { FaArrowLeft } from 'react-icons/fa';
 
-import type { CertificateStatus, MessageMonitorRow } from '../../types/messages';
+import type { MessageMonitorRow } from '../../types/messages';
+import type { CertificateStatus, CertificateDetails } from '../../types/certificates';
 import { fetchMessageMonitor, MessageFilterParams } from '../../lib/telemetryClient';
 import { TransactionLink } from '../../components/TransactionLink';
 import Pagination from '../../components/Pagination';
+import { mapRowToCertificateDetails } from '../messageMonitor/mappers/mapCertificate';
 
 const formatCertificateStatus = (status: CertificateStatus | null) => {
     if (status === 'Valid') {
@@ -55,7 +56,8 @@ const TelemetryPage: React.FC = () => {
 
     const [search, setSearch] = useState('');
     const [page, setPage] = useState(1);
-    const [selectedTransactionId, setSelectedTransactionId] = useState<string | null>(null);
+    // UI modal boundary: keep modal state in CertificateDetails, never MessageMonitorRow.
+    const [selectedCert, setSelectedCert] = useState<CertificateDetails | null>(null);
     const pageSize = 25;
 
     const filterParams = useMemo<MessageFilterParams>(() => {
@@ -150,13 +152,6 @@ const TelemetryPage: React.FC = () => {
         };
     }, [messageEvents, totalRows]);
 
-    const {
-        data: certificateData,
-        loading: certificateLoading,
-        error: certificateError,
-    } = useCertificateDetails(selectedTransactionId);
-
-    const selectedCertificate = certificateData ?? undefined;
 
     if (loading) {
         return (
@@ -295,40 +290,11 @@ const TelemetryPage: React.FC = () => {
                 </div>
             </div>
 
-            {selectedTransactionId && (
-                <>
-                    {certificateLoading && (
-                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-                            <div className="rounded bg-white px-4 py-3 text-sm text-gray-700 shadow">
-                                Loading certificate details...
-                            </div>
-                        </div>
-                    )}
-
-                    {!certificateLoading && certificateError && (
-                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-                            <div className="w-full max-w-md rounded bg-white p-4 shadow">
-                                <p className="text-sm text-red-600">{certificateError}</p>
-                                <div className="mt-4 text-right">
-                                    <button
-                                        type="button"
-                                        onClick={() => setSelectedTransactionId(null)}
-                                        className="rounded bg-slate-100 px-3 py-1 text-sm hover:bg-slate-200"
-                                    >
-                                        Close
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {!certificateLoading && !certificateError && selectedCertificate && (
-                        <CertInspectorModal
-                            cert={selectedCertificate}
-                            onClose={() => setSelectedTransactionId(null)}
-                        />
-                    )}
-                </>
+            {selectedCert && (
+                <CertInspectorModal
+                    cert={selectedCert}
+                    onClose={() => setSelectedCert(null)}
+                />
             )}
 
             <div className="bg-white rounded-lg shadow overflow-x-auto">
@@ -355,7 +321,7 @@ const TelemetryPage: React.FC = () => {
                             <tr
                                 key={`${event.transaction_id}-${event.transport_timestamp}`}
                                 className="border-t text-sm"
-                                onClick={() => setSelectedTransactionId(event.transaction_id)}
+                                onClick={() => setSelectedCert(mapRowToCertificateDetails(event))}
                             >
                                 <td className="p-3 font-mono break-all">
                                     <TransactionLink id={event.transaction_id} />
