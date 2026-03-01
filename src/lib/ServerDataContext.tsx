@@ -11,13 +11,27 @@ interface ServerDataContextType {
     pdExecutions: PdExecution[];
     committeeQueue: CommitteeQueueItem[];
     messages: MessageEvent[];
-
     integrationHealth?: IntegrationHealthResponse;
-
     loading: boolean;
     error: string | null;
     refresh: () => Promise<void>;
 }
+
+interface ServerDataPayload {
+    findings: Finding[];
+    pdExecutions: PdExecution[];
+    committeeQueue: CommitteeQueueItem[];
+    messages: MessageEvent[];
+    integrationHealth?: IntegrationHealthResponse;
+}
+
+const EMPTY_SERVER_DATA: ServerDataPayload = {
+    findings: [],
+    pdExecutions: [],
+    committeeQueue: [],
+    messages: [],
+    integrationHealth: undefined,
+};
 
 const ServerDataContext =
     React.createContext<ServerDataContextType | undefined>(undefined);
@@ -45,7 +59,12 @@ const fetchMessages = async (): Promise<MessageEvent[]> => {
     return data as MessageEvent[];
 };
 
-const loadFromApi = async (client: ApiClient) => {
+const formatReason = (reason: unknown): string =>
+    reason instanceof Error ? reason.message : String(reason);
+
+const loadFromApi = async (
+    client: ApiClient
+): Promise<{ data: ServerDataPayload; error: string | null }> => {
     const [
         findingsResult,
         pdExecutionsResult,
@@ -60,21 +79,6 @@ const loadFromApi = async (client: ApiClient) => {
         client.getIntegrationHealth(),
     ]);
 
-    const findings = findingsResult.status === 'fulfilled' ? findingsResult.value : [];
-
-    const pdExecutions =
-        pdExecutionsResult.status === 'fulfilled' ? pdExecutionsResult.value : [];
-
-    const committeeQueue =
-        committeeQueueResult.status === 'fulfilled' ? committeeQueueResult.value : [];
-
-    const messages = messagesResult.status === 'fulfilled' ? messagesResult.value : [];
-
-    const integrationHealth =
-        integrationHealthResult.status === 'fulfilled'
-            ? integrationHealthResult.value
-            : undefined;
-
     if (integrationHealthResult.status === 'rejected') {
         console.warn(
             '[ServerDataContext] Integration health unavailable',
@@ -82,25 +86,30 @@ const loadFromApi = async (client: ApiClient) => {
         );
     }
 
-    const errors = [findingsResult, pdExecutionsResult].filter(
-        r => r.status === 'rejected'
+    const errorSources = [findingsResult, pdExecutionsResult].filter(
+        result => result.status === 'rejected'
     ) as PromiseRejectedResult[];
 
     return {
-        findings,
-        pdExecutions,
-        committeeQueue,
-        messages,
-        integrationHealth,
+        data: {
+            findings: findingsResult.status === 'fulfilled' ? findingsResult.value : [],
+            pdExecutions:
+                pdExecutionsResult.status === 'fulfilled'
+                    ? pdExecutionsResult.value
+                    : [],
+            committeeQueue:
+                committeeQueueResult.status === 'fulfilled'
+                    ? committeeQueueResult.value
+                    : [],
+            messages: messagesResult.status === 'fulfilled' ? messagesResult.value : [],
+            integrationHealth:
+                integrationHealthResult.status === 'fulfilled'
+                    ? integrationHealthResult.value
+                    : undefined,
+        },
         error:
-            errors.length > 0
-                ? errors
-                    .map(e =>
-                        e.reason instanceof Error
-                            ? e.reason.message
-                            : String(e.reason)
-                    )
-                .join(' | ')
+            errorSources.length > 0
+                ? errorSources.map(result => formatReason(result.reason)).join(' | ')
                 : null,
     };
 };
@@ -108,40 +117,36 @@ const loadFromApi = async (client: ApiClient) => {
 export const ServerDataProvider: React.FC<{ children: React.ReactNode }> = ({
     children,
 }) => {
-    const [state, setState] = React.useState({
-        findings: [] as Finding[],
-        pdExecutions: [] as PdExecution[],
-        committeeQueue: [] as CommitteeQueueItem[],
-        messages: [] as MessageEvent[],
-        integrationHealth: undefined as IntegrationHealthResponse | undefined,
-        loading: true,
-        error: null as string | null,
-    });
+    const [data, setData] = React.useState<ServerDataPayload>(EMPTY_SERVER_DATA);
+    const [loading, setLoading] = React.useState(true);
+    const [error, setError] = React.useState<string | null>(null);
 
     const refresh = React.useCallback(async () => {
-        setState(prev => ({ ...prev, loading: true, error: null }));
+        setLoading(true);
+        setError(null);
 
         try {
-            const data = await loadFromApi(apiClient);
-            setState(prev => ({ ...prev, ...data }));
-        } catch (error) {
-            setState(prev => ({
-                ...prev,
-                error: error instanceof Error ? error.message : String(error),
-            }));
+            const response = await loadFromApi(apiClient);
+            setData(response.data);
+            setError(response.error);
+        } catch (err) {
+            setError(formatReason(err));
         } finally {
-            setState(prev => ({ ...prev, loading: false }));
+            setLoading(false);
         }
     }, []);
 
     React.useEffect(() => {
-        refresh();
+        void refresh();
     }, [refresh]);
 
+    const value = React.useMemo(
+        () => ({ ...data, loading, error, refresh }),
+        [data, loading, error, refresh]
+    );
+
     return (
-        <ServerDataContext.Provider value={{ ...state, refresh }}>
-            {children}
-        </ServerDataContext.Provider>
+        <ServerDataContext.Provider value={value}>{children}</ServerDataContext.Provider>
     );
 };
 
