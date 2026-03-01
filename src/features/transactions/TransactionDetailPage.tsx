@@ -35,7 +35,7 @@ const TransactionDetailPage: React.FC = () => {
     }, [findings, id]);
 
     const relatedTelemetry = useMemo(() => {
-        return messages.filter(event => event.requestId === id);
+        return messages.filter(event => event.transaction_id === id);
     }, [id, messages]);
 
     const certificateDetails = useMemo(
@@ -256,28 +256,28 @@ const TransactionDetailPage: React.FC = () => {
                         <table className="min-w-full border-collapse">
                             <thead className="bg-gray-100 text-left text-sm text-gray-700">
                                 <tr>
-                                    <th className="p-3">Event ID</th>
-                                    <th className="p-3">Timestamp</th>
-                                    <th className="p-3">Status</th>
+                                    <th className="p-3">Transaction ID</th>
+                                    <th className="p-3">Transport Timestamp</th>
+                                    <th className="p-3">Response Status</th>
                                     <th className="p-3">Channel</th>
-                                    <th className="p-3">Interaction</th>
+                                    <th className="p-3">Host</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {pagedTelemetry.map(event => (
-                                    <tr key={event.id} className="border-t text-sm">
+                                    <tr key={`${event.transaction_id}-${event.transport_timestamp}`} className="border-t text-sm">
                                         <td className="p-3 font-mono text-xs text-gray-700">
-                                            {event.id}
+                                            {event.transaction_id}
                                         </td>
                                         <td className="p-3">
                                             {formatTimestamp(
-                                                event.timestamp,
+                                                event.transport_timestamp,
                                                 preferences.timezone
                                             )}
                                         </td>
-                                        <td className="p-3">{event.status ?? '—'}</td>
-                                        <td className="p-3">{event.channelId ?? '—'}</td>
-                                        <td className="p-3">{event.interactionId ?? '—'}</td>
+                                        <td className="p-3">{event.response_status}</td>
+                                        <td className="p-3">{event.channel}</td>
+                                        <td className="p-3">{event.host ?? '—'}</td>
                                     </tr>
                                 ))}
                             </tbody>
