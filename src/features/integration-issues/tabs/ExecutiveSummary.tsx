@@ -1,18 +1,14 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 
+import type { IntegrationHealthResponse } from '../../../api/integrationHealth';
+
 /* ============================
    Types
 ============================ */
 
-type CertificateHealthData = {
-    expired: number;
-    expiringSoon: number;
-    valid: number | null;
-};
-
 type Props = {
-    data?: CertificateHealthData;
+    data?: IntegrationHealthResponse['certificateHealth'];
     errorMessage: string | null;
     onViewDetails: () => void;
     impactedLink: string;
