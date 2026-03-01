@@ -1,12 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 import { committeeQueueData } from './data/committeeQueue.data';
 import { committeeStatusStyles } from './data/committeeStatus';
+import BackButton from '../../components/navigation/BackButton';
 import Pagination from '../../components/Pagination';
 
 const CommitteeQueue: React.FC = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const [query, setQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<'all' | string>('all');
     const [sortKey, setSortKey] = useState<'decisionTarget' | 'severity' | 'organization'>('decisionTarget');
@@ -54,12 +56,12 @@ const CommitteeQueue: React.FC = () => {
     return (
         <div className="p-6 space-y-6">
             <div>
-                <button
-                    onClick={() => navigate('/dashboard')}
+                <BackButton
+                    defaultRoute="/dashboard"
+                    label="Back to Dashboard"
                     className="text-sm text-blue-600 hover:underline mb-2"
-                >
-                    ← Back to Dashboard
-                </button>
+                    showIcon={false}
+                />
 
                 <h1 className="text-2xl font-semibold">Committee Review Queue</h1>
                 <p className="text-gray-600">
@@ -152,7 +154,7 @@ const CommitteeQueue: React.FC = () => {
                             <td className="px-4 py-3">{item.decisionTarget}</td>
                             <td className="px-4 py-3 text-right">
                                 <button
-                                    onClick={() => navigate(`/committee/${item.id}`)}
+                                    onClick={() => navigate(`/committee/${item.id}`, { state: { from: location.pathname } })}
                                     className="text-blue-600 hover:underline font-medium"
                                 >
                                     Open Case →
