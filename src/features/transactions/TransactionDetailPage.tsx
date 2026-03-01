@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { FaArrowLeft } from 'react-icons/fa';
 
 import { useServerData } from '../../lib/ServerDataContext';
@@ -56,7 +56,6 @@ const getDaysToExpirationClassName = (days: number | null): string => {
 
 const TransactionDetailPage: React.FC = () => {
     const navigate = useNavigate();
-    const location = useLocation();
     const { id } = useParams<{ id: string }>();
     const { pdExecutions, findings } = useServerData();
     const { preferences } = useUserPreferences();
@@ -66,6 +65,7 @@ const TransactionDetailPage: React.FC = () => {
     const [telemetryTotal, setTelemetryTotal] = useState(0);
     const [telemetryLoading, setTelemetryLoading] = useState(false);
     const [telemetryError, setTelemetryError] = useState<string | null>(null);
+
     const [latestCertificateEvent, setLatestCertificateEvent] =
         useState<MessageMonitorRow | null>(null);
 
@@ -182,11 +182,7 @@ const TransactionDetailPage: React.FC = () => {
         <div className="p-6 space-y-6">
             <div className="flex items-center space-x-4">
                 <button
-                    onClick={() => {
-                        const from =
-                            (location.state as { from?: string } | undefined)?.from;
-                        navigate(from ?? '/pd-executions');
-                    }}
+                    onClick={() => navigate('/pd-executions')}
                     className="text-gray-600 hover:text-gray-900"
                 >
                     <FaArrowLeft />
@@ -196,6 +192,287 @@ const TransactionDetailPage: React.FC = () => {
                     <p className="text-gray-600">Trace PD execution, findings, and telemetry</p>
                 </div>
             </div>
+
+            <div className="mb-6 rounded-lg border bg-white p-4 shadow-sm">
+                <div className="flex items-center justify-between">
+                    <h2 className="text-lg font-semibold">Transaction Overview</h2>
+                    <span className="inline-flex items-center gap-1 rounded bg-blue-100 px-2 py-0.5 text-xs text-blue-700">
+                        🔗 Traceable
+                    </span>
+                </div>
+
+                <dl className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <dt className="text-gray-500">Transaction ID</dt>
+                        <dd className="font-mono text-xs">
+                            {id ? <TransactionLink id={id} /> : '—'}
+                        </dd>
+                    </div>
+                    <div>
+                        <dt className="text-gray-500">Transaction Type</dt>
+                        <dd>Patient Discovery</dd>
+                    </div>
+                    <div>
+                        <dt className="text-gray-500">Outcome</dt>
+                        <dd>{transaction?.outcome ?? '—'}</dd>
+                    </div>
+                    <div>
+                        <dt className="text-gray-500">Environment</dt>
+                        <dd>{transaction?.sourceEnvironment ?? '—'}</dd>
+                    </div>
+                </dl>
+            </div>
+
+            <section className="space-y-3">
+                <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold">
+                        Transport Security (Certificate)
+                    </h3>
+                    <span
+                        className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${certificateBadge.className}`}
+                    >
+                        <span aria-hidden="true">{certificateBadge.icon}</span>
+                        {certificateBadge.label}
+                    </span>
+                </div>
+
+                <div className="rounded-lg border bg-white p-4 shadow-sm space-y-3 text-sm">
+                    <p className="text-gray-600">
+                        {latestCertificateEvent
+                            ? certificateDescription
+                            : 'Certificate data was not reported in message monitor telemetry for this transaction.'}
+                    </p>
+
+                    <dl className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <dt className="text-gray-500">Certificate Status</dt>
+                            <dd className="font-medium">
+                                {latestCertificateEvent?.certificate_status ?? '—'}
+                            </dd>
+                        </div>
+                        <div>
+                            <dt className="text-gray-500">Certificate Thumbprint</dt>
+                            <dd className="font-mono text-xs break-all">
+                                {certificateThumbprint ?? 'Not reported'}
+                            </dd>
+                        </div>
+                        <div>
+                            <dt className="text-gray-500">Subject CN</dt>
+                            <dd>{latestCertificateEvent?.subject_cn ?? 'Not reported'}</dd>
+                        </div>
+                        <div>
+                            <dt className="text-gray-500">Issuer CN</dt>
+                            <dd>{latestCertificateEvent?.issuer_cn ?? 'Not reported'}</dd>
+                        </div>
+                        <div>
+                            <dt className="text-gray-500">Days Until Expiration</dt>
+                            <dd
+                                className={getDaysToExpirationClassName(
+                                    latestCertificateEvent?.days_until_expiration ?? null
+                                )}
+                            >
+                                {latestCertificateEvent?.days_until_expiration ?? 'Not reported'}
+                            </dd>
+                        </div>
+                        <div>
+                            <dt className="text-gray-500">Detection Source</dt>
+                            <dd>{latestCertificateEvent?.detected_via ?? 'Not reported'}</dd>
+                        </div>
+                        <div>
+                            <dt className="text-gray-500">Self-signed</dt>
+                            <dd
+                                className={
+                                    isSelfSigned
+                                        ? 'font-semibold text-yellow-700'
+                                        : 'text-gray-800'
+                                }
+                            >
+                                {isSelfSigned === null || isSelfSigned === undefined
+                                    ? 'Not reported'
+                                    : isSelfSigned
+                                        ? 'Yes (self-signed certificate)'
+                                        : 'No'}
+                            </dd>
+                        </div>
+                    </dl>
+                </div>
+            </section>
+
+            <section className="space-y-3">
+                <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold">Related Findings</h3>
+                    <span className="inline-flex items-center gap-1 rounded bg-blue-100 px-2 py-0.5 text-xs text-blue-700">
+                        🔗 Traceable
+                    </span>
+                </div>
+
+                {!relatedFindings.length ? (
+                    <div className="rounded border border-dashed p-6 text-center text-gray-500">
+                        No findings detected for this transaction.
+                        <br />
+                        All telemetry events completed successfully.
+                    </div>
+                ) : (
+                    <div className="space-y-3">
+                        {relatedFindings.map(finding => {
+                            const certCopy = buildCertificateFindingCopy(
+                                finding,
+                                transaction
+                            );
+
+                            return (
+                                <div
+                                    key={finding.id}
+                                    className={`rounded-lg border border-l-4 bg-white p-4 shadow-sm ${
+                                        finding.severity === 'critical'
+                                            ? 'border-red-500'
+                                            : 'border-yellow-500'
+                                    }`}
+                                >
+                                    <div className="flex items-center justify-between">
+                                        <div className="font-semibold text-gray-800">
+                                            {certCopy?.summary ??
+                                                finding.summary ??
+                                                '—'}
+                                        </div>
+                                        <span className="text-xs text-gray-500 uppercase tracking-wide">
+                                            Related Transaction
+                                        </span>
+                                    </div>
+                                    {certCopy ? (
+                                        <div className="mt-3 space-y-2 text-sm text-gray-700">
+                                            <p>
+                                                <span className="font-semibold">
+                                                    Why this matters:
+                                                </span>{' '}
+                                                {certCopy.why}
+                                            </p>
+                                            <p>
+                                                <span className="font-semibold">
+                                                    Recommended action:
+                                                </span>{' '}
+                                                {certCopy.action}
+                                            </p>
+                                            {certCopy.thumbprint && (
+                                                <p className="text-xs text-gray-500">
+                                                    Affected certificate:{' '}
+                                                    <span className="font-mono">
+                                                        {certCopy.thumbprint}
+                                                    </span>
+                                                </p>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <div className="mt-2 text-sm text-gray-600">
+                                            {finding.recommendedAction ?? '—'}
+                                        </div>
+                                    )}
+                                    {finding.executionId && (
+                                        <div className="mt-2">
+                                            <TransactionLink id={finding.executionId} />
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+            </section>
+
+            <section className="space-y-3">
+                <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold">Telemetry Events</h3>
+                    <span className="inline-flex items-center gap-1 rounded bg-blue-100 px-2 py-0.5 text-xs text-blue-700">
+                        🔗 Traceable
+                    </span>
+                </div>
+
+                <div className="mb-3 rounded-md bg-gray-50 p-3 text-sm text-gray-700">
+                    These telemetry events are associated with transaction{' '}
+                    <span className="font-mono font-medium">{id ?? '—'}</span>
+                </div>
+
+                {telemetryError && (
+                    <div className="rounded border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                        {telemetryError}
+                    </div>
+                )}
+
+                {telemetryLoading ? (
+                    <div className="rounded border border-dashed p-6 text-center text-gray-500">
+                        Loading telemetry events...
+                    </div>
+                ) : !telemetryRows.length ? (
+                    <div className="rounded border border-dashed p-6 text-center text-gray-500">
+                        No telemetry events detected for this transaction.
+                    </div>
+                ) : (
+                    <div className="bg-white rounded-lg shadow overflow-x-auto">
+                        <table className="min-w-full border-collapse">
+                            <thead className="bg-gray-100 text-left text-sm text-gray-700">
+                                <tr>
+                                    <th className="p-3">Transaction ID</th>
+                                    <th className="p-3">Timestamp</th>
+                                    <th className="p-3">Response Status</th>
+                                    <th className="p-3">Channel</th>
+                                    <th className="p-3">Host</th>
+                                    <th className="p-3">Certificate Status</th>
+                                    <th className="p-3">Days until expiration</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {telemetryRows.map(event => {
+                                    const rowBadge = getCertificateStatusBadge(
+                                        mapStatusToCertificateStatus(event.certificate_status)
+                                    );
+
+                                    return (
+                                        <tr
+                                            key={`${event.transaction_id}-${event.transport_timestamp}-${event.cert_id ?? 'no-cert'}`}
+                                            className="border-t text-sm"
+                                        >
+                                            <td className="p-3 font-mono text-xs text-gray-700">
+                                                {event.transaction_id}
+                                            </td>
+                                            <td className="p-3">
+                                                {formatTimestamp(
+                                                    event.transport_timestamp,
+                                                    preferences.timezone
+                                                )}
+                                            </td>
+                                            <td className="p-3">{event.response_status}</td>
+                                            <td className="p-3">{event.channel}</td>
+                                            <td className="p-3">{event.host ?? '—'}</td>
+                                            <td className="p-3">
+                                                <span
+                                                    className={`inline-flex items-center rounded px-2 py-1 text-xs ${rowBadge.className}`}
+                                                >
+                                                    <span aria-hidden="true" className="mr-1">
+                                                        {rowBadge.icon}
+                                                    </span>
+                                                    {event.certificate_status ?? '—'}
+                                                </span>
+                                            </td>
+                                            <td
+                                                className={`p-3 ${getDaysToExpirationClassName(
+                                                    event.days_until_expiration
+                                                )}`}
+                                            >
+                                                {event.days_until_expiration ?? '—'}
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+                <Pagination
+                    page={page}
+                    totalPages={totalPages}
+                    onPageChange={setPage}
+                />
+            </section>
         </div>
     );
 };
