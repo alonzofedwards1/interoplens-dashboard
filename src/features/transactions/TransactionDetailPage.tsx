@@ -19,6 +19,7 @@ import type { MessageMonitorRow } from '../../types/messages';
 
 const tablePageSize = 10;
 const certificateScanBatchSize = 100;
+const maxCertificateFetchPages = 50;
 
 const mapStatusToCertificateStatus = (
     status: MessageMonitorRow['certificate_status']
@@ -69,12 +70,13 @@ const TransactionDetailPage: React.FC = () => {
     const [latestCertificateEvent, setLatestCertificateEvent] =
         useState<MessageMonitorRow | null>(null);
 
-    const transaction = useMemo(
-        () => pdExecutions.find(exec => exec.requestId === id),
-        [id, pdExecutions]
-    );
+    const transaction = useMemo(() => {
+        if (!Array.isArray(pdExecutions)) return undefined;
+        return pdExecutions.find(exec => exec.requestId === id);
+    }, [id, pdExecutions]);
 
     const relatedFindings = useMemo(() => {
+        if (!Array.isArray(findings)) return [];
         return (findings as Finding[]).filter(
             finding => finding.executionId && finding.executionId === id
         );
@@ -99,8 +101,13 @@ const TransactionDetailPage: React.FC = () => {
 
             const exactRows = response.data.filter(row => row.transaction_id === id);
             setTelemetryRows(exactRows);
-            setTelemetryTotal(response.pagination.total);
+            setTelemetryTotal(
+                response.pagination.total > 0
+                    ? response.pagination.total
+                    : exactRows.length
+            );
         } catch (error) {
+            console.error('Telemetry page fetch failed', error);
             setTelemetryError(
                 error instanceof Error ? error.message : 'Failed to load telemetry events'
             );
@@ -120,6 +127,7 @@ const TransactionDetailPage: React.FC = () => {
         try {
             let offset = 0;
             let total = 0;
+            let pageCount = 0;
             const allRows: MessageMonitorRow[] = [];
 
             do {
@@ -133,15 +141,24 @@ const TransactionDetailPage: React.FC = () => {
                 allRows.push(...exactRows);
 
                 total = response.pagination.total;
-                offset += response.pagination.limit;
-            } while (offset < total);
+                const step =
+                    response.pagination.limit > 0
+                        ? response.pagination.limit
+                        : response.data.length > 0
+                            ? response.data.length
+                            : certificateScanBatchSize;
+
+                offset += Math.max(1, step);
+                pageCount += 1;
+            } while (offset < total && pageCount < maxCertificateFetchPages);
 
             const latestCert = allRows
                 .filter(hasCertificateData)
                 .sort((a, b) => getRowTime(b) - getRowTime(a))[0] ?? null;
 
             setLatestCertificateEvent(latestCert);
-        } catch {
+        } catch (error) {
+            console.error('Certificate telemetry fetch failed', error);
             setLatestCertificateEvent(null);
         }
     }, [id]);
