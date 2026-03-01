@@ -134,18 +134,58 @@ const toPaginationNumber = (value: unknown): number => {
 };
 
 const parseMessageMonitorResponse = (value: unknown): MessageMonitorResponse => {
-    if (!isRecord(value) || !Array.isArray(value.data) || !isRecord(value.pagination)) {
-        throw new Error('Unexpected message monitor response format');
+    if (Array.isArray(value)) {
+        const rows = value
+            .map(normalizeMessageMonitorRow)
+            .filter((row): row is MessageMonitorRow => row !== null);
+
+        return {
+            data: rows,
+            pagination: {
+                total: rows.length,
+                limit: rows.length,
+                offset: 0,
+            },
+        };
     }
 
+    if (!isRecord(value)) {
+        return {
+            data: [],
+            pagination: {
+                total: 0,
+                limit: 0,
+                offset: 0,
+            },
+        };
+    }
+
+    const dataCandidate = Array.isArray(value.data)
+        ? value.data
+        : Array.isArray(value.rows)
+            ? value.rows
+            : [];
+
+    const paginationCandidate = isRecord(value.pagination)
+        ? value.pagination
+        : isRecord(value.meta)
+            ? value.meta
+            : {};
+
+    const rows = dataCandidate
+        .map(normalizeMessageMonitorRow)
+        .filter((row): row is MessageMonitorRow => row !== null);
+
+    const limit = toPaginationNumber(paginationCandidate.limit) || rows.length;
+    const offset = toPaginationNumber(paginationCandidate.offset);
+    const total = toPaginationNumber(paginationCandidate.total) || rows.length;
+
     return {
-        data: value.data
-            .map(normalizeMessageMonitorRow)
-            .filter((row): row is MessageMonitorRow => row !== null),
+        data: rows,
         pagination: {
-            total: toPaginationNumber(value.pagination.total),
-            limit: toPaginationNumber(value.pagination.limit),
-            offset: toPaginationNumber(value.pagination.offset),
+            total,
+            limit,
+            offset,
         },
     };
 };
