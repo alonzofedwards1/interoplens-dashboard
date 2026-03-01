@@ -1,5 +1,8 @@
 import type { CertificateDetails } from '../../../types';
 
+/** UI boundary guard: modal components must consume `CertificateDetails` only.
+ * Do not pass `MessageMonitorRow` directly into this modal.
+ */
 interface Props {
     cert: CertificateDetails;
     onClose: () => void;

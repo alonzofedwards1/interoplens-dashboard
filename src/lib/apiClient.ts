@@ -2,8 +2,9 @@ import { CommitteeQueueItem } from '../features/committee/data/committeeQueue.da
 import { FindingsCountResponse, FindingsListResponse } from '../types/findings';
 import type { Oid } from '../types';
 import { PdExecutionCounts, PdExecutionsResponse } from '../types/pdExecutions';
-import type { MessageEvent } from '../types/messages';
+import type { MessageMonitorRow } from '../types/messages';
 import { requestJson } from './api/request';
+import { API_BASE } from './apiBase';
 import { fetchMessageEvents } from './telemetryClient';
 
 export async function apiGet<T>(url: string): Promise<T> {
@@ -33,33 +34,33 @@ export class ApiClient {
     async getFindings(): Promise<FindingsListResponse['findings']> {
         const data = await apiGet<
             FindingsListResponse | FindingsListResponse['findings']
-        >('/api/findings');
+        >(`${API_BASE}/api/findings`);
 
         return Array.isArray(data) ? data : data.findings;
     }
 
     async getFindingsCount(): Promise<FindingsCountResponse> {
-        return apiGet('/api/findings/count');
+        return apiGet(`${API_BASE}/api/findings/count`);
     }
 
     async getPdExecutions(): Promise<PdExecutionsResponse> {
-        return apiGet('/api/pd-executions');
+        return apiGet(`${API_BASE}/api/pd-executions`);
     }
 
     async getPdExecutionsCount(): Promise<PdExecutionCounts> {
-        return apiGet('/api/pd-executions/count');
+        return apiGet(`${API_BASE}/api/pd-executions/count`);
     }
 
     async getCommitteeQueue(): Promise<CommitteeQueueItem[]> {
-        return apiGet('/api/committee-queue');
+        return apiGet(`${API_BASE}/api/committee-queue`);
     }
 
-    async getTelemetryEvents(): Promise<MessageEvent[]> {
+    async getTelemetryEvents(): Promise<MessageMonitorRow[]> {
         return fetchMessageEvents();
     }
 
     async getOids(): Promise<Oid[]> {
-        return apiGet<Oid[]>('/api/oids');
+        return apiGet<Oid[]>(`${API_BASE}/api/oids`);
     }
 
     /* ==============================
@@ -67,7 +68,7 @@ export class ApiClient {
     ============================== */
     async getIntegrationHealth(): Promise<IntegrationHealthResponse> {
         return apiGet<IntegrationHealthResponse>(
-            '/api/health/integrations'
+            `${API_BASE}/api/health/integrations`
         );
     }
 }

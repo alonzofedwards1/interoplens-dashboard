@@ -1,5 +1,6 @@
-import {useState} from "react";
+import {useMemo, useState} from "react";
 import {useNavigate} from "react-router-dom";
+import BackButton from "../../components/navigation/BackButton";
 
 import ExecutiveSummary from "./tabs/ExecutiveSummary";
 import AnalystBreakdown from "./tabs/AnalystBreakdown";
@@ -7,6 +8,7 @@ import TechnicalLogs from "./tabs/TechnicalLogs";
 
 import {UserRole} from "../../types/auth";
 import {useServerData} from '../../lib/ServerDataContext';
+import { deriveCertificateHealth } from './utils/certificateHealth';
 
 /* ============================
    Types
@@ -34,24 +36,22 @@ const IntegrationIssuesPage: React.FC<Props> = ({role}) => {
 
     const canViewLogs = role === "admin" || role === "analyst";
 
-    // ✅ THIS IS CORRECT
-    const {integrationHealth, loading} = useServerData();
+    const {integrationHealth, loading, messages} = useServerData();
 
-    console.log(
-        '[IntegrationIssuesPage] integrationHealth',
-        integrationHealth
-    );
+    const fallbackCertificateHealth = useMemo(() => deriveCertificateHealth(messages), [messages]);
+
+    const certificateHealth = integrationHealth?.certificateHealth ?? fallbackCertificateHealth;
 
     return (
         <div className="p-6 space-y-6">
             {/* Header */}
             <div className="space-y-2">
-                <button
-                    onClick={() => navigate(-1)}
+                <BackButton
+                    defaultRoute="/dashboard"
+                    label="Back"
                     className="text-sm text-blue-600 hover:underline"
-                >
-                    ← Back
-                </button>
+                    showIcon={false}
+                />
 
                 <h1 className="text-2xl font-bold text-gray-800">
                     Integration Issues & Health
@@ -88,17 +88,16 @@ const IntegrationIssuesPage: React.FC<Props> = ({role}) => {
             <div>
                 {activeTab === "summary" && (
                     <ExecutiveSummary
-                        data={integrationHealth?.certificateHealth}
+                        data={certificateHealth}
                         errorMessage={
                             loading
                                 ? null
-                                : integrationHealth
+                                : certificateHealth
                                     ? null
                                     : "Integration health data unavailable"
                         }
                         impactedLink="/organizations"
                         onViewDetails={() => {
-                            // later this can navigate to Findings filtered by CERT
                             navigate('/findings?category=certificate');
                         }}
                     />
