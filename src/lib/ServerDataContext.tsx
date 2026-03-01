@@ -2,15 +2,16 @@ import React from 'react';
 
 import { CommitteeQueueItem } from '../features/committee/data/committeeQueue.data';
 import { Finding } from '../types/findings';
-import type { MessageEvent } from '../types/messages';
+import type { MessageMonitorRow } from '../types/messages';
 import { PdExecution } from '../types/pdExecutions';
 import { apiClient, ApiClient, IntegrationHealthResponse } from './apiClient';
+import { fetchMessageEvents } from './telemetryClient';
 
 interface ServerDataContextType {
     findings: Finding[];
     pdExecutions: PdExecution[];
     committeeQueue: CommitteeQueueItem[];
-    messages: MessageEvent[];
+    messages: MessageMonitorRow[];
     integrationHealth?: IntegrationHealthResponse;
     loading: boolean;
     error: string | null;
@@ -21,7 +22,7 @@ interface ServerDataPayload {
     findings: Finding[];
     pdExecutions: PdExecution[];
     committeeQueue: CommitteeQueueItem[];
-    messages: MessageEvent[];
+    messages: MessageMonitorRow[];
     integrationHealth?: IntegrationHealthResponse;
 }
 
@@ -36,27 +37,8 @@ const EMPTY_SERVER_DATA: ServerDataPayload = {
 const ServerDataContext =
     React.createContext<ServerDataContextType | undefined>(undefined);
 
-const fetchMessages = async (): Promise<MessageEvent[]> => {
-    const token = localStorage.getItem('authToken') ?? localStorage.getItem('token') ?? '';
-
-    const response = await fetch('/api/messages', {
-        method: 'GET',
-        credentials: 'include',
-        headers: {
-            Authorization: `Bearer ${token}`,
-        },
-    });
-
-    if (!response.ok) {
-        throw new Error(`Failed to load messages (${response.status})`);
-    }
-
-    const data = (await response.json()) as unknown;
-    if (!Array.isArray(data)) {
-        throw new Error('Unexpected messages response format');
-    }
-
-    return data as MessageEvent[];
+const fetchMessages = async (): Promise<MessageMonitorRow[]> => {
+    return fetchMessageEvents({ limit: 1000, offset: 0 });
 };
 
 const formatReason = (reason: unknown): string =>
@@ -78,13 +60,6 @@ const loadFromApi = async (
         fetchMessages(),
         client.getIntegrationHealth(),
     ]);
-
-    if (integrationHealthResult.status === 'rejected') {
-        console.warn(
-            '[ServerDataContext] Integration health unavailable',
-            integrationHealthResult.reason
-        );
-    }
 
     const errorSources = [findingsResult, pdExecutionsResult].filter(
         result => result.status === 'rejected'

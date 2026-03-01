@@ -1,22 +1,21 @@
 import { Finding } from '../types/findings';
 import { PdExecution } from '../types/pdExecutions';
-
-export type CertificateStatus = 'VALID' | 'EXPIRING_SOON' | 'EXPIRED';
-
-const CERT_STATUS_VALUES: CertificateStatus[] = [
-    'VALID',
-    'EXPIRING_SOON',
-    'EXPIRED',
-];
+import type { CertificateStatus } from '../types/certificates';
 
 const normalizeCertificateStatus = (
     value?: string | null
 ): CertificateStatus | undefined => {
     if (!value) return undefined;
-    const normalized = value.toUpperCase();
-    return CERT_STATUS_VALUES.includes(normalized as CertificateStatus)
-        ? (normalized as CertificateStatus)
-        : undefined;
+
+    const normalized = value.trim().toUpperCase();
+
+    if (normalized === 'VALID') return 'Valid';
+    if (normalized === 'EXPIRED') return 'Expired';
+    if (normalized === 'EXPIRING_SOON' || normalized === 'EXPIRING SOON') {
+        return 'Expiring Soon';
+    }
+
+    return undefined;
 };
 
 const readExecutionField = <T,>(
@@ -58,23 +57,23 @@ export const getExecutionCertificateDetails = (exec?: PdExecution) => {
 
 export const getCertificateStatusBadge = (status?: CertificateStatus) => {
     switch (status) {
-        case 'VALID':
+        case 'Valid':
             return {
-                label: 'VALID',
+                label: 'Valid',
                 icon: '✅',
                 className: 'bg-green-100 text-green-800',
                 tooltip: 'Certificate validated',
             };
-        case 'EXPIRING_SOON':
+        case 'Expiring Soon':
             return {
-                label: 'EXPIRING SOON',
+                label: 'Expiring Soon',
                 icon: '⚠️',
                 className: 'bg-yellow-100 text-yellow-800',
                 tooltip: 'Certificate expiring soon',
             };
-        case 'EXPIRED':
+        case 'Expired':
             return {
-                label: 'EXPIRED',
+                label: 'Expired',
                 icon: '❌',
                 className: 'bg-red-100 text-red-800',
                 tooltip: 'Certificate expired — caused TLS failure',
@@ -91,11 +90,11 @@ export const getCertificateStatusBadge = (status?: CertificateStatus) => {
 
 export const getCertificateStatusDescription = (status?: CertificateStatus) => {
     switch (status) {
-        case 'VALID':
+        case 'Valid':
             return 'Transport certificate validated successfully during this transaction.';
-        case 'EXPIRING_SOON':
+        case 'Expiring Soon':
             return 'Transport certificate will expire soon. Renewal is recommended to prevent outages.';
-        case 'EXPIRED':
+        case 'Expired':
             return 'Transport certificate was expired at the time of execution, causing the transaction to fail.';
         default:
             return 'Certificate status was not reported for this transaction.';
@@ -129,9 +128,9 @@ export const buildCertificateFindingCopy = (
 
     const status = details.status;
     const isExpired =
-        status === 'EXPIRED' || rootCause === 'CERT_EXPIRED';
+        status === 'Expired' || rootCause === 'CERT_EXPIRED';
     const isExpiringSoon =
-        status === 'EXPIRING_SOON' || rootCause === 'CERT_EXPIRING_SOON';
+        status === 'Expiring Soon' || rootCause === 'CERT_EXPIRING_SOON';
 
     if (isExpired) {
         return {
@@ -155,7 +154,7 @@ export const buildCertificateFindingCopy = (
         };
     }
 
-    if (status === 'VALID') {
+    if (status === 'Valid') {
         return {
             summary:
                 'The security certificate validated successfully for this transaction.',
