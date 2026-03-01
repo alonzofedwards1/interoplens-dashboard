@@ -1,4 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import CertInspectorModal from '../integration-issues/modals/CertInspectorModal';
+import { useCertificateDetails } from '../../hooks/useCertificateDetails';
 import { useNavigate } from 'react-router-dom';
 import { FaArrowLeft, FaClock, FaTimesCircle, FaCheckCircle } from 'react-icons/fa';
 
@@ -78,6 +80,7 @@ const TelemetryPage: React.FC = () => {
     const [search, setSearch] = useState('');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
     const [page, setPage] = useState(1);
+    const [selectedTransactionId, setSelectedTransactionId] = useState<string | null>(null);
     const pageSize = 25;
 
     const filterParams = useMemo<MessageFilterParams>(() => {
@@ -449,6 +452,42 @@ const TelemetryPage: React.FC = () => {
                     Sort: {sortDirection === 'asc' ? 'Oldest first' : 'Newest first'}
                 </button>
             </div>
+
+            {selectedTransactionId && (
+                <>
+                    {certificateLoading && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+                            <div className="rounded bg-white px-4 py-3 text-sm text-gray-700 shadow">
+                                Loading certificate details...
+                            </div>
+                        </div>
+                    )}
+
+                    {!certificateLoading && certificateError && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+                            <div className="w-full max-w-md rounded bg-white p-4 shadow">
+                                <p className="text-sm text-red-600">{certificateError}</p>
+                                <div className="mt-4 text-right">
+                                    <button
+                                        type="button"
+                                        onClick={() => setSelectedTransactionId(null)}
+                                        className="rounded bg-slate-100 px-3 py-1 text-sm hover:bg-slate-200"
+                                    >
+                                        Close
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {!certificateLoading && !certificateError && selectedCertificate && (
+                        <CertInspectorModal
+                            cert={selectedCertificate}
+                            onClose={() => setSelectedTransactionId(null)}
+                        />
+                    )}
+                </>
+            )}
 
             <div className="bg-white rounded-lg shadow overflow-x-auto">
                 <table className="min-w-full border-collapse">
