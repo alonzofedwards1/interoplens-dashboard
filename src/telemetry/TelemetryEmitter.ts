@@ -1,4 +1,4 @@
-import type { TelemetryEvent } from './TelemetryEvent';
+import type { TelemetryEvent } from './TelemetryTypes';
 import { TelemetryContext } from './TelemetryContext';
 import { telemetryStore, TelemetryStore } from './TelemetryStore';
 import {
