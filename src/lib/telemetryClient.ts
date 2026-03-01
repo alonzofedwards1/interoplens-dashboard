@@ -1,5 +1,6 @@
 import type { MessageMonitorResponse, MessageMonitorRow } from '../types/messages';
 import type { CertificateStatus } from '../types/certificates';
+import { API_BASE } from './apiBase';
 
 export type MessageFilterParams = {
     startTime?: string;
@@ -204,7 +205,7 @@ export async function fetchMessageMonitor(
     if (typeof filters?.offset === 'number') params.set('offset', String(filters.offset));
 
     const query = params.toString();
-    const url = `/api/message-monitor${query ? `?${query}` : ''}`;
+    const url = `${API_BASE}/api/message-monitor${query ? `?${query}` : ''}`;
 
     const token = getAuthToken();
     const res = await fetch(url, {

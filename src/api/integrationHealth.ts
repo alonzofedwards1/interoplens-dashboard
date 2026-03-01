@@ -1,4 +1,5 @@
 import { requestJson } from '../lib/api/request';
+import { API_BASE } from '../lib/apiBase';
 
 export interface IntegrationHealthResponse {
     totalExecutions: number;
@@ -12,5 +13,5 @@ export interface IntegrationHealthResponse {
 }
 
 export async function fetchIntegrationHealth(): Promise<IntegrationHealthResponse> {
-    return requestJson<IntegrationHealthResponse>('/api/health/integrations');
+    return requestJson<IntegrationHealthResponse>(`${API_BASE}/api/health/integrations`);
 }
