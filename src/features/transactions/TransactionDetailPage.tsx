@@ -77,7 +77,7 @@ const TransactionDetailPage: React.FC = () => {
     const relatedFindings = useMemo(() => {
         if (!Array.isArray(findings)) return [];
         return (findings as Finding[]).filter(
-            finding => finding.executionId && finding.executionId === id
+            finding => finding.executionId === id
         );
     }, [findings, id]);
 
@@ -172,11 +172,87 @@ const TransactionDetailPage: React.FC = () => {
 
     const totalPages = Math.max(1, Math.ceil(telemetryTotal / tablePageSize));
 
-    useEffect(() => {
-        if (page > totalPages) {
-            setPage(totalPages);
+            setTelemetryRows(exactRows);
+            setTelemetryTotal(
+                response.pagination.total > 0
+                    ? response.pagination.total
+                    : exactRows.length
+            );
+        } catch (error) {
+            console.error('Telemetry fetch failed', error);
+            setTelemetryError(
+                error instanceof Error
+                    ? error.message
+                    : 'Failed to load telemetry events'
+            );
+            setTelemetryRows([]);
+            setTelemetryTotal(0);
+        } finally {
+            setTelemetryLoading(false);
         }
-    }, [page, totalPages]);
+    }, [id, page]);
+
+    const fetchCertificateTelemetry = useCallback(async () => {
+        if (!id) return;
+
+        try {
+            let offset = 0;
+            let total = 0;
+            let pageCount = 0;
+            const allRows: MessageMonitorRow[] = [];
+
+            do {
+                const response = await fetchMessageMonitor({
+                    search: id,
+                    limit: certificateScanBatchSize,
+                    offset,
+                });
+
+                const exactRows = response.data.filter(
+                    row => row.transaction_id === id
+                );
+
+                allRows.push(...exactRows);
+
+                total = response.pagination.total;
+                const step =
+                    response.pagination.limit ||
+                    response.data.length ||
+                    certificateScanBatchSize;
+
+                offset += step;
+                pageCount++;
+            } while (offset < total && pageCount < maxCertificateFetchPages);
+
+            const latestCert =
+                allRows
+                    .filter(hasCertificateData)
+                    .sort((a, b) => getRowTime(b) - getRowTime(a))[0] ?? null;
+
+            setLatestCertificateEvent(latestCert);
+        } catch (error) {
+            console.error('Certificate telemetry fetch failed', error);
+            setLatestCertificateEvent(null);
+        }
+    }, [id]);
+
+    useEffect(() => {
+        void fetchTelemetryPage();
+    }, [fetchTelemetryPage]);
+
+    useEffect(() => {
+        void fetchCertificateTelemetry();
+    }, [fetchCertificateTelemetry]);
+
+    const totalPages = Math.max(1, Math.ceil(telemetryTotal / tablePageSize));
+
+    const certificateStatus = mapStatusToCertificateStatus(
+        latestCertificateEvent?.certificate_status ?? null
+    );
+
+    const certificateBadge = getCertificateStatusBadge(certificateStatus);
+    const certificateDescription =
+        getCertificateStatusDescription(certificateStatus);
 
     useEffect(() => {
         setPage(1);
@@ -203,51 +279,49 @@ const TransactionDetailPage: React.FC = () => {
                     className="text-gray-600 hover:text-gray-900"
                 />
                 <div>
-                    <h1 className="text-2xl font-semibold">Transaction Detail</h1>
-                    <p className="text-gray-600">Trace PD execution, findings, and telemetry</p>
+                    <h1 className="text-2xl font-semibold">
+                        Transaction Detail
+                    </h1>
+                    <p className="text-gray-600">
+                        Trace PD execution, findings, and telemetry
+                    </p>
                 </div>
             </div>
 
-            <div className="mb-6 rounded-lg border bg-white p-4 shadow-sm">
-                <div className="flex items-center justify-between">
-                    <h2 className="text-lg font-semibold">Transaction Overview</h2>
-                    <span className="inline-flex items-center gap-1 rounded bg-blue-100 px-2 py-0.5 text-xs text-blue-700">
-                        🔗 Traceable
-                    </span>
-                </div>
+            {/* Transaction Overview */}
+            <div className="rounded-lg border bg-white p-4 shadow-sm">
+                <h2 className="text-lg font-semibold mb-4">
+                    Transaction Overview
+                </h2>
 
-                <dl className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <dl className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                     <div>
                         <dt className="text-gray-500">Transaction ID</dt>
                         <dd className="font-mono text-xs">
-                            {id ? <TransactionLink id={id} /> : '—'}
+                            <TransactionLink id={id} />
                         </dd>
                     </div>
                     <div>
-                        <dt className="text-gray-500">Transaction Type</dt>
-                        <dd>Patient Discovery</dd>
-                    </div>
-                    <div>
                         <dt className="text-gray-500">Outcome</dt>
-                        <dd>{transaction?.outcome ?? '—'}</dd>
+                        <dd>{transaction?.outcome ?? 'Not reported'}</dd>
                     </div>
                     <div>
                         <dt className="text-gray-500">Environment</dt>
-                        <dd>{transaction?.sourceEnvironment ?? '—'}</dd>
+                        <dd>{transaction?.sourceEnvironment ?? 'Not reported'}</dd>
                     </div>
                 </dl>
             </div>
 
+            {/* Certificate Section */}
             <section className="space-y-3">
                 <div className="flex items-center justify-between">
                     <h3 className="text-lg font-semibold">
                         Transport Security (Certificate)
                     </h3>
                     <span
-                        className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${certificateBadge.className}`}
+                        className={`inline-flex items-center rounded px-2 py-1 text-xs ${certificateBadge.className}`}
                     >
-                        <span aria-hidden="true">{certificateBadge.icon}</span>
-                        {certificateBadge.label}
+                        {certificateBadge.icon} {certificateBadge.label}
                     </span>
                 </div>
 
@@ -313,94 +387,15 @@ const TransactionDetailPage: React.FC = () => {
                 </div>
             </section>
 
+            {/* Telemetry Section */}
             <section className="space-y-3">
-                <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold">Related Findings</h3>
-                    <span className="inline-flex items-center gap-1 rounded bg-blue-100 px-2 py-0.5 text-xs text-blue-700">
-                        🔗 Traceable
-                    </span>
-                </div>
+                <h3 className="text-lg font-semibold">Telemetry Events</h3>
 
-                {!relatedFindings.length ? (
-                    <div className="rounded border border-dashed p-6 text-center text-gray-500">
-                        No findings detected for this transaction.
-                        <br />
-                        All telemetry events completed successfully.
-                    </div>
-                ) : (
-                    <div className="space-y-3">
-                        {relatedFindings.map(finding => {
-                            const certCopy = buildCertificateFindingCopy(
-                                finding,
-                                transaction
-                            );
-
-                            return (
-                                <div
-                                    key={finding.id}
-                                    className={`rounded-lg border border-l-4 bg-white p-4 shadow-sm ${
-                                        finding.severity === 'critical'
-                                            ? 'border-red-500'
-                                            : 'border-yellow-500'
-                                    }`}
-                                >
-                                    <div className="flex items-center justify-between">
-                                        <div className="font-semibold text-gray-800">
-                                            {certCopy?.summary ??
-                                                finding.summary ??
-                                                '—'}
-                                        </div>
-                                        <span className="text-xs text-gray-500 uppercase tracking-wide">
-                                            Related Transaction
-                                        </span>
-                                    </div>
-                                    {certCopy ? (
-                                        <div className="mt-3 space-y-2 text-sm text-gray-700">
-                                            <p>
-                                                <span className="font-semibold">
-                                                    Why this matters:
-                                                </span>{' '}
-                                                {certCopy.why}
-                                            </p>
-                                            <p>
-                                                <span className="font-semibold">
-                                                    Recommended action:
-                                                </span>{' '}
-                                                {certCopy.action}
-                                            </p>
-                                            {certCopy.thumbprint && (
-                                                <p className="text-xs text-gray-500">
-                                                    Affected certificate:{' '}
-                                                    <span className="font-mono">
-                                                        {certCopy.thumbprint}
-                                                    </span>
-                                                </p>
-                                            )}
-                                        </div>
-                                    ) : (
-                                        <div className="mt-2 text-sm text-gray-600">
-                                            {finding.recommendedAction ?? '—'}
-                                        </div>
-                                    )}
-                                    {finding.executionId && (
-                                        <div className="mt-2">
-                                            <TransactionLink id={finding.executionId} />
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        })}
+                {telemetryError && (
+                    <div className="text-red-600 text-sm">
+                        {telemetryError}
                     </div>
                 )}
-            </section>
-
-            <section className="space-y-3">
-                <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold">Telemetry Events</h3>
-                    <span className="inline-flex items-center gap-1 rounded bg-blue-100 px-2 py-0.5 text-xs text-blue-700">
-                        🔗 Traceable
-                    </span>
-                </div>
 
                 <div className="mb-3 rounded-md bg-gray-50 p-3 text-sm text-gray-700">
                     These telemetry events are associated with transaction{' '}
@@ -482,6 +477,7 @@ const TransactionDetailPage: React.FC = () => {
                         </table>
                     </div>
                 )}
+
                 <Pagination
                     page={page}
                     totalPages={totalPages}
