@@ -1,45 +1,48 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaArrowLeft, FaChartBar, FaClock, FaTimesCircle, FaCheckCircle } from 'react-icons/fa';
+import { FaArrowLeft, FaClock, FaTimesCircle, FaCheckCircle } from 'react-icons/fa';
 
-import { TelemetryEvent } from '../../telemetry/TelemetryEvent';
-import { fetchTelemetryEvents, TelemetryFilterParams } from '../../lib/telemetryClient';
+import type { MessageEvent } from '../../types/messages';
+import { fetchMessageEvents, MessageFilterParams } from '../../lib/telemetryClient';
 import { TransactionLink } from '../../components/TransactionLink';
 import Pagination from '../../components/Pagination';
 
-const formatStatus = (status?: string) => {
-    const normalized = (status || 'UNKNOWN').toUpperCase();
-    switch (normalized) {
-        case 'SUCCESS':
+const formatStatus = (status?: MessageEvent['status']) => {
+    switch (status) {
+        case 'Success':
             return {
-                label: 'SUCCESS',
+                label: 'Success',
                 className: 'bg-green-100 text-green-800',
                 icon: <FaCheckCircle aria-hidden className="mr-1" />,
             };
-        case 'NF':
-        case 'NO_MATCH':
+        case 'Error':
             return {
-                label: 'NF',
-                className: 'bg-gray-100 text-gray-800',
-                icon: <FaChartBar aria-hidden className="mr-1" />,
-            };
-        case 'ERROR':
-            return {
-                label: 'ERROR',
+                label: 'Error',
                 className: 'bg-red-100 text-red-800',
                 icon: <FaTimesCircle aria-hidden className="mr-1" />,
             };
+        case 'Warning':
         default:
             return {
-                label: normalized,
+                label: status ?? 'Warning',
                 className: 'bg-yellow-100 text-yellow-800',
                 icon: <FaClock aria-hidden className="mr-1" />,
             };
     }
 };
 
+const formatCertificateStatus = (status: 'Valid' | 'Expired' | 'Expiring Soon') => {
+    if (status === 'Valid') {
+        return 'bg-green-100 text-green-800';
+    }
+    if (status === 'Expired') {
+        return 'bg-red-100 text-red-800';
+    }
+    return 'bg-yellow-100 text-yellow-800';
+};
+
 const formatEnvironment = (environment?: string) => {
-    if (!environment) return '—';
+    if (!environment) return '-';
     const normalized = environment.toUpperCase();
     if (normalized === 'PROD') return 'PROD';
     if (normalized === 'TEST') return 'TEST';
@@ -52,17 +55,14 @@ const formatTimestamp = (timestamp?: string) => {
     return Number.isNaN(date.getTime())
         ? '—'
         : date.toLocaleString(undefined, {
-              dateStyle: 'medium',
-              timeStyle: 'medium',
-          });
+            dateStyle: 'medium',
+            timeStyle: 'medium',
+        });
 };
-
-type TelemetryStatus = TelemetryEvent['status'];
-type TelemetryEnvironment = TelemetryEvent['environment'];
 
 const TelemetryPage: React.FC = () => {
     const navigate = useNavigate();
-    const [telemetryEvents, setTelemetryEvents] = useState<TelemetryEvent[]>([]);
+    const [messageEvents, setMessageEvents] = useState<MessageEvent[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string>();
 
@@ -71,17 +71,16 @@ const TelemetryPage: React.FC = () => {
     const [customEnd, setCustomEnd] = useState('');
     const [organizationFilter, setOrganizationFilter] = useState<'all' | string>('all');
     const [transactionTypeFilter, setTransactionTypeFilter] = useState<'all' | string>('all');
+    const [sourceFilter, setSourceFilter] = useState<'all' | 'transport' | 'telemetry'>('all');
 
-    const [statusFilter, setStatusFilter] = useState<TelemetryStatus | 'all'>('all');
-    const [environmentFilter, setEnvironmentFilter] = useState<TelemetryEnvironment | 'all'>(
-        'all'
-    );
+    const [statusFilter, setStatusFilter] = useState<'all' | MessageEvent['status']>('all');
+    const [environmentFilter, setEnvironmentFilter] = useState<'all' | string>('all');
     const [search, setSearch] = useState('');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
     const [page, setPage] = useState(1);
     const pageSize = 25;
 
-    const filterParams = useMemo<TelemetryFilterParams>(() => {
+    const filterParams = useMemo<MessageFilterParams>(() => {
         const now = new Date();
         let startTime: string | undefined;
         let endTime: string | undefined;
@@ -117,130 +116,69 @@ const TelemetryPage: React.FC = () => {
             organization: organizationFilter === 'all' ? undefined : organizationFilter,
             transactionType:
                 transactionTypeFilter === 'all' ? undefined : transactionTypeFilter,
+            status: statusFilter === 'all' ? undefined : statusFilter,
+            environment: environmentFilter === 'all' ? undefined : environmentFilter,
+            search: search.trim() || undefined,
+            source: sourceFilter === 'all' ? undefined : sourceFilter,
         };
-    }, [customEnd, customStart, organizationFilter, timeRange, transactionTypeFilter]);
+    }, [
+        customEnd,
+        customStart,
+        environmentFilter,
+        organizationFilter,
+        search,
+        sourceFilter,
+        statusFilter,
+        timeRange,
+        transactionTypeFilter,
+    ]);
 
-    const loadTelemetry = React.useCallback(async (filters?: TelemetryFilterParams) => {
+    const loadMessages = React.useCallback(async (filters?: MessageFilterParams) => {
         setLoading(true);
         setError(undefined);
         try {
-            const shouldAttemptFiltered =
-                Boolean(filters?.startTime) ||
-                Boolean(filters?.endTime) ||
-                Boolean(filters?.organization) ||
-                Boolean(filters?.transactionType);
-
-            if (shouldAttemptFiltered) {
-                try {
-                    const events = await fetchTelemetryEvents(filters);
-                    setTelemetryEvents(events);
-                    return;
-                } catch (err) {
-                    console.warn(
-                        '[Phase0][TelemetryFilters] Backend filter not supported',
-                        err
-                    );
-                }
-            }
-
-            const events = await fetchTelemetryEvents();
-            setTelemetryEvents(events);
+            const events = await fetchMessageEvents(filters);
+            setMessageEvents(events);
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to load telemetry');
+            setError(err instanceof Error ? err.message : 'Failed to load messages');
         } finally {
             setLoading(false);
         }
     }, []);
 
     useEffect(() => {
-        loadTelemetry(filterParams);
-    }, [filterParams, loadTelemetry]);
+        loadMessages(filterParams);
+    }, [filterParams, loadMessages]);
 
     const organizationOptions = useMemo(() => {
         const values = new Set<string>();
-        telemetryEvents.forEach(event => {
+        messageEvents.forEach(event => {
             if (event.channelId) {
                 values.add(event.channelId);
             }
         });
 
         return Array.from(values).sort((a, b) => a.localeCompare(b));
-    }, [telemetryEvents]);
+    }, [messageEvents]);
 
     const transactionTypeOptions = useMemo(() => {
         const values = new Set<string>();
-        telemetryEvents.forEach(event => {
+        messageEvents.forEach(event => {
             if (event.eventType) {
                 values.add(event.eventType);
             }
         });
 
         return Array.from(values).sort((a, b) => a.localeCompare(b));
-    }, [telemetryEvents]);
-
-    const filteredEvents = useMemo(() => {
-        const query = search.trim().toLowerCase();
-        const startTime = filterParams.startTime
-            ? Date.parse(filterParams.startTime)
-            : undefined;
-        const endTime = filterParams.endTime
-            ? Date.parse(filterParams.endTime)
-            : undefined;
-
-        return telemetryEvents.filter(event => {
-            const outcomeStatus = (event.status || 'UNKNOWN').toUpperCase();
-            const eventTime = event.timestamp ? Date.parse(event.timestamp) : NaN;
-
-            const matchesStatus =
-                statusFilter === 'all' || outcomeStatus === statusFilter?.toUpperCase();
-            const matchesEnvironment =
-                environmentFilter === 'all' || event.environment === environmentFilter;
-            const matchesOrganization =
-                organizationFilter === 'all' || event.channelId === organizationFilter;
-            const matchesTransactionType =
-                transactionTypeFilter === 'all' || event.eventType === transactionTypeFilter;
-
-            const matchesStart =
-                startTime === undefined || (!Number.isNaN(eventTime) && eventTime >= startTime);
-            const matchesEnd =
-                endTime === undefined || (!Number.isNaN(eventTime) && eventTime <= endTime);
-
-            if (
-                !matchesStatus ||
-                !matchesEnvironment ||
-                !matchesOrganization ||
-                !matchesTransactionType ||
-                !matchesStart ||
-                !matchesEnd
-            ) {
-                return false;
-            }
-            if (!query) return true;
-
-            return (
-                (event.requestId || '').toLowerCase().includes(query) ||
-                (event.channelId || '').toLowerCase().includes(query) ||
-                (event.interactionId || '').toLowerCase().includes(query) ||
-                (event.eventId || '').toLowerCase().includes(query)
-            );
-        });
-    }, [
-        environmentFilter,
-        filterParams,
-        organizationFilter,
-        search,
-        statusFilter,
-        telemetryEvents,
-        transactionTypeFilter,
-    ]);
+    }, [messageEvents]);
 
     const sortedEvents = useMemo(() => {
-        return [...filteredEvents].sort((a, b) => {
+        return [...messageEvents].sort((a, b) => {
             const aTime = new Date(a.timestamp).getTime();
             const bTime = new Date(b.timestamp).getTime();
             return sortDirection === 'asc' ? aTime - bTime : bTime - aTime;
         });
-    }, [filteredEvents, sortDirection]);
+    }, [messageEvents, sortDirection]);
 
     const totalPages = Math.max(1, Math.ceil(sortedEvents.length / pageSize));
 
@@ -256,18 +194,17 @@ const TelemetryPage: React.FC = () => {
     }, [page, sortedEvents]);
 
     const metrics = useMemo(() => {
-        const total = telemetryEvents.length;
-        const successes = telemetryEvents.filter(
-            e => (e.status || '').toUpperCase() === 'SUCCESS'
-        ).length;
-        const errors = telemetryEvents.filter(
-            e => (e.status || '').toUpperCase() === 'ERROR'
-        ).length;
+        const total = messageEvents.length;
+        const successes = messageEvents.filter(e => e.status === 'Success').length;
+        const errors = messageEvents.filter(e => e.status === 'Error').length;
+
+        const durations = messageEvents
+            .map(event => event.durationMs)
+            .filter((duration): duration is number => typeof duration === 'number');
+
         const averageDuration = Math.round(
-            telemetryEvents.reduce(
-                (sum, event) => sum + Number(event.durationMs ?? 0),
-                0
-            ) / Math.max(total, 1)
+            durations.reduce((sum, duration) => sum + duration, 0) /
+            Math.max(durations.length, 1)
         );
 
         const successRate = total ? Math.round((successes / total) * 100) : 0;
@@ -279,12 +216,12 @@ const TelemetryPage: React.FC = () => {
             averageDuration,
             successRate,
         };
-    }, [telemetryEvents]);
+    }, [messageEvents]);
 
     if (loading) {
         return (
             <div className="flex min-h-screen items-center justify-center text-gray-700">
-                Loading telemetry...
+                Loading messages...
             </div>
         );
     }
@@ -294,9 +231,9 @@ const TelemetryPage: React.FC = () => {
             <div className="flex min-h-screen items-center justify-center">
                 <div className="bg-white shadow rounded p-6 space-y-4 text-center">
                     <div className="text-red-600 font-semibold">{error}</div>
-                    <p className="text-gray-600">Unable to load telemetry events.</p>
+                    <p className="text-gray-600">Unable to load message events.</p>
                     <button
-                        onClick={() => loadTelemetry(filterParams)}
+                        onClick={() => loadMessages(filterParams)}
                         className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
                     >
                         Retry
@@ -317,15 +254,15 @@ const TelemetryPage: React.FC = () => {
                         <FaArrowLeft />
                     </button>
                     <div>
-                        <h1 className="text-2xl font-semibold">Telemetry</h1>
+                        <h1 className="text-2xl font-semibold">Message Monitor</h1>
                         <p className="text-gray-600">
-                            Live PD execution telemetry with outcomes and timing
+                            Unified integration message monitoring across transport and telemetry layers
                         </p>
                     </div>
                 </div>
                 <span
                     className="inline-flex items-center gap-1 rounded bg-emerald-100 px-2 py-0.5 text-xs text-emerald-700"
-                    title="Statuses shown here are normalized across systems into a standard taxonomy (Success, Warning, Failure). Raw vendor logs are not displayed."
+                    title="Statuses shown here are normalized across systems into a standard taxonomy (Success, Warning, Error)."
                 >
                     Normalized Status View
                 </span>
@@ -333,7 +270,7 @@ const TelemetryPage: React.FC = () => {
                     🔗 Traceable
                 </span>
                 <button
-                    onClick={() => loadTelemetry(filterParams)}
+                    onClick={() => loadMessages(filterParams)}
                     className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
                 >
                     Refresh
@@ -349,11 +286,11 @@ const TelemetryPage: React.FC = () => {
 
             <div className="bg-white rounded-lg shadow p-4 flex flex-wrap gap-3 items-center justify-between text-sm">
                 <div className="flex flex-wrap gap-2 items-center">
-                    <label htmlFor="telemetry-time-range" className="text-gray-700">
+                    <label htmlFor="message-time-range" className="text-gray-700">
                         Time Range
                     </label>
                     <select
-                        id="telemetry-time-range"
+                        id="message-time-range"
                         value={timeRange}
                         onChange={event =>
                             setTimeRange(event.target.value as typeof timeRange)
@@ -369,21 +306,21 @@ const TelemetryPage: React.FC = () => {
 
                 {timeRange === 'custom' && (
                     <div className="flex flex-wrap gap-2 items-center">
-                        <label htmlFor="telemetry-start" className="text-gray-700">
+                        <label htmlFor="message-start" className="text-gray-700">
                             Start
                         </label>
                         <input
-                            id="telemetry-start"
+                            id="message-start"
                             type="datetime-local"
                             value={customStart}
                             onChange={event => setCustomStart(event.target.value)}
                             className="border rounded px-2 py-1"
                         />
-                        <label htmlFor="telemetry-end" className="text-gray-700">
+                        <label htmlFor="message-end" className="text-gray-700">
                             End
                         </label>
                         <input
-                            id="telemetry-end"
+                            id="message-end"
                             type="datetime-local"
                             value={customEnd}
                             onChange={event => setCustomEnd(event.target.value)}
@@ -393,11 +330,29 @@ const TelemetryPage: React.FC = () => {
                 )}
 
                 <div className="flex flex-wrap gap-2 items-center">
-                    <label htmlFor="telemetry-org" className="text-gray-700">
+                    <label htmlFor="message-source" className="text-gray-700">
+                        Source
+                    </label>
+                    <select
+                        id="message-source"
+                        value={sourceFilter}
+                        onChange={event =>
+                            setSourceFilter(event.target.value as typeof sourceFilter)
+                        }
+                        className="border rounded px-2 py-1"
+                    >
+                        <option value="all">All</option>
+                        <option value="transport">Transport</option>
+                        <option value="telemetry">Telemetry</option>
+                    </select>
+                </div>
+
+                <div className="flex flex-wrap gap-2 items-center">
+                    <label htmlFor="message-org" className="text-gray-700">
                         Organization / Channel
                     </label>
                     <select
-                        id="telemetry-org"
+                        id="message-org"
                         value={organizationFilter}
                         onChange={event => setOrganizationFilter(event.target.value)}
                         className="border rounded px-2 py-1"
@@ -410,17 +365,19 @@ const TelemetryPage: React.FC = () => {
                                 </option>
                             ))
                         ) : (
-                            <option value="all">Unavailable</option>
+                            <option value="all" disabled>
+                                No channels
+                            </option>
                         )}
                     </select>
                 </div>
 
                 <div className="flex flex-wrap gap-2 items-center">
-                    <label htmlFor="telemetry-transaction" className="text-gray-700">
-                        Transaction Type
+                    <label htmlFor="message-type" className="text-gray-700">
+                        Event Type
                     </label>
                     <select
-                        id="telemetry-transaction"
+                        id="message-type"
                         value={transactionTypeFilter}
                         onChange={event => setTransactionTypeFilter(event.target.value)}
                         className="border rounded px-2 py-1"
@@ -433,19 +390,19 @@ const TelemetryPage: React.FC = () => {
                                 </option>
                             ))
                         ) : (
-                            <option value="all">Unavailable</option>
+                            <option value="all" disabled>
+                                No event types
+                            </option>
                         )}
                     </select>
                 </div>
-            </div>
 
-            <div className="bg-white rounded-lg shadow p-4 flex flex-wrap gap-3 items-center justify-between">
                 <div className="flex gap-2 items-center text-sm">
-                    <label htmlFor="telemetry-status" className="text-gray-700">
+                    <label htmlFor="message-status" className="text-gray-700">
                         Status
                     </label>
                     <select
-                        id="telemetry-status"
+                        id="message-status"
                         value={statusFilter}
                         onChange={event =>
                             setStatusFilter(event.target.value as typeof statusFilter)
@@ -453,22 +410,21 @@ const TelemetryPage: React.FC = () => {
                         className="border rounded px-2 py-1"
                     >
                         <option value="all">All</option>
-                        <option value="SUCCESS">Success</option>
-                        <option value="NF">NF</option>
-                        <option value="NO_MATCH">No match</option>
-                        <option value="ERROR">Error</option>
+                        <option value="Success">Success</option>
+                        <option value="Warning">Warning</option>
+                        <option value="Error">Error</option>
                     </select>
                 </div>
 
                 <div className="flex gap-2 items-center text-sm">
-                    <label htmlFor="telemetry-environment" className="text-gray-700">
+                    <label htmlFor="message-environment" className="text-gray-700">
                         Environment
                     </label>
                     <select
-                        id="telemetry-environment"
+                        id="message-environment"
                         value={environmentFilter}
                         onChange={event =>
-                            setEnvironmentFilter(event.target.value as typeof environmentFilter)
+                            setEnvironmentFilter(event.target.value)
                         }
                         className="border rounded px-2 py-1"
                     >
@@ -482,7 +438,7 @@ const TelemetryPage: React.FC = () => {
                     type="search"
                     value={search}
                     onChange={event => setSearch(event.target.value)}
-                    placeholder="Search request, message, channel, or interaction"
+                    placeholder="Search request, transaction, channel, or interaction"
                     className="border rounded px-3 py-2 w-full sm:w-80"
                 />
 
@@ -497,64 +453,66 @@ const TelemetryPage: React.FC = () => {
             <div className="bg-white rounded-lg shadow overflow-x-auto">
                 <table className="min-w-full border-collapse">
                     <thead className="bg-gray-100 text-left text-sm text-gray-700">
-                        <tr>
-                            <th className="p-3">Event ID</th>
-                            <th className="p-3">Timestamp</th>
-                            <th className="p-3">Event Type</th>
-                            <th className="p-3">Status</th>
-                            <th className="p-3">Request ID</th>
-                            <th className="p-3">Channel ID</th>
-                            <th className="p-3">Interaction ID</th>
-                            <th className="p-3">Duration (ms)</th>
-                            <th className="p-3">Environment</th>
-                        </tr>
+                    <tr>
+                        <th className="p-3">Event ID</th>
+                        <th className="p-3">Timestamp</th>
+                        <th className="p-3">Event Type</th>
+                        <th className="p-3">Status</th>
+                        <th className="p-3">Request ID</th>
+                        <th className="p-3">Channel ID</th>
+                        <th className="p-3">Interaction ID</th>
+                        <th className="p-3">Duration (ms)</th>
+                        <th className="p-3">Environment</th>
+                        <th className="p-3">Certificate</th>
+                    </tr>
                     </thead>
                     <tbody>
-                        {pagedEvents.map(event => {
-                            const statusValue = event.status || 'UNKNOWN';
-                            const status = formatStatus(statusValue);
-                            return (
-                                <tr key={event.eventId} className="border-t text-sm">
-                                    <td className="p-3 font-mono text-xs text-gray-700">
-                                        {event.eventId}
-                                    </td>
-                                    <td className="p-3 whitespace-nowrap">
-                                        {formatTimestamp(event.timestamp)}
-                                    </td>
-                                    <td className="p-3">{event.eventType || '—'}</td>
-                                    <td className="p-3">
+                    {pagedEvents.map(event => {
+                        const status = formatStatus(event.status);
+                        return (
+                            <tr key={event.id} className="border-t text-sm">
+                                <td className="p-3 font-mono text-xs text-gray-700">{event.id}</td>
+                                <td className="p-3 whitespace-nowrap">{formatTimestamp(event.timestamp)}</td>
+                                <td className="p-3">{event.eventType}</td>
+                                <td className="p-3">
                                         <span
                                             className={`inline-flex items-center px-2 py-1 rounded text-xs ${status.className}`}
                                         >
                                             {status.icon}
                                             {status.label}
                                         </span>
-                                    </td>
-                                    <td className="p-3 font-mono break-all">
-                                        {event.requestId ? (
-                                            <TransactionLink id={event.requestId} />
-                                        ) : (
-                                            '—'
-                                        )}
-                                    </td>
-                                    <td className="p-3 font-mono break-all">
-                                        {event.channelId || '—'}
-                                    </td>
-                                    <td className="p-3 font-mono break-all">
-                                        {event.interactionId || '—'}
-                                    </td>
-                                    <td className="p-3">{Number(event.durationMs ?? 0)}</td>
-                                    <td className="p-3">{formatEnvironment(event.environment)}</td>
-                                </tr>
-                            );
-                        })}
-                        {!sortedEvents.length && (
-                            <tr>
-                                <td colSpan={9} className="p-4 text-center text-gray-500">
-                                    No telemetry events available.
+                                </td>
+                                <td className="p-3 font-mono break-all">
+                                    {event.requestId ? <TransactionLink id={event.requestId} /> : '-'}
+                                </td>
+                                <td className="p-3 font-mono break-all">{event.channelId ?? '-'}</td>
+                                <td className="p-3 font-mono break-all">{event.interactionId ?? '-'}</td>
+                                <td className="p-3">{event.durationMs ?? '-'}</td>
+                                <td className="p-3">{formatEnvironment(event.environment)}</td>
+                                <td className="p-3">
+                                    {event.certificate ? (
+                                        <span
+                                            className={`inline-flex items-center rounded px-2 py-1 text-xs ${formatCertificateStatus(
+                                                event.certificate.status
+                                            )}`}
+                                            title={event.certificate.thumbprint}
+                                        >
+                                            {event.certificate.status}
+                                        </span>
+                                    ) : (
+                                        '-'
+                                    )}
                                 </td>
                             </tr>
-                        )}
+                        );
+                    })}
+                    {!sortedEvents.length && (
+                        <tr>
+                            <td colSpan={10} className="p-4 text-center text-gray-500">
+                                No message events available.
+                            </td>
+                        </tr>
+                    )}
                     </tbody>
                 </table>
                 <Pagination
@@ -568,9 +526,9 @@ const TelemetryPage: React.FC = () => {
 };
 
 const SummaryCard = ({
-    label,
-    value,
-}: {
+                         label,
+                         value,
+                     }: {
     label: string;
     value: string | number;
 }) => (

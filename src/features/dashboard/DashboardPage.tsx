@@ -37,10 +37,10 @@ const Dashboard: React.FC<DashboardProps> = ({ role, onLogout }) => {
     const {
         findings,
         pdExecutions,
-        telemetryEvents,
+        messages,
         loading,
         error,
-        telemetryWarning,
+        messagesWarning,
         refresh,
     } = useServerData();
 
@@ -114,7 +114,7 @@ const Dashboard: React.FC<DashboardProps> = ({ role, onLogout }) => {
     const { alertCards, insightCards } = useDashboardMetrics(
         findings,
         pdExecutions,
-        telemetryEvents,
+        messages,
         complianceStandard
     );
 
@@ -150,9 +150,9 @@ const Dashboard: React.FC<DashboardProps> = ({ role, onLogout }) => {
                         </div>
                     )}
 
-                    {telemetryWarning && (
+                    {messagesWarning && (
                         <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
-                            Telemetry unavailable: {telemetryWarning}
+                            Messages unavailable: {messagesWarning}
                         </div>
                     )}
 
