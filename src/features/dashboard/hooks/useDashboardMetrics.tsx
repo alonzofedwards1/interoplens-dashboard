@@ -153,7 +153,7 @@ const buildInsightCards = (
     findingsMetrics: ReturnType<typeof deriveFindingsMetrics>,
     pdMetrics: ReturnType<typeof derivePdMetrics>,
     pdExecutions: PdExecution[],
-    telemetryEvents: MessageEvent[],
+    messages: MessageEvent[],
     complianceStandard: ComplianceStandard
 ): InsightCard[] => {
     const complianceCategories: Record<ComplianceStandard, string[]> = {
@@ -197,7 +197,7 @@ const buildInsightCards = (
         : 0;
 
     const telemetryRequestIds = new Set(
-        telemetryEvents
+        messages
             .map(event => event.requestId)
             .filter((id): id is string => Boolean(id))
     );
@@ -257,7 +257,7 @@ const buildInsightCards = (
 const useDashboardMetrics = (
     findings: Finding[],
     pdExecutions: PdExecution[],
-    telemetryEvents: MessageEvent[],
+    messages: MessageEvent[],
     complianceStandard: ComplianceStandard
 ) => {
     const findingsMetrics = React.useMemo(
@@ -277,7 +277,7 @@ const useDashboardMetrics = (
             findingsMetrics,
             pdMetrics,
             pdExecutions,
-            telemetryEvents,
+            messages,
             complianceStandard
         ),
     };

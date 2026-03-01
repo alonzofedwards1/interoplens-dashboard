@@ -18,7 +18,7 @@ import { formatTimestamp } from '../../lib/dateTime';
 const TransactionDetailPage: React.FC = () => {
     const navigate = useNavigate();
     const { id } = useParams<{ id: string }>();
-    const { pdExecutions, telemetryEvents, findings } = useServerData();
+    const { pdExecutions, messages, findings } = useServerData();
     const { preferences } = useUserPreferences();
     const [page, setPage] = useState(1);
     const pageSize = 10;
@@ -35,8 +35,8 @@ const TransactionDetailPage: React.FC = () => {
     }, [findings, id]);
 
     const relatedTelemetry = useMemo(() => {
-        return telemetryEvents.filter(event => event.requestId === id);
-    }, [id, telemetryEvents]);
+        return messages.filter(event => event.requestId === id);
+    }, [id, messages]);
 
     const certificateDetails = useMemo(
         () => getExecutionCertificateDetails(transaction),
