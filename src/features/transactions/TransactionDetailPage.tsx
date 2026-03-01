@@ -172,6 +172,12 @@ const TransactionDetailPage: React.FC = () => {
 
     const totalPages = Math.max(1, Math.ceil(telemetryTotal / tablePageSize));
 
+    useEffect(() => {
+        void fetchCertificateTelemetry();
+    }, [fetchCertificateTelemetry]);
+
+    const totalPages = Math.max(1, Math.ceil(telemetryTotal / tablePageSize));
+
             setTelemetryRows(exactRows);
             setTelemetryTotal(
                 response.pagination.total > 0
@@ -244,17 +250,7 @@ const TransactionDetailPage: React.FC = () => {
         void fetchCertificateTelemetry();
     }, [fetchCertificateTelemetry]);
 
-    const totalPages = Math.max(1, Math.ceil(telemetryTotal / tablePageSize));
-
-    const certificateStatus = mapStatusToCertificateStatus(
-        latestCertificateEvent?.certificate_status ?? null
-    );
-
-    const certificateBadge = getCertificateStatusBadge(certificateStatus);
-    const certificateDescription =
-        getCertificateStatusDescription(certificateStatus);
-
-    useEffect(() => {
+    useEffect(function resetPageOnTransactionChange() {
         setPage(1);
     }, [id]);
 
