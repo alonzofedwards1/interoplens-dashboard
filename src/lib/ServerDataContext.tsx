@@ -37,6 +37,10 @@ const EMPTY_SERVER_DATA: ServerDataPayload = {
 const ServerDataContext =
     React.createContext<ServerDataContextType | undefined>(undefined);
 
+const fetchMessages = async (): Promise<MessageMonitorRow[]> => {
+    return fetchMessageEvents({ limit: 1000, offset: 0 });
+};
+
 const formatReason = (reason: unknown): string =>
     reason instanceof Error ? reason.message : String(reason);
 

@@ -14,8 +14,6 @@ import { useUserPreferences } from '../../lib/useUserPreferences';
 import { formatTimestamp } from '../../lib/dateTime';
 import { fetchMessageMonitor } from '../../lib/telemetryClient';
 import type { MessageMonitorRow } from '../../types/messages';
-import { Finding } from '../../types/findings';
-import { buildCertificateFindingCopy } from '../../lib/certificates';
 
 const tablePageSize = 10;
 const certificateScanBatchSize = 100;
