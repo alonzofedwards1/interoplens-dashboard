@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 
 import { fetchOidDetail, submitOidGovernance } from "../../lib/api/oids";
 import type { OidDetail as OidDetailRecord, OidGovernanceAction } from "../../types";
@@ -10,10 +10,10 @@ import ObservationSnapshot from "./components/ObservationSnapshot";
 import UsageTimeline from "./components/UsageTimeline";
 import GovernancePanel from "./components/GovernancePanel";
 import LinkedFindingsTable from "./components/LinkedFindingsTable";
+import BackButton from "../../components/navigation/BackButton";
 
 const OidDetail = () => {
     const { oid } = useParams();
-    const navigate = useNavigate();
     const decodedOid = useMemo(() => {
         if (!oid) return "";
         try {
@@ -97,12 +97,12 @@ const OidDetail = () => {
     if (error) {
         return (
             <div className="p-6 space-y-3">
-                <button
-                    onClick={() => navigate("/oids")}
+                <BackButton
+                    defaultRoute="/oids"
+                    label="Back to OID Directory"
                     className="text-sm text-blue-600 hover:underline"
-                >
-                    ← Back to OID Directory
-                </button>
+                    showIcon={false}
+                />
                 <div className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">
                     {error}
                 </div>
@@ -120,12 +120,12 @@ const OidDetail = () => {
 
     return (
         <div className="p-6 space-y-4">
-            <button
-                onClick={() => navigate("/oids")}
+            <BackButton
+                defaultRoute="/oids"
+                label="Back to OID Directory"
                 className="text-sm text-blue-600 hover:underline"
-            >
-                ← Back to OID Directory
-            </button>
+                showIcon={false}
+            />
 
             <h1 className="text-2xl font-semibold font-mono">{record.oid}</h1>
 

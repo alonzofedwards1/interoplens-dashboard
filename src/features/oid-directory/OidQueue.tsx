@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { fetchOids } from "../../lib/api/oids";
 import type { Oid, OidConfidence, OidStatus } from "@/types";
 import { OID_STATUS_LABELS } from "./data/oidStatus.data";
 import { normalizeOid } from "./utils/normalizeOid";
+import BackButton from '../../components/navigation/BackButton';
 import Pagination from "../../components/Pagination";
 
 const OidQueue = () => {
     const navigate = useNavigate();
+    const location = useLocation();
 
     const [statusFilter, setStatusFilter] = useState<OidStatus | "ALL">("ALL");
     const [confidenceFilter, setConfidenceFilter] = useState<OidConfidence | "ALL">("ALL");
@@ -98,12 +100,12 @@ const OidQueue = () => {
 
     return (
         <div className="p-6 space-y-4">
-            <button
-                onClick={() => navigate("/dashboard")}
+            <BackButton
+                defaultRoute="/dashboard"
+                label="Back to Dashboard"
                 className="text-sm text-blue-600 hover:underline"
-            >
-                Back to Dashboard
-            </button>
+                showIcon={false}
+            />
             <div>
                 <h1 className="text-2xl font-semibold">OID Directory</h1>
                 <p className="text-sm text-gray-500">
@@ -192,7 +194,7 @@ const OidQueue = () => {
                             <tr
                                 key={oid.oid}
                                 className="border-t cursor-pointer hover:bg-gray-50"
-                                onClick={() => navigate(`/oids/${encodeURIComponent(oid.oid)}`)}
+                                onClick={() => navigate(`/oids/${encodeURIComponent(oid.oid)}`, { state: { from: location.pathname } })}
                             >
                                 <td className="p-3 font-mono">{oid.oid}</td>
                                 <td className="p-3 text-gray-700">{oid.displayName}</td>

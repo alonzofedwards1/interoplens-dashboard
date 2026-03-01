@@ -1,6 +1,5 @@
 import React, { useMemo } from "react";
-import { useNavigate } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import BackButton from '../../components/navigation/BackButton';
 
 import ReportsHeader from "../../components/reports/ReportsHeader";
 import ReportsFilters from "../../components/reports/ReportsFilters";
@@ -37,7 +36,6 @@ const defaultReportFilters = {
 type ReportFilters = typeof defaultReportFilters;
 
 const Reports: React.FC = () => {
-    const navigate = useNavigate();
 
     const [filters, setFilters] = useUserPreference(
         "reports.filters",
@@ -75,13 +73,12 @@ const Reports: React.FC = () => {
         <div className="p-6 space-y-6">
             {/* ⬅ Back */}
             <div className="flex items-center gap-2">
-                <button
-                    onClick={() => navigate(-1)}
+                <BackButton
+                    defaultRoute="/dashboard"
+                    label="Back"
                     className="flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900"
-                >
-                    <ArrowLeft size={16} />
-                    Back
-                </button>
+                    showIcon={false}
+                />
             </div>
 
             <ReportsHeader

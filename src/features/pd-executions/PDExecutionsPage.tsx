@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { FaArrowLeft } from 'react-icons/fa';
+import { useSearchParams } from 'react-router-dom';
 import {
     Bar,
     BarChart,
@@ -14,6 +13,7 @@ import {
 import { useUserPreference } from '../../lib/userPreferences';
 import { useServerData } from '../../lib/ServerDataContext';
 import { TransactionLink } from '../../components/TransactionLink';
+import BackButton from '../../components/navigation/BackButton';
 import Pagination from '../../components/Pagination';
 import { Finding } from '../../types/findings';
 import { fetchPdExecutionTelemetry } from '../../lib/api/pdExecutions';
@@ -93,7 +93,6 @@ const triggerDownload = (payload: BlobPart, filename: string, mimeType: string) 
 };
 
 const PDExecutions: React.FC = () => {
-    const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
     const { pdExecutions, loading, findings } = useServerData();
     const { preferences: userPreferences } = useUserPreferences();
@@ -573,12 +572,11 @@ const PDExecutions: React.FC = () => {
         <div className="p-6 space-y-6">
             {/* Header */}
             <div className="flex items-center space-x-4">
-                <button
-                    onClick={() => navigate('/dashboard')}
+                <BackButton
+                    defaultRoute="/dashboard"
+                    label=""
                     className="text-gray-600 hover:text-gray-900"
-                >
-                    <FaArrowLeft />
-                </button>
+                />
                 <div>
                     <h1 className="text-2xl font-semibold">PD Executions</h1>
                     <p className="text-gray-600">

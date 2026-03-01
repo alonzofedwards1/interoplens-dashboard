@@ -1,12 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import CertInspectorModal from '../integration-issues/modals/CertInspectorModal';
-import { useNavigate } from 'react-router-dom';
-import { FaArrowLeft } from 'react-icons/fa';
 
 import type { MessageMonitorRow } from '../../types/messages';
 import type { CertificateStatus, CertificateDetails } from '../../types/certificates';
 import { fetchMessageMonitor, MessageFilterParams } from '../../lib/telemetryClient';
 import { TransactionLink } from '../../components/TransactionLink';
+import BackButton from '../../components/navigation/BackButton';
 import Pagination from '../../components/Pagination';
 import { mapRowToCertificateDetails } from '../messageMonitor/mappers/mapCertificate';
 
@@ -42,7 +41,6 @@ const getDaysToExpirationClassName = (days: number | null) => {
 };
 
 const TelemetryPage: React.FC = () => {
-    const navigate = useNavigate();
     const [messageEvents, setMessageEvents] = useState<MessageMonitorRow[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string>();
@@ -182,12 +180,11 @@ const TelemetryPage: React.FC = () => {
         <div className="p-6 space-y-6">
             <div className="flex items-center justify-between flex-wrap gap-3">
                 <div className="flex items-center space-x-4">
-                    <button
-                        onClick={() => navigate('/dashboard')}
+                    <BackButton
+                        defaultRoute="/dashboard"
+                        label=""
                         className="text-gray-600 hover:text-gray-900"
-                    >
-                        <FaArrowLeft />
-                    </button>
+                    />
                     <div>
                         <h1 className="text-2xl font-semibold">Message Monitor</h1>
                         <p className="text-gray-600">Unified integration message monitoring across transport and telemetry layers</p>

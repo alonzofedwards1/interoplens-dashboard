@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { FaArrowLeft } from 'react-icons/fa';
+import { useParams } from 'react-router-dom';
 
 import { useServerData } from '../../lib/ServerDataContext';
 import { TransactionLink } from '../../components/TransactionLink';
 import { Finding } from '../../types/findings';
 import Pagination from '../../components/Pagination';
+import BackButton from '../../components/navigation/BackButton';
 import {
     buildCertificateFindingCopy,
     getCertificateStatusBadge,
@@ -56,7 +56,6 @@ const getDaysToExpirationClassName = (days: number | null): string => {
 };
 
 const TransactionDetailPage: React.FC = () => {
-    const navigate = useNavigate();
     const { id } = useParams<{ id: string }>();
     const { pdExecutions, findings } = useServerData();
     const { preferences } = useUserPreferences();
@@ -198,12 +197,11 @@ const TransactionDetailPage: React.FC = () => {
     return (
         <div className="p-6 space-y-6">
             <div className="flex items-center space-x-4">
-                <button
-                    onClick={() => navigate('/pd-executions')}
+                <BackButton
+                    defaultRoute="/pd-executions"
+                    label=""
                     className="text-gray-600 hover:text-gray-900"
-                >
-                    <FaArrowLeft />
-                </button>
+                />
                 <div>
                     <h1 className="text-2xl font-semibold">Transaction Detail</h1>
                     <p className="text-gray-600">Trace PD execution, findings, and telemetry</p>

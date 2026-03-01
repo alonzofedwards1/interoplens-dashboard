@@ -1,5 +1,6 @@
 import {useMemo, useState} from "react";
 import {useNavigate} from "react-router-dom";
+import BackButton from "../../components/navigation/BackButton";
 
 import ExecutiveSummary from "./tabs/ExecutiveSummary";
 import AnalystBreakdown from "./tabs/AnalystBreakdown";
@@ -45,12 +46,12 @@ const IntegrationIssuesPage: React.FC<Props> = ({role}) => {
         <div className="p-6 space-y-6">
             {/* Header */}
             <div className="space-y-2">
-                <button
-                    onClick={() => navigate(-1)}
+                <BackButton
+                    defaultRoute="/dashboard"
+                    label="Back"
                     className="text-sm text-blue-600 hover:underline"
-                >
-                    ← Back
-                </button>
+                    showIcon={false}
+                />
 
                 <h1 className="text-2xl font-bold text-gray-800">
                     Integration Issues & Health
