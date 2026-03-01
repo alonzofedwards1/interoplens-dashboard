@@ -48,11 +48,17 @@ export function examplePdResponderIntegration(
     eventId: ctx.eventId,
     eventType: TELEMETRY_EVENT_TYPE,
     timestamp: getUtcIsoString(),
-    status,
-    durationMs,
-    channelId: 'api-telemetry',
-    environment,
-    requestId,
-    interactionId: TELEMETRY_INTERACTION_ID,
+    source: {
+      channelId: 'api-telemetry',
+      environment,
+    },
+    outcome: {
+      status,
+      durationMs,
+    },
+    correlation: {
+      requestId,
+      interactionId: TELEMETRY_INTERACTION_ID,
+    },
   });
 }

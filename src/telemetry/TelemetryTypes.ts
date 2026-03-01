@@ -5,15 +5,19 @@ export interface TelemetryEvent {
   eventId: string;
   eventType: string;
   timestamp: string;
-
-  status: string;
-  durationMs: number;
-
-  channelId: string;
-  environment: string;
-
-  requestId: string;
-  interactionId: string;
+  source?: {
+    channelId?: string;
+    environment?: string;
+  };
+  outcome?: {
+    status?: TelemetryStatus;
+    durationMs?: number;
+  };
+  correlation?: {
+    requestId?: string;
+    interactionId?: string;
+  };
+  raw?: unknown;
 }
 
 export const TELEMETRY_EVENT_TYPE = 'PD_EXECUTION' as const;
