@@ -4,8 +4,9 @@ import type {
     OidGovernanceAction,
 } from "../../types";
 import { requestJson, requestOk } from "./request";
+import { API_BASE } from '../apiBase';
 
-const BASE = '/api/oids';
+const BASE = `${API_BASE}/api/oids`;
 
 /* ============================
    GET /api/oids
