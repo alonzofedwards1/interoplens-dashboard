@@ -6,6 +6,7 @@ import {
     PdExecutionsResponse,
 } from '../types/pdExecutions';
 import { requestJson } from '../lib/api/request';
+import { API_BASE } from '../lib/apiBase';
 
 type FetchParams = Record<string, string | number | boolean | undefined>;
 
@@ -26,13 +27,13 @@ export const fetchPdExecutions = async (
     params?: FetchParams
 ): Promise<PdExecutionsResponse> => {
     return requestJson<PdExecutionsResponse>(
-        `/api/pd-executions${buildQueryString(params)}`,
+        `${API_BASE}/api/pd-executions${buildQueryString(params)}`,
         { method: 'GET' }
     );
 };
 
 export const fetchPdExecutionCounts = async (): Promise<PdExecutionCounts> => {
-    return requestJson<PdExecutionCounts>('/api/pd-executions/count', {
+    return requestJson<PdExecutionCounts>(`${API_BASE}/api/pd-executions/count`, {
         method: 'GET',
     });
 };

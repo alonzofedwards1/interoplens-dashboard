@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { FaArrowLeft } from 'react-icons/fa';
+import { useSearchParams } from 'react-router-dom';
 import {
     Bar,
     BarChart,
@@ -14,6 +13,7 @@ import {
 import { useUserPreference } from '../../lib/userPreferences';
 import { useServerData } from '../../lib/ServerDataContext';
 import { TransactionLink } from '../../components/TransactionLink';
+import BackButton from '../../components/navigation/BackButton';
 import Pagination from '../../components/Pagination';
 import { Finding } from '../../types/findings';
 import { fetchPdExecutionTelemetry } from '../../lib/api/pdExecutions';
@@ -93,7 +93,6 @@ const triggerDownload = (payload: BlobPart, filename: string, mimeType: string) 
 };
 
 const PDExecutions: React.FC = () => {
-    const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
     const { pdExecutions, loading, findings } = useServerData();
     const { preferences: userPreferences } = useUserPreferences();
@@ -122,9 +121,9 @@ const PDExecutions: React.FC = () => {
             .map(value => value.trim().toUpperCase())
             .filter(Boolean);
 
-        const hasExpired = normalized.includes('EXPIRED');
-        const hasExpiring = normalized.includes('EXPIRING_SOON');
-        const hasValid = normalized.includes('VALID');
+        const hasExpired = normalized.includes('Expired');
+        const hasExpiring = normalized.includes('Expiring Soon');
+        const hasValid = normalized.includes('Valid');
 
         let nextFilter: ExecutionPreferences['certStatusFilter'] = 'all';
         if (hasExpired && hasExpiring) {
@@ -184,15 +183,15 @@ const PDExecutions: React.FC = () => {
 
             const matchesCertStatus = (() => {
                 if (certStatusFilter === 'all') return true;
-                if (certStatusFilter === 'valid') return certificateStatus === 'VALID';
+                if (certStatusFilter === 'valid') return certificateStatus === 'Valid';
                 if (certStatusFilter === 'expiring') {
-                    return certificateStatus === 'EXPIRING_SOON';
+                    return certificateStatus === 'Expiring Soon';
                 }
-                if (certStatusFilter === 'expired') return certificateStatus === 'EXPIRED';
+                if (certStatusFilter === 'expired') return certificateStatus === 'Expired';
                 return (
                     certStatusFilter === 'impacted' &&
-                    (certificateStatus === 'EXPIRED' ||
-                        certificateStatus === 'EXPIRING_SOON')
+                    (certificateStatus === 'Expired' ||
+                        certificateStatus === 'Expiring Soon')
                 );
             })();
 
@@ -423,11 +422,11 @@ const PDExecutions: React.FC = () => {
         } else if (nextValue === 'impacted') {
             params.set('certStatus', 'EXPIRED,EXPIRING_SOON');
         } else if (nextValue === 'valid') {
-            params.set('certStatus', 'VALID');
+            params.set('certStatus', 'Valid');
         } else if (nextValue === 'expiring') {
-            params.set('certStatus', 'EXPIRING_SOON');
+            params.set('certStatus', 'Expiring Soon');
         } else if (nextValue === 'expired') {
-            params.set('certStatus', 'EXPIRED');
+            params.set('certStatus', 'Expired');
         }
         setSearchParams(params);
     };
@@ -573,12 +572,11 @@ const PDExecutions: React.FC = () => {
         <div className="p-6 space-y-6">
             {/* Header */}
             <div className="flex items-center space-x-4">
-                <button
-                    onClick={() => navigate('/dashboard')}
+                <BackButton
+                    defaultRoute="/dashboard"
+                    label=""
                     className="text-gray-600 hover:text-gray-900"
-                >
-                    <FaArrowLeft />
-                </button>
+                />
                 <div>
                     <h1 className="text-2xl font-semibold">PD Executions</h1>
                     <p className="text-gray-600">
