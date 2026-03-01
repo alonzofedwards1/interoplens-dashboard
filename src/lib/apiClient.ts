@@ -3,11 +3,8 @@ import { FindingsCountResponse, FindingsListResponse } from '../types/findings';
 import type { Oid } from '../types';
 import { PdExecutionCounts, PdExecutionsResponse } from '../types/pdExecutions';
 import { TelemetryEvent } from '../types/telemetry';
-import { API_BASE_URL } from '../config/api';
 import { requestJson } from './api/request';
 import { fetchTelemetryEvents } from './telemetryClient';
-
-const buildUrl = (base: string, path: string) => `${base}${path}`;
 
 export async function apiGet<T>(url: string): Promise<T> {
     return requestJson<T>(url);
@@ -36,25 +33,25 @@ export class ApiClient {
     async getFindings(): Promise<FindingsListResponse['findings']> {
         const data = await apiGet<
             FindingsListResponse | FindingsListResponse['findings']
-        >(buildUrl(API_BASE_URL, '/api/findings'));
+        >('/api/findings');
 
         return Array.isArray(data) ? data : data.findings;
     }
 
     async getFindingsCount(): Promise<FindingsCountResponse> {
-        return apiGet(buildUrl(API_BASE_URL, '/api/findings/count'));
+        return apiGet('/api/findings/count');
     }
 
     async getPdExecutions(): Promise<PdExecutionsResponse> {
-        return apiGet(buildUrl(API_BASE_URL, '/api/pd-executions'));
+        return apiGet('/api/pd-executions');
     }
 
     async getPdExecutionsCount(): Promise<PdExecutionCounts> {
-        return apiGet(buildUrl(API_BASE_URL, '/api/pd-executions/count'));
+        return apiGet('/api/pd-executions/count');
     }
 
     async getCommitteeQueue(): Promise<CommitteeQueueItem[]> {
-        return apiGet(buildUrl(API_BASE_URL, '/api/committee-queue'));
+        return apiGet('/api/committee-queue');
     }
 
     async getTelemetryEvents(): Promise<TelemetryEvent[]> {
@@ -62,7 +59,7 @@ export class ApiClient {
     }
 
     async getOids(): Promise<Oid[]> {
-        return apiGet<Oid[]>(buildUrl(API_BASE_URL, '/api/oids'));
+        return apiGet<Oid[]>('/api/oids');
     }
 
     /* ==============================
@@ -70,7 +67,7 @@ export class ApiClient {
     ============================== */
     async getIntegrationHealth(): Promise<IntegrationHealthResponse> {
         return apiGet<IntegrationHealthResponse>(
-            buildUrl(API_BASE_URL, '/api/health/integrations')
+            '/api/health/integrations'
         );
     }
 }

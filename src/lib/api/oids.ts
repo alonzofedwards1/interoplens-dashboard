@@ -3,10 +3,9 @@ import type {
     OidDetail,
     OidGovernanceAction,
 } from "../../types";
-import { API_BASE_URL } from "../../config/api";
 import { requestJson, requestOk } from "./request";
 
-const BASE = `${API_BASE_URL}/api/oids`;
+const BASE = '/api/oids';
 
 /* ============================
    GET /api/oids
