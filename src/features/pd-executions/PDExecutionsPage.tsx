@@ -122,9 +122,9 @@ const PDExecutions: React.FC = () => {
             .map(value => value.trim().toUpperCase())
             .filter(Boolean);
 
-        const hasExpired = normalized.includes('EXPIRED');
-        const hasExpiring = normalized.includes('EXPIRING_SOON');
-        const hasValid = normalized.includes('VALID');
+        const hasExpired = normalized.includes('Expired');
+        const hasExpiring = normalized.includes('Expiring Soon');
+        const hasValid = normalized.includes('Valid');
 
         let nextFilter: ExecutionPreferences['certStatusFilter'] = 'all';
         if (hasExpired && hasExpiring) {
@@ -184,15 +184,15 @@ const PDExecutions: React.FC = () => {
 
             const matchesCertStatus = (() => {
                 if (certStatusFilter === 'all') return true;
-                if (certStatusFilter === 'valid') return certificateStatus === 'VALID';
+                if (certStatusFilter === 'valid') return certificateStatus === 'Valid';
                 if (certStatusFilter === 'expiring') {
-                    return certificateStatus === 'EXPIRING_SOON';
+                    return certificateStatus === 'Expiring Soon';
                 }
-                if (certStatusFilter === 'expired') return certificateStatus === 'EXPIRED';
+                if (certStatusFilter === 'expired') return certificateStatus === 'Expired';
                 return (
                     certStatusFilter === 'impacted' &&
-                    (certificateStatus === 'EXPIRED' ||
-                        certificateStatus === 'EXPIRING_SOON')
+                    (certificateStatus === 'Expired' ||
+                        certificateStatus === 'Expiring Soon')
                 );
             })();
 
@@ -423,11 +423,11 @@ const PDExecutions: React.FC = () => {
         } else if (nextValue === 'impacted') {
             params.set('certStatus', 'EXPIRED,EXPIRING_SOON');
         } else if (nextValue === 'valid') {
-            params.set('certStatus', 'VALID');
+            params.set('certStatus', 'Valid');
         } else if (nextValue === 'expiring') {
-            params.set('certStatus', 'EXPIRING_SOON');
+            params.set('certStatus', 'Expiring Soon');
         } else if (nextValue === 'expired') {
-            params.set('certStatus', 'EXPIRED');
+            params.set('certStatus', 'Expired');
         }
         setSearchParams(params);
     };
