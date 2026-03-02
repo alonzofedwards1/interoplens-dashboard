@@ -2,9 +2,10 @@ import React from 'react';
 
 import { CommitteeQueueItem } from '../features/committee/data/committeeQueue.data';
 import { Finding } from '../types/findings';
-import type { MessageEvent } from '../types/messages';
+import type { MessageMonitorRow } from '../types/messages';
 import { PdExecution } from '../types/pdExecutions';
 import { apiClient, ApiClient, IntegrationHealthResponse } from './apiClient';
+import { fetchMessageEvents } from './telemetryClient';
 
 interface ServerDataContextType {
     findings: Finding[];
@@ -36,27 +37,32 @@ const EMPTY_SERVER_DATA: ServerDataPayload = {
 const ServerDataContext =
     React.createContext<ServerDataContextType | undefined>(undefined);
 
-const fetchMessages = async (): Promise<MessageEvent[]> => {
-    const token = localStorage.getItem('authToken') ?? localStorage.getItem('token') ?? '';
+const EMPTY_SERVER_DATA: ServerDataPayload = {
+    findings: [],
+    pdExecutions: [],
+    committeeQueue: [],
+    messages: [],
+    integrationHealth: undefined,
+};
 
-    const response = await fetch('/api/messages', {
-        method: 'GET',
-        credentials: 'include',
-        headers: {
-            Authorization: `Bearer ${token}`,
-        },
-    });
+const ServerDataContext =
+    React.createContext<ServerDataContextType | undefined>(undefined);
 
-    if (!response.ok) {
-        throw new Error(`Failed to load messages (${response.status})`);
-    }
+const MESSAGE_EVENTS_LIMIT = 100;
 
-    const data = (await response.json()) as unknown;
-    if (!Array.isArray(data)) {
-        throw new Error('Unexpected messages response format');
-    }
+const loadMessageRows = async (): Promise<MessageMonitorRow[]> => {
+    return fetchMessageEvents({ limit: MESSAGE_EVENTS_LIMIT, offset: 0 });
+};
 
-    return data as MessageEvent[];
+const formatReason = (reason: unknown): string =>
+    reason instanceof Error ? reason.message : String(reason);
+
+/**
+ * SAFE MESSAGE FETCH
+ * Backend allows max limit = 100
+ */
+const fetchMessages = async (): Promise<MessageMonitorRow[]> => {
+    return fetchMessageEvents({ limit: 100, offset: 0 });
 };
 
 const formatReason = (reason: unknown): string =>
@@ -75,7 +81,7 @@ const loadFromApi = async (
         client.getFindings(),
         client.getPdExecutions(),
         client.getCommitteeQueue(),
-        fetchMessages(),
+        loadMessageRows(),
         client.getIntegrationHealth(),
     ]);
 
@@ -153,7 +159,9 @@ export const ServerDataProvider: React.FC<{ children: React.ReactNode }> = ({
 export const useServerData = () => {
     const ctx = React.useContext(ServerDataContext);
     if (!ctx) {
-        throw new Error('useServerData must be used within a ServerDataProvider');
+        throw new Error(
+            'useServerData must be used within a ServerDataProvider'
+        );
     }
     return ctx;
 };

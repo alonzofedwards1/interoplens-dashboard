@@ -32,7 +32,11 @@ SELECT
     o.source
 FROM transport_events t
 JOIN certificates c ON t.cert_id = c.cert_id
-LEFT JOIN endpoint_cert_observations o ON c.cert_id = o.cert_id
+LEFT JOIN (
+    SELECT cert_id, MAX(source) AS source
+    FROM endpoint_cert_observations
+    GROUP BY cert_id
+) o ON c.cert_id = o.cert_id
 WHERE t.transaction_id = %s
 LIMIT 1;
 """

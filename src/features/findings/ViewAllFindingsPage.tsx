@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import Filters, { FiltersState } from "../../components/Filters";
 import {
     FaChevronDown,
@@ -12,6 +12,7 @@ import {
 import { Finding } from "../../types/findings";
 import { useServerData } from "../../lib/ServerDataContext";
 import { TransactionLink } from "../../components/TransactionLink";
+import BackButton from '../../components/navigation/BackButton';
 import Pagination from "../../components/Pagination";
 import { buildCertificateFindingCopy } from "../../lib/certificates";
 import { useUserPreferences } from "../../lib/useUserPreferences";
@@ -77,7 +78,6 @@ type SortDirection = "asc" | "desc";
 ============================ */
 
 const ViewAllFindingsPage: React.FC = () => {
-    const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const { findings: rawFindings, pdExecutions } = useServerData();
     const { preferences } = useUserPreferences();
@@ -211,12 +211,12 @@ const ViewAllFindingsPage: React.FC = () => {
 
     return (
         <div className="p-6 space-y-4">
-            <button
-                onClick={() => navigate("/dashboard")}
+            <BackButton
+                defaultRoute="/dashboard"
+                label="Back to Dashboard"
                 className="text-sm text-blue-600 hover:underline"
-            >
-                Back to Dashboard
-            </button>
+                showIcon={false}
+            />
 
             <div>
                 <h1 className="text-xl font-semibold text-gray-800">

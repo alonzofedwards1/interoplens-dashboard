@@ -1,11 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 
 import {
     KnowledgeBaseArticle,
     KnowledgeBaseStatus,
 } from './data/knowledgeBase.data';
 import { readKnowledgeBase } from './knowledgeBaseStore';
+import BackButton from '../../components/navigation/BackButton';
 import Pagination from '../../components/Pagination';
 
 const statusLabels: Record<KnowledgeBaseStatus, string> = {
@@ -21,7 +21,6 @@ const badgeClasses: Record<KnowledgeBaseStatus, string> = {
 };
 
 const KnowledgeBasePage: React.FC = () => {
-    const navigate = useNavigate();
     const [statusFilter, setStatusFilter] = useState<'all' | KnowledgeBaseStatus>(
         'all'
     );
@@ -71,12 +70,12 @@ const KnowledgeBasePage: React.FC = () => {
 
     return (
         <div className="p-6 space-y-4">
-            <button
-                onClick={() => navigate('/committee')}
+            <BackButton
+                defaultRoute="/committee"
+                label="Back to Committee Queue"
                 className="text-sm text-blue-600 hover:underline"
-            >
-                ← Back to Committee Queue
-            </button>
+                showIcon={false}
+            />
 
             <div className="flex items-center justify-between flex-wrap gap-3">
                 <div>

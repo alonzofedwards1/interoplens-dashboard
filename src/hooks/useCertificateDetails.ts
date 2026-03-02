@@ -3,8 +3,8 @@ import { useEffect, useState } from 'react';
 import { fetchCertificateDetails } from '../lib/api/certificates';
 import type { CertificateDetails } from '../types';
 
-const toDisplayDate = (isoDate: string): string => {
-    if (!isoDate) return '—';
+const toDisplayDate = (isoDate: string | null): string | null => {
+    if (!isoDate) return null;
 
     const date = new Date(isoDate);
     if (Number.isNaN(date.getTime())) {

@@ -1,4 +1,4 @@
-import type { TelemetryEvent } from './TelemetryEvent';
+import type { TelemetryEvent } from './TelemetryTypes';
 
 export class TelemetryStore {
   private events: TelemetryEvent[] = [];

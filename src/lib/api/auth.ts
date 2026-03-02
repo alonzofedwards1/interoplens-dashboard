@@ -1,5 +1,6 @@
 import { safeJson } from './utils';
 import { requestOk } from './request';
+import { API_BASE } from '../apiBase';
 
 export type User = {
     userId: number;
@@ -23,20 +24,20 @@ const readJsonIfAvailable = async (response: Response) => {
 };
 
 export const login = async (username: string, password: string): Promise<void> => {
-    await requestOk('/api/auth/login', {
+    await requestOk(`${API_BASE}/api/auth/login`, {
         method: 'POST',
         body: JSON.stringify({ username, password }),
     });
 };
 
 export const logout = async (): Promise<void> => {
-    await requestOk('/api/auth/logout', {
+    await requestOk(`${API_BASE}/api/auth/logout`, {
         method: 'POST',
     });
 };
 
 export const me = async (): Promise<User | null> => {
-    const res = await authFetch('/api/auth/me', { method: 'GET' });
+    const res = await authFetch(`${API_BASE}/api/auth/me`, { method: 'GET' });
 
     if (res.status === 401) return null;
 

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 
 import { committeeCasesData } from './data/committeeCases.data';
 import {
@@ -17,10 +17,10 @@ import {
     hasKnowledgeBaseArticle,
     upsertKnowledgeBaseArticleFromCase,
 } from '../knowledge-base/knowledgeBaseStore';
+import BackButton from '../../components/navigation/BackButton';
 
 const CommitteeCaseDetail: React.FC = () => {
     const { id } = useParams<{ id: string }>();
-    const navigate = useNavigate();
 
     const caseData = committeeCasesData.find((c) => c.id === id);
 
@@ -74,12 +74,12 @@ const CommitteeCaseDetail: React.FC = () => {
         return (
             <div className="p-6">
                 <p className="text-gray-600">Committee case not found.</p>
-                <button
-                    onClick={() => navigate('/committee')}
+                <BackButton
+                    defaultRoute="/committee"
+                    label="Back to Committee Queue"
                     className="mt-4 text-blue-600 hover:underline"
-                >
-                    ← Back to Committee Queue
-                </button>
+                    showIcon={false}
+                />
             </div>
         );
     }
@@ -111,12 +111,12 @@ const CommitteeCaseDetail: React.FC = () => {
                 <div className="text-right">
                     <div className="text-xs text-gray-500">Decision Target</div>
                     <div className="font-medium">{caseData.decisionTarget}</div>
-                    <button
-                        onClick={() => navigate('/committee')}
+                    <BackButton
+                        defaultRoute="/committee"
+                        label="Back to Committee Queue"
                         className="mt-2 text-sm text-blue-600 hover:underline"
-                    >
-                        ← Back to Committee Queue
-                    </button>
+                        showIcon={false}
+                    />
                 </div>
             </div>
 
