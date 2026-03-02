@@ -55,8 +55,9 @@ export class ApiClient {
         return apiGet(`${API_BASE}/api/committee-queue`);
     }
 
-    async getTelemetryEvents(): Promise<MessageMonitorRow[]> {
-        return fetchMessageEvents();
+    async getTelemetryEvents(): Promise<MessageEvent[]> {
+        const response = await fetchMessageEvents();
+        return response.items;
     }
 
     async getOids(): Promise<Oid[]> {

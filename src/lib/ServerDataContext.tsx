@@ -11,7 +11,7 @@ interface ServerDataContextType {
     findings: Finding[];
     pdExecutions: PdExecution[];
     committeeQueue: CommitteeQueueItem[];
-    messages: MessageMonitorRow[];
+    messages: MessageEvent[];
     integrationHealth?: IntegrationHealthResponse;
     loading: boolean;
     error: string | null;
@@ -22,9 +22,20 @@ interface ServerDataPayload {
     findings: Finding[];
     pdExecutions: PdExecution[];
     committeeQueue: CommitteeQueueItem[];
-    messages: MessageMonitorRow[];
+    messages: MessageEvent[];
     integrationHealth?: IntegrationHealthResponse;
 }
+
+const EMPTY_SERVER_DATA: ServerDataPayload = {
+    findings: [],
+    pdExecutions: [],
+    committeeQueue: [],
+    messages: [],
+    integrationHealth: undefined,
+};
+
+const ServerDataContext =
+    React.createContext<ServerDataContextType | undefined>(undefined);
 
 const EMPTY_SERVER_DATA: ServerDataPayload = {
     findings: [],
@@ -54,6 +65,9 @@ const fetchMessages = async (): Promise<MessageMonitorRow[]> => {
     return fetchMessageEvents({ limit: 100, offset: 0 });
 };
 
+const formatReason = (reason: unknown): string =>
+    reason instanceof Error ? reason.message : String(reason);
+
 const loadFromApi = async (
     client: ApiClient
 ): Promise<{ data: ServerDataPayload; error: string | null }> => {
@@ -71,16 +85,20 @@ const loadFromApi = async (
         client.getIntegrationHealth(),
     ]);
 
+    if (integrationHealthResult.status === 'rejected') {
+        console.warn(
+            '[ServerDataContext] Integration health unavailable',
+            integrationHealthResult.reason
+        );
+    }
+
     const errorSources = [findingsResult, pdExecutionsResult].filter(
         result => result.status === 'rejected'
     ) as PromiseRejectedResult[];
 
     return {
         data: {
-            findings:
-                findingsResult.status === 'fulfilled'
-                    ? findingsResult.value
-                    : [],
+            findings: findingsResult.status === 'fulfilled' ? findingsResult.value : [],
             pdExecutions:
                 pdExecutionsResult.status === 'fulfilled'
                     ? pdExecutionsResult.value
@@ -89,10 +107,7 @@ const loadFromApi = async (
                 committeeQueueResult.status === 'fulfilled'
                     ? committeeQueueResult.value
                     : [],
-            messages:
-                messagesResult.status === 'fulfilled'
-                    ? messagesResult.value
-                    : [],
+            messages: messagesResult.status === 'fulfilled' ? messagesResult.value : [],
             integrationHealth:
                 integrationHealthResult.status === 'fulfilled'
                     ? integrationHealthResult.value
@@ -100,18 +115,15 @@ const loadFromApi = async (
         },
         error:
             errorSources.length > 0
-                ? errorSources
-                    .map(result => formatReason(result.reason))
-                    .join(' | ')
+                ? errorSources.map(result => formatReason(result.reason)).join(' | ')
                 : null,
     };
 };
 
-export const ServerDataProvider: React.FC<{
-    children: React.ReactNode;
-}> = ({ children }) => {
-    const [data, setData] =
-        React.useState<ServerDataPayload>(EMPTY_SERVER_DATA);
+export const ServerDataProvider: React.FC<{ children: React.ReactNode }> = ({
+    children,
+}) => {
+    const [data, setData] = React.useState<ServerDataPayload>(EMPTY_SERVER_DATA);
     const [loading, setLoading] = React.useState(true);
     const [error, setError] = React.useState<string | null>(null);
 
@@ -135,19 +147,12 @@ export const ServerDataProvider: React.FC<{
     }, [refresh]);
 
     const value = React.useMemo(
-        () => ({
-            ...data,
-            loading,
-            error,
-            refresh,
-        }),
+        () => ({ ...data, loading, error, refresh }),
         [data, loading, error, refresh]
     );
 
     return (
-        <ServerDataContext.Provider value={value}>
-            {children}
-        </ServerDataContext.Provider>
+        <ServerDataContext.Provider value={value}>{children}</ServerDataContext.Provider>
     );
 };
 

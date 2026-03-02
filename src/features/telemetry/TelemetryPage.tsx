@@ -1,25 +1,90 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { FaArrowLeft, FaCheckCircle, FaClock, FaTimesCircle } from 'react-icons/fa';
+
+import Pagination from '../../components/Pagination';
+import { TransactionLink } from '../../components/TransactionLink';
+import { ColumnFilter } from '../../components/table/ColumnFilter';
+import { TableHeaderCell } from '../../components/table/TableHeaderCell';
+import { TableToolbar } from '../../components/table/TableToolbar';
+import type { DateRangeFilterValue, RangeFilterValue } from '../../components/table/types';
+import { useCertificateDetails } from '../../hooks/useCertificateDetails';
+import { useTableControls } from '../../hooks/useTableControls';
+import {
+    fetchMessageEvents,
+    MessageFilterParams,
+    MessageSortBy,
+    buildMessageEventsQuery,
+} from '../../lib/telemetryClient';
+import type { MessageEvent } from '../../types/messages';
 import CertInspectorModal from '../integration-issues/modals/CertInspectorModal';
 
-import type { MessageMonitorRow } from '../../types/messages';
-import type { CertificateStatus, CertificateDetails } from '../../types/certificates';
-import { fetchMessageMonitor, MessageFilterParams } from '../../lib/telemetryClient';
-import { TransactionLink } from '../../components/TransactionLink';
-import BackButton from '../../components/navigation/BackButton';
-import Pagination from '../../components/Pagination';
-import { mapRowToCertificateDetails } from '../messageMonitor/mappers/mapCertificate';
+interface MessageMonitorFilters {
+    search: string;
+    source: 'all' | 'transport' | 'telemetry';
+    organization: string;
+    transactionType: string;
+    status: 'all' | MessageEvent['status'];
+    environment: 'all' | 'PROD' | 'TEST';
+    transportTimestamp: DateRangeFilterValue;
+    durationMs: RangeFilterValue<number>;
+}
 
-const formatCertificateStatus = (status: CertificateStatus | null) => {
-    if (status === 'Valid') {
-        return 'bg-green-100 text-green-800';
+const DEFAULT_FILTERS: MessageMonitorFilters = {
+    search: '',
+    source: 'all',
+    organization: '',
+    transactionType: '',
+    status: 'all',
+    environment: 'all',
+    transportTimestamp: { start: '', end: '' },
+    durationMs: { min: undefined, max: undefined },
+};
+
+const SORTABLE_COLUMNS: readonly MessageSortBy[] = [
+    'timestamp',
+    'eventType',
+    'status',
+    'durationMs',
+    'environment',
+    'channelId',
+] as const;
+
+const formatStatus = (status?: MessageEvent['status']) => {
+    switch (status) {
+        case 'Success':
+            return {
+                label: 'Success',
+                className: 'bg-green-100 text-green-800',
+                icon: <FaCheckCircle aria-hidden className="mr-1" />,
+            };
+        case 'Error':
+            return {
+                label: 'Error',
+                className: 'bg-red-100 text-red-800',
+                icon: <FaTimesCircle aria-hidden className="mr-1" />,
+            };
+        case 'Warning':
+        default:
+            return {
+                label: status ?? 'Warning',
+                className: 'bg-yellow-100 text-yellow-800',
+                icon: <FaClock aria-hidden className="mr-1" />,
+            };
     }
-    if (status === 'Expired') {
-        return 'bg-red-100 text-red-800';
-    }
-    if (status === 'Expiring Soon') {
-        return 'bg-yellow-100 text-yellow-800';
-    }
-    return 'bg-gray-100 text-gray-700';
+};
+
+const formatCertificateStatus = (status: 'Valid' | 'Expired' | 'Expiring Soon') => {
+    if (status === 'Valid') return 'bg-green-100 text-green-800';
+    if (status === 'Expired') return 'bg-red-100 text-red-800';
+    return 'bg-yellow-100 text-yellow-800';
+};
+
+const formatEnvironment = (environment?: string) => {
+    if (!environment) return '-';
+    const normalized = environment.toUpperCase();
+    if (normalized === 'PROD' || normalized === 'TEST') return normalized;
+    return normalized;
 };
 
 const formatTimestamp = (timestamp?: string | null) => {
@@ -27,10 +92,13 @@ const formatTimestamp = (timestamp?: string | null) => {
     const date = new Date(timestamp);
     return Number.isNaN(date.getTime())
         ? '—'
-        : date.toLocaleString(undefined, {
-            dateStyle: 'medium',
-            timeStyle: 'medium',
-        });
+        : date.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'medium' });
+};
+
+const toIsoIfValid = (value?: string) => {
+    if (!value) return undefined;
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
 };
 
 const getDaysToExpirationClassName = (days: number | null) => {
@@ -41,162 +109,194 @@ const getDaysToExpirationClassName = (days: number | null) => {
 };
 
 const TelemetryPage: React.FC = () => {
-    const [messageEvents, setMessageEvents] = useState<MessageMonitorRow[]>([]);
+    const navigate = useNavigate();
+    const [messageEvents, setMessageEvents] = useState<MessageEvent[]>([]);
+    const [totalCount, setTotalCount] = useState(0);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string>();
-    const [totalRows, setTotalRows] = useState(0);
+    const [error, setError] = useState<string | null>(null);
+    const [selectedTransactionId, setSelectedTransactionId] = useState<string | null>(null);
 
-    const [timeRange, setTimeRange] = useState<'1h' | '24h' | '7d' | 'custom'>('24h');
-    const [customStart, setCustomStart] = useState('');
-    const [customEnd, setCustomEnd] = useState('');
-    const [organizationFilter, setOrganizationFilter] = useState<'all' | string>('all');
-    const [sourceFilter, setSourceFilter] = useState<'all' | 'transport' | 'telemetry'>('all');
+    const { data: selectedCertificate, loading: certificateLoading, error: certificateError } =
+        useCertificateDetails(selectedTransactionId);
 
-    const [search, setSearch] = useState('');
-    const [page, setPage] = useState(1);
-    // UI modal boundary: keep modal state in CertificateDetails, never MessageMonitorRow.
-    const [selectedCert, setSelectedCert] = useState<CertificateDetails | null>(null);
-    const pageSize = 25;
+    const {
+        filters,
+        sortBy,
+        sortOrder,
+        limit,
+        offset,
+        setFilter,
+        setSort,
+        setLimit,
+        setOffset,
+        resetAll,
+        buildQueryString,
+    } = useTableControls<MessageMonitorFilters, MessageSortBy>({
+        tableKey: 'message-monitor',
+        defaultFilters: DEFAULT_FILTERS,
+        defaultLimit: 25,
+        defaultOffset: 0,
+        allowedSortColumns: SORTABLE_COLUMNS,
+    });
 
-    const filterParams = useMemo<MessageFilterParams>(() => {
-        const now = new Date();
-        let startTime: string | undefined;
-        let endTime: string | undefined;
+    const lastQueryRef = useRef<string>('');
 
-        if (timeRange === 'custom') {
-            if (customStart) {
-                const startDate = new Date(customStart);
-                startTime = Number.isNaN(startDate.getTime())
-                    ? undefined
-                    : startDate.toISOString();
-            }
-            if (customEnd) {
-                const endDate = new Date(customEnd);
-                endTime = Number.isNaN(endDate.getTime())
-                    ? undefined
-                    : endDate.toISOString();
-            }
-        } else {
-            const ranges = {
-                '1h': 1,
-                '24h': 24,
-                '7d': 24 * 7,
-            };
-            const hours = ranges[timeRange];
-            const startDate = new Date(now.getTime() - hours * 60 * 60 * 1000);
-            startTime = startDate.toISOString();
-            endTime = now.toISOString();
+    const apiFilters = useMemo<MessageFilterParams>(
+        () => ({
+            search: filters.search.trim() || undefined,
+            source: filters.source === 'all' ? undefined : filters.source,
+            organization: filters.organization || undefined,
+            transactionType: filters.transactionType || undefined,
+            status: filters.status === 'all' ? undefined : filters.status,
+            environment: filters.environment === 'all' ? undefined : filters.environment,
+            startTime: toIsoIfValid(filters.transportTimestamp.start),
+            endTime: toIsoIfValid(filters.transportTimestamp.end),
+            daysUntilExpirationMin:
+                typeof filters.durationMs.min === 'number' ? filters.durationMs.min : undefined,
+            daysUntilExpirationMax:
+                typeof filters.durationMs.max === 'number' ? filters.durationMs.max : undefined,
+        }),
+        [filters]
+    );
+
+    const loadMessages = React.useCallback(async () => {
+        const query = buildMessageEventsQuery({
+            filters: apiFilters,
+            sortBy: sortBy ?? undefined,
+            sortOrder: sortOrder ?? undefined,
+            limit,
+            offset,
+        });
+
+        if (query === lastQueryRef.current) {
+            return;
         }
 
-        return {
-            startTime,
-            endTime,
-            organization: organizationFilter === 'all' ? undefined : organizationFilter,
-            search: search.trim() || undefined,
-            source: sourceFilter === 'all' ? undefined : sourceFilter,
-            limit: pageSize,
-            offset: (page - 1) * pageSize,
-        };
-    }, [customEnd, customStart, organizationFilter, page, search, sourceFilter, timeRange]);
-
-    const loadMessages = React.useCallback(async (filters: MessageFilterParams) => {
+        lastQueryRef.current = query;
         setLoading(true);
-        setError(undefined);
+        setError(null);
+
         try {
-            const response = await fetchMessageMonitor(filters);
-            setMessageEvents(response.data);
-            setTotalRows(response.pagination.total);
+            const response = await fetchMessageEvents({
+                filters: apiFilters,
+                sortBy: sortBy ?? undefined,
+                sortOrder: sortOrder ?? undefined,
+                limit,
+                offset,
+            });
+            setMessageEvents(response.items);
+            setTotalCount(response.total);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to load messages');
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [apiFilters, limit, offset, sortBy, sortOrder]);
 
     useEffect(() => {
-        void loadMessages(filterParams);
-    }, [filterParams, loadMessages]);
+        void loadMessages();
+    }, [buildQueryString, loadMessages]);
 
-    const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
-
-    useEffect(() => {
-        if (page > totalPages) {
-            setPage(totalPages);
+    const fallbackSortedEvents = useMemo(() => {
+        if (!sortBy || !sortOrder) {
+            return messageEvents;
         }
-    }, [page, totalPages]);
+
+        const sorted = [...messageEvents].sort((a, b) => {
+            const left = a[sortBy as keyof MessageEvent];
+            const right = b[sortBy as keyof MessageEvent];
+
+            if (left == null && right == null) return 0;
+            if (left == null) return 1;
+            if (right == null) return -1;
+
+            if (sortBy === 'timestamp') {
+                const leftTime = new Date(String(left)).getTime();
+                const rightTime = new Date(String(right)).getTime();
+                return leftTime - rightTime;
+            }
+
+            if (typeof left === 'number' && typeof right === 'number') {
+                return left - right;
+            }
+
+            return String(left).localeCompare(String(right));
+        });
+
+        return sortOrder === 'asc' ? sorted : sorted.reverse();
+    }, [messageEvents, sortBy, sortOrder]);
 
     const organizationOptions = useMemo(() => {
         const values = new Set<string>();
-        messageEvents.forEach(event => {
-            if (event.channel) {
-                values.add(event.channel);
-            }
-        });
+        fallbackSortedEvents.forEach(event => event.channelId && values.add(event.channelId));
         return Array.from(values).sort((a, b) => a.localeCompare(b));
-    }, [messageEvents]);
+    }, [fallbackSortedEvents]);
+
+    const transactionTypeOptions = useMemo(() => {
+        const values = new Set<string>();
+        fallbackSortedEvents.forEach(event => event.eventType && values.add(event.eventType));
+        return Array.from(values).sort((a, b) => a.localeCompare(b));
+    }, [fallbackSortedEvents]);
 
     const metrics = useMemo(() => {
-        const expired = messageEvents.filter(e => e.certificate_status === 'Expired').length;
-        const expiringSoon = messageEvents.filter(
-            e => e.certificate_status === 'Expiring Soon'
-        ).length;
-        const valid = messageEvents.filter(e => e.certificate_status === 'Valid').length;
+        const total = fallbackSortedEvents.length;
+        const successes = fallbackSortedEvents.filter(e => e.status === 'Success').length;
+        const errors = fallbackSortedEvents.filter(e => e.status === 'Error').length;
+        const durations = fallbackSortedEvents
+            .map(event => event.durationMs)
+            .filter((duration): duration is number => typeof duration === 'number');
 
         return {
-            total: totalRows,
-            expired,
-            expiringSoon,
-            valid,
+            total,
+            errors,
+            successRate: total ? Math.round((successes / total) * 100) : 0,
+            averageDuration: Math.round(
+                durations.reduce((sum, duration) => sum + duration, 0) /
+                    Math.max(1, durations.length)
+            ),
         };
-    }, [messageEvents, totalRows]);
+    }, [fallbackSortedEvents]);
 
+    const currentPage = Math.floor(offset / limit) + 1;
+    const totalPages = Math.max(1, Math.ceil(totalCount / limit));
 
-    if (loading) {
-        return (
-            <div className="flex min-h-screen items-center justify-center text-gray-700">
-                Loading messages...
-            </div>
-        );
-    }
-
-    if (error) {
-        return (
-            <div className="flex min-h-screen items-center justify-center">
-                <div className="bg-white shadow rounded p-6 space-y-4 text-center">
-                    <div className="text-red-600 font-semibold">{error}</div>
-                    <p className="text-gray-600">Unable to load message events.</p>
-                    <button
-                        onClick={() => void loadMessages(filterParams)}
-                        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                    >
-                        Retry
-                    </button>
-                </div>
-            </div>
-        );
-    }
+    const handlePageChange = (page: number) => {
+        const normalized = Math.max(1, page);
+        setOffset((normalized - 1) * limit);
+    };
 
     return (
         <div className="p-6 space-y-6">
             <div className="flex items-center justify-between flex-wrap gap-3">
                 <div className="flex items-center space-x-4">
-                    <BackButton
-                        defaultRoute="/dashboard"
-                        label=""
+                    <button
+                        type="button"
+                        onClick={() => navigate('/dashboard')}
                         className="text-gray-600 hover:text-gray-900"
                     />
                     <div>
                         <h1 className="text-2xl font-semibold">Message Monitor</h1>
-                        <p className="text-gray-600">Unified integration message monitoring across transport and telemetry layers</p>
+                        <p className="text-gray-600">Unified integration message monitoring.</p>
                     </div>
                 </div>
                 <button
-                    onClick={() => void loadMessages(filterParams)}
-                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                    type="button"
+                    onClick={() => void loadMessages()}
+                    className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+                    disabled={loading}
                 >
                     Refresh
                 </button>
             </div>
+
+            <TableToolbar
+                globalSearch={filters.search}
+                onGlobalSearchChange={value => setFilter('search', value)}
+                onReset={resetAll}
+                limit={limit}
+                onLimitChange={setLimit}
+                isLoading={loading}
+            />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <SummaryCard label="Events" value={metrics.total} />
@@ -205,168 +305,204 @@ const TelemetryPage: React.FC = () => {
                 <SummaryCard label="Valid certs" value={metrics.valid} />
             </div>
 
-            <div className="bg-white rounded-lg shadow p-4 flex flex-wrap gap-3 items-center justify-between text-sm">
-                <div className="flex flex-wrap gap-2 items-center">
-                    <label htmlFor="message-time-range" className="text-gray-700">Time Range</label>
-                    <select
-                        id="message-time-range"
-                        value={timeRange}
-                        onChange={event => setTimeRange(event.target.value as typeof timeRange)}
-                        className="border rounded px-2 py-1"
-                    >
-                        <option value="1h">Last 1h</option>
-                        <option value="24h">Last 24h</option>
-                        <option value="7d">Last 7d</option>
-                        <option value="custom">Custom</option>
-                    </select>
-                </div>
-
-                {timeRange === 'custom' && (
-                    <div className="flex flex-wrap gap-2 items-center">
-                        <label htmlFor="message-start" className="text-gray-700">Start</label>
-                        <input
-                            id="message-start"
-                            type="datetime-local"
-                            value={customStart}
-                            onChange={event => setCustomStart(event.target.value)}
-                            className="border rounded px-2 py-1"
-                        />
-                        <label htmlFor="message-end" className="text-gray-700">End</label>
-                        <input
-                            id="message-end"
-                            type="datetime-local"
-                            value={customEnd}
-                            onChange={event => setCustomEnd(event.target.value)}
-                            className="border rounded px-2 py-1"
-                        />
-                    </div>
-                )}
-
-                <div className="flex flex-wrap gap-2 items-center">
-                    <label htmlFor="message-source" className="text-gray-700">Source</label>
-                    <select
-                        id="message-source"
-                        value={sourceFilter}
-                        onChange={event => setSourceFilter(event.target.value as typeof sourceFilter)}
-                        className="border rounded px-2 py-1"
-                    >
-                        <option value="all">All</option>
-                        <option value="transport">Transport</option>
-                        <option value="telemetry">Telemetry</option>
-                    </select>
-                </div>
-
-                <div className="flex flex-wrap gap-2 items-center">
-                    <label htmlFor="message-org" className="text-gray-700">Channel</label>
-                    <select
-                        id="message-org"
-                        value={organizationFilter}
-                        onChange={event => setOrganizationFilter(event.target.value)}
-                        className="border rounded px-2 py-1"
-                    >
-                        <option value="all">All</option>
-                        {organizationOptions.length ? (
-                            organizationOptions.map(value => (
-                                <option key={value} value={value}>{value}</option>
-                            ))
-                        ) : (
-                            <option value="all" disabled>No channels</option>
-                        )}
-                    </select>
-                </div>
-
-                <div className="flex gap-2 items-center text-sm">
-                    <label htmlFor="message-search" className="text-gray-700">Search</label>
-                    <input
-                        id="message-search"
-                        value={search}
-                        onChange={event => setSearch(event.target.value)}
-                        className="border rounded px-2 py-1"
-                        placeholder="Transaction ID"
+            <div className="rounded-lg bg-white p-4 shadow">
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-3 lg:grid-cols-4">
+                    <ColumnFilter
+                        type="enum"
+                        value={filters.source}
+                        onChange={value => setFilter('source', String(value) as MessageMonitorFilters['source'])}
+                        options={[
+                            { label: 'All Sources', value: 'all' },
+                            { label: 'Transport', value: 'transport' },
+                            { label: 'Telemetry', value: 'telemetry' },
+                        ]}
+                    />
+                    <ColumnFilter
+                        type="enum"
+                        value={filters.status}
+                        onChange={value => setFilter('status', String(value) as MessageMonitorFilters['status'])}
+                        options={[
+                            { label: 'All Status', value: 'all' },
+                            { label: 'Success', value: 'Success' },
+                            { label: 'Warning', value: 'Warning' },
+                            { label: 'Error', value: 'Error' },
+                        ]}
+                    />
+                    <ColumnFilter
+                        type="enum"
+                        value={filters.environment}
+                        onChange={value =>
+                            setFilter('environment', String(value) as MessageMonitorFilters['environment'])
+                        }
+                        options={[
+                            { label: 'All Environments', value: 'all' },
+                            { label: 'Prod', value: 'PROD' },
+                            { label: 'Test', value: 'TEST' },
+                        ]}
+                    />
+                    <ColumnFilter
+                        type="text"
+                        value={filters.organization}
+                        onChange={value => setFilter('organization', String(value))}
+                        placeholder="Channel ID"
+                        debounceMs={300}
+                    />
+                    <ColumnFilter
+                        type="text"
+                        value={filters.transactionType}
+                        onChange={value => setFilter('transactionType', String(value))}
+                        placeholder="Event type"
+                        debounceMs={300}
+                    />
+                    <ColumnFilter
+                        type="date"
+                        value={filters.transportTimestamp.start ?? ''}
+                        onChange={value =>
+                            setFilter('transportTimestamp', {
+                                ...filters.transportTimestamp,
+                                start: String(value),
+                            })
+                        }
+                    />
+                    <ColumnFilter
+                        type="date"
+                        value={filters.transportTimestamp.end ?? ''}
+                        onChange={value =>
+                            setFilter('transportTimestamp', {
+                                ...filters.transportTimestamp,
+                                end: String(value),
+                            })
+                        }
+                    />
+                    <ColumnFilter
+                        type="range"
+                        value={filters.durationMs}
+                        onChange={value =>
+                            setFilter('durationMs', value as RangeFilterValue<number>)
+                        }
                     />
                 </div>
             </div>
 
-            {selectedCert && (
-                <CertInspectorModal
-                    cert={selectedCert}
-                    onClose={() => setSelectedCert(null)}
-                />
+            {error && <div className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>}
+
+            {selectedTransactionId && (
+                <>
+                    {certificateLoading && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+                            <div className="rounded bg-white px-4 py-3 text-sm text-gray-700 shadow">
+                                Loading certificate details...
+                            </div>
+                        </div>
+                    )}
+                    {!certificateLoading && certificateError && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+                            <div className="w-full max-w-md rounded bg-white p-4 shadow">
+                                <p className="text-sm text-red-600">{certificateError}</p>
+                                <div className="mt-4 text-right">
+                                    <button
+                                        type="button"
+                                        onClick={() => setSelectedTransactionId(null)}
+                                        className="rounded bg-slate-100 px-3 py-1 text-sm hover:bg-slate-200"
+                                    >
+                                        Close
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    {!certificateLoading && !certificateError && selectedCertificate && (
+                        <CertInspectorModal
+                            cert={selectedCertificate}
+                            onClose={() => setSelectedTransactionId(null)}
+                        />
+                    )}
+                </>
             )}
 
             <div className="bg-white rounded-lg shadow overflow-x-auto">
                 <table className="min-w-full border-collapse">
                     <thead className="bg-gray-100 text-left text-sm text-gray-700">
                         <tr>
-                            <th className="p-3">Transaction ID</th>
-                            <th className="p-3">Transport Timestamp</th>
-                            <th className="p-3">Channel</th>
-                            <th className="p-3">Response Status</th>
-                            <th className="p-3">Host</th>
-                            <th className="p-3">Port</th>
-                            <th className="p-3">Certificate Status</th>
-                            <th className="p-3">Days Until Expiration</th>
-                            <th className="p-3">Subject CN</th>
-                            <th className="p-3">Issuer CN</th>
-                            <th className="p-3">Is Self Signed</th>
-                            <th className="p-3">Cert Age (Years)</th>
-                            <th className="p-3">Detected Via</th>
+                            <TableHeaderCell columnKey="timestamp" label="Timestamp" activeSortBy={sortBy} activeSortOrder={sortOrder} onSort={setSort} disabled={loading} />
+                            <TableHeaderCell columnKey="eventType" label="Event Type" activeSortBy={sortBy} activeSortOrder={sortOrder} onSort={setSort} disabled={loading} />
+                            <TableHeaderCell columnKey="status" label="Status" activeSortBy={sortBy} activeSortOrder={sortOrder} onSort={setSort} disabled={loading} />
+                            <th className="p-3">Request ID</th>
+                            <TableHeaderCell columnKey="channelId" label="Channel ID" activeSortBy={sortBy} activeSortOrder={sortOrder} onSort={setSort} disabled={loading} />
+                            <th className="p-3">Interaction ID</th>
+                            <TableHeaderCell columnKey="durationMs" label="Duration (ms)" activeSortBy={sortBy} activeSortOrder={sortOrder} onSort={setSort} disabled={loading} />
+                            <TableHeaderCell columnKey="environment" label="Environment" activeSortBy={sortBy} activeSortOrder={sortOrder} onSort={setSort} disabled={loading} />
+                            <th className="p-3">Certificate</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {messageEvents.map(event => (
-                            <tr
-                                key={`${event.transaction_id}-${event.transport_timestamp}`}
-                                className="border-t text-sm"
-                                onClick={() => setSelectedCert(mapRowToCertificateDetails(event))}
-                            >
-                                <td className="p-3 font-mono break-all">
-                                    <TransactionLink id={event.transaction_id} />
+                        {loading && (
+                            <tr>
+                                <td colSpan={9} className="p-4 text-center text-gray-500">
+                                    Loading messages...
                                 </td>
-                                <td className="p-3 whitespace-nowrap">{formatTimestamp(event.transport_timestamp)}</td>
-                                <td className="p-3">{event.channel}</td>
-                                <td className="p-3">{event.response_status}</td>
-                                <td className="p-3 break-all">{event.host ?? '—'}</td>
-                                <td className="p-3">{event.port ?? '—'}</td>
-                                <td className="p-3">
-                                    <span className={`inline-flex items-center rounded px-2 py-1 text-xs ${formatCertificateStatus(event.certificate_status)}`}>
-                                        {event.certificate_status ?? 'Unknown'}
-                                    </span>
-                                </td>
-                                <td className={`p-3 font-medium ${getDaysToExpirationClassName(event.days_until_expiration)}`}>
-                                    {event.days_until_expiration ?? '—'}
-                                </td>
-                                <td className="p-3 break-all">{event.subject_cn ?? '—'}</td>
-                                <td className="p-3 break-all">{event.issuer_cn ?? '—'}</td>
-                                <td className="p-3">
-                                    {event.is_self_signed === null ? '—' : event.is_self_signed ? 'Yes' : 'No'}
+                            </tr>
+                        )}
+                        {!loading &&
+                            fallbackSortedEvents.map(event => {
+                                const status = formatStatus(event.status);
+                                return (
+                                    <tr key={event.id} className="border-t text-sm">
+                                        <td className="p-3 whitespace-nowrap">{formatTimestamp(event.timestamp)}</td>
+                                        <td className="p-3">{event.eventType}</td>
+                                        <td className="p-3">
+                                            <span className={`inline-flex items-center rounded px-2 py-1 text-xs ${status.className}`}>
+                                                {status.icon}
+                                                {status.label}
+                                            </span>
+                                        </td>
+                                        <td className="p-3 font-mono break-all">
+                                            {event.requestId ? <TransactionLink id={event.requestId} /> : '-'}
+                                        </td>
+                                        <td className="p-3 font-mono break-all">{event.channelId ?? '-'}</td>
+                                        <td className="p-3 font-mono break-all">{event.interactionId ?? '-'}</td>
+                                        <td className="p-3">{event.durationMs ?? '-'}</td>
+                                        <td className="p-3">{formatEnvironment(event.environment)}</td>
+                                        <td className="p-3">
+                                            {event.certificate ? (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setSelectedTransactionId(event.transactionId ?? null)}
+                                                    className={`inline-flex items-center rounded px-2 py-1 text-xs ${formatCertificateStatus(event.certificate.status)}`}
+                                                >
+                                                    {event.certificate.status}
+                                                </button>
+                                            ) : (
+                                                '-'
+                                            )}
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        {!loading && fallbackSortedEvents.length === 0 && (
+                            <tr>
+                                <td colSpan={9} className="p-4 text-center text-gray-500">
+                                    No message events available.
                                 </td>
                                 <td className="p-3">{event.cert_age_years ?? '—'}</td>
                                 <td className="p-3">{event.detected_via ?? '—'}</td>
                             </tr>
-                        ))}
-                        {!messageEvents.length && (
-                            <tr>
-                                <td colSpan={13} className="p-4 text-center text-gray-500">
-                                    No message events available.
-                                </td>
-                            </tr>
                         )}
                     </tbody>
                 </table>
-                <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+                <Pagination page={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />
             </div>
+
+            {organizationOptions.length > 0 || transactionTypeOptions.length > 0 ? (
+                <div className="text-xs text-gray-500">
+                    Channels: {organizationOptions.length} • Event Types: {transactionTypeOptions.length}
+                </div>
+            ) : null}
         </div>
     );
 };
 
-const SummaryCard = ({
-    label,
-    value,
-}: {
-    label: string;
-    value: string | number;
-}) => (
+const SummaryCard = ({ label, value }: { label: string; value: string | number }) => (
     <div className="bg-white rounded-lg shadow p-4">
         <div className="text-sm text-gray-500">{label}</div>
         <div className="text-2xl font-bold">{value}</div>
