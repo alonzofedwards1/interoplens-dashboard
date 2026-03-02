@@ -40,7 +40,6 @@ const Dashboard: React.FC<DashboardProps> = ({ role, onLogout }) => {
         messages,
         loading,
         error,
-        messagesWarning,
         refresh,
     } = useServerData();
 
@@ -150,11 +149,6 @@ const Dashboard: React.FC<DashboardProps> = ({ role, onLogout }) => {
                         </div>
                     )}
 
-                    {messagesWarning && (
-                        <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
-                            Messages unavailable: {messagesWarning}
-                        </div>
-                    )}
 
                     {/* ============================
                         Alert Summary Cards

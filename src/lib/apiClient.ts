@@ -55,7 +55,8 @@ export class ApiClient {
     }
 
     async getTelemetryEvents(): Promise<MessageEvent[]> {
-        return fetchMessageEvents();
+        const response = await fetchMessageEvents();
+        return response.items;
     }
 
     async getOids(): Promise<Oid[]> {

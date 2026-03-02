@@ -1,4 +1,13 @@
 import type { MessageEvent } from '../types/messages';
+import { SortOrder } from '../components/table/types';
+
+export type MessageSortBy =
+    | 'timestamp'
+    | 'eventType'
+    | 'status'
+    | 'durationMs'
+    | 'environment'
+    | 'channelId';
 
 export type MessageFilterParams = {
     startTime?: string;
@@ -9,27 +18,61 @@ export type MessageFilterParams = {
     environment?: string;
     search?: string;
     source?: 'transport' | 'telemetry';
+    responseStatus?: number;
+    daysUntilExpirationMin?: number;
+    daysUntilExpirationMax?: number;
 };
+
+export interface MessageQueryParams {
+    filters?: MessageFilterParams;
+    sortBy?: MessageSortBy;
+    sortOrder?: SortOrder;
+    limit?: number;
+    offset?: number;
+}
+
+export interface MessageEventsResponse {
+    items: MessageEvent[];
+    total: number;
+}
 
 const getAuthToken = () => {
     return localStorage.getItem('authToken') ?? localStorage.getItem('token') ?? '';
 };
 
+const appendDefined = (params: URLSearchParams, key: string, value: unknown) => {
+    if (value == null || value === '') {
+        return;
+    }
+    params.set(key, String(value));
+};
+
+export function buildMessageEventsQuery(params: MessageQueryParams = {}): string {
+    const query = new URLSearchParams();
+
+    appendDefined(query, 'startTime', params.filters?.startTime);
+    appendDefined(query, 'endTime', params.filters?.endTime);
+    appendDefined(query, 'organization', params.filters?.organization);
+    appendDefined(query, 'transactionType', params.filters?.transactionType);
+    appendDefined(query, 'status', params.filters?.status);
+    appendDefined(query, 'environment', params.filters?.environment);
+    appendDefined(query, 'search', params.filters?.search);
+    appendDefined(query, 'source', params.filters?.source);
+    appendDefined(query, 'responseStatus', params.filters?.responseStatus);
+    appendDefined(query, 'daysUntilExpirationMin', params.filters?.daysUntilExpirationMin);
+    appendDefined(query, 'daysUntilExpirationMax', params.filters?.daysUntilExpirationMax);
+    appendDefined(query, 'sortBy', params.sortBy);
+    appendDefined(query, 'sortOrder', params.sortOrder);
+    appendDefined(query, 'limit', params.limit);
+    appendDefined(query, 'offset', params.offset);
+
+    return query.toString();
+}
+
 export async function fetchMessageEvents(
-    filters?: MessageFilterParams
-): Promise<MessageEvent[]> {
-    const params = new URLSearchParams();
-
-    if (filters?.startTime) params.set('startTime', filters.startTime);
-    if (filters?.endTime) params.set('endTime', filters.endTime);
-    if (filters?.organization) params.set('organization', filters.organization);
-    if (filters?.transactionType) params.set('transactionType', filters.transactionType);
-    if (filters?.status) params.set('status', filters.status);
-    if (filters?.environment) params.set('environment', filters.environment);
-    if (filters?.search) params.set('search', filters.search);
-    if (filters?.source) params.set('source', filters.source);
-
-    const query = params.toString();
+    params: MessageQueryParams = {}
+): Promise<MessageEventsResponse> {
+    const query = buildMessageEventsQuery(params);
     const url = `/api/messages${query ? `?${query}` : ''}`;
 
     const token = getAuthToken();
@@ -45,9 +88,31 @@ export async function fetchMessageEvents(
     }
 
     const data = (await res.json()) as unknown;
-    if (!Array.isArray(data)) {
-        throw new Error('Unexpected messages response format');
+
+    if (Array.isArray(data)) {
+        return {
+            items: data as MessageEvent[],
+            total: data.length,
+        };
     }
 
-    return data as MessageEvent[];
+    if (
+        typeof data === 'object' &&
+        data !== null &&
+        'items' in data &&
+        Array.isArray((data as { items: unknown }).items)
+    ) {
+        const typed = data as { items: MessageEvent[]; total?: number };
+        return {
+            items: typed.items,
+            total: typeof typed.total === 'number' ? typed.total : typed.items.length,
+        };
+    }
+
+    throw new Error('Unexpected messages response format');
 }
+
+/**
+ * Backward-compatible alias for legacy callers.
+ */
+export const fetchMessageMonitor = fetchMessageEvents;
