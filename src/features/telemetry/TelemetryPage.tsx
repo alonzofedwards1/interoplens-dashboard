@@ -87,7 +87,7 @@ const formatEnvironment = (environment?: string) => {
     return normalized;
 };
 
-const formatTimestamp = (timestamp?: string) => {
+const formatTimestamp = (timestamp?: string | null) => {
     if (!timestamp) return '—';
     const date = new Date(timestamp);
     return Number.isNaN(date.getTime())
@@ -266,9 +266,7 @@ const TelemetryPage: React.FC = () => {
                         type="button"
                         onClick={() => navigate('/dashboard')}
                         className="text-gray-600 hover:text-gray-900"
-                    >
-                        <FaArrowLeft />
-                    </button>
+                    />
                     <div>
                         <h1 className="text-2xl font-semibold">Message Monitor</h1>
                         <p className="text-gray-600">Unified integration message monitoring.</p>
@@ -295,9 +293,9 @@ const TelemetryPage: React.FC = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <SummaryCard label="Events" value={metrics.total} />
-                <SummaryCard label="Success rate" value={`${metrics.successRate}%`} />
-                <SummaryCard label="Errors" value={metrics.errors} />
-                <SummaryCard label="Avg duration" value={`${metrics.averageDuration} ms`} />
+                <SummaryCard label="Expired certs" value={metrics.expired} />
+                <SummaryCard label="Expiring soon" value={metrics.expiringSoon} />
+                <SummaryCard label="Valid certs" value={metrics.valid} />
             </div>
 
             <div className="rounded-lg bg-white p-4 shadow">
@@ -479,6 +477,8 @@ const TelemetryPage: React.FC = () => {
                                 <td colSpan={9} className="p-4 text-center text-gray-500">
                                     No message events available.
                                 </td>
+                                <td className="p-3">{event.cert_age_years ?? '—'}</td>
+                                <td className="p-3">{event.detected_via ?? '—'}</td>
                             </tr>
                         )}
                     </tbody>

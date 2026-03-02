@@ -84,7 +84,7 @@ export async function fetchMessageEvents(
     });
 
     if (!res.ok) {
-        throw new Error(`Failed to fetch messages (${res.status})`);
+        throw new Error(`Failed to fetch message monitor (${res.status})`);
     }
 
     const data = (await res.json()) as unknown;

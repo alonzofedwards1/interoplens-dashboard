@@ -4,10 +4,9 @@ import {
     FaShieldAlt,
     FaChartBar,
     FaPlug,
-    FaPaintBrush,
-    FaArrowLeft
+    FaPaintBrush
 } from "react-icons/fa";
-import { Link } from "react-router-dom";
+import BackButton from "../../components/navigation/BackButton";
 
 /* ---- Section Components ---- */
 import AccountSettings from "../../components/settings/AccountSettings";
@@ -73,13 +72,11 @@ const SettingsPage: React.FC = () => {
         <div className="p-8 bg-base-200 min-h-screen">
             {/* Header */}
             <div className="mb-8">
-                <Link
-                    to="/dashboard"
+                <BackButton
+                    defaultRoute="/dashboard"
+                    label="Back to Dashboard"
                     className="inline-flex items-center gap-2 text-sm text-primary hover:underline mb-2"
-                >
-                    <FaArrowLeft />
-                    Back to Dashboard
-                </Link>
+                />
                 <h1 className="text-3xl font-semibold">Settings</h1>
             </div>
 
