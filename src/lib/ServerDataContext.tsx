@@ -6,22 +6,35 @@ import type { MessageEvent } from '../types/messages';
 import { PdExecution } from '../types/pdExecutions';
 import { apiClient, ApiClient, IntegrationHealthResponse } from './apiClient';
 
-interface ServerDataContextValue {
+interface ServerDataContextType {
     findings: Finding[];
     pdExecutions: PdExecution[];
     committeeQueue: CommitteeQueueItem[];
     messages: MessageEvent[];
-
     integrationHealth?: IntegrationHealthResponse;
-
     loading: boolean;
-    error?: string;
-    messagesWarning?: string;
+    error: string | null;
     refresh: () => Promise<void>;
 }
 
+interface ServerDataPayload {
+    findings: Finding[];
+    pdExecutions: PdExecution[];
+    committeeQueue: CommitteeQueueItem[];
+    messages: MessageEvent[];
+    integrationHealth?: IntegrationHealthResponse;
+}
+
+const EMPTY_SERVER_DATA: ServerDataPayload = {
+    findings: [],
+    pdExecutions: [],
+    committeeQueue: [],
+    messages: [],
+    integrationHealth: undefined,
+};
+
 const ServerDataContext =
-    React.createContext<ServerDataContextValue | undefined>(undefined);
+    React.createContext<ServerDataContextType | undefined>(undefined);
 
 const fetchMessages = async (): Promise<MessageEvent[]> => {
     const token = localStorage.getItem('authToken') ?? localStorage.getItem('token') ?? '';
@@ -46,7 +59,12 @@ const fetchMessages = async (): Promise<MessageEvent[]> => {
     return data as MessageEvent[];
 };
 
-const loadFromApi = async (client: ApiClient) => {
+const formatReason = (reason: unknown): string =>
+    reason instanceof Error ? reason.message : String(reason);
+
+const loadFromApi = async (
+    client: ApiClient
+): Promise<{ data: ServerDataPayload; error: string | null }> => {
     const [
         findingsResult,
         pdExecutionsResult,
@@ -61,21 +79,6 @@ const loadFromApi = async (client: ApiClient) => {
         client.getIntegrationHealth(),
     ]);
 
-    const findings = findingsResult.status === 'fulfilled' ? findingsResult.value : [];
-
-    const pdExecutions =
-        pdExecutionsResult.status === 'fulfilled' ? pdExecutionsResult.value : [];
-
-    const committeeQueue =
-        committeeQueueResult.status === 'fulfilled' ? committeeQueueResult.value : [];
-
-    const messages = messagesResult.status === 'fulfilled' ? messagesResult.value : [];
-
-    const integrationHealth =
-        integrationHealthResult.status === 'fulfilled'
-            ? integrationHealthResult.value
-            : undefined;
-
     if (integrationHealthResult.status === 'rejected') {
         console.warn(
             '[ServerDataContext] Integration health unavailable',
@@ -83,64 +86,67 @@ const loadFromApi = async (client: ApiClient) => {
         );
     }
 
-    const messagesWarning =
-        messagesResult.status === 'rejected'
-            ? messagesResult.reason instanceof Error
-                ? messagesResult.reason.message
-                : String(messagesResult.reason)
-            : undefined;
-
-    const errors = [findingsResult, pdExecutionsResult].filter(
-        r => r.status === 'rejected'
+    const errorSources = [findingsResult, pdExecutionsResult].filter(
+        result => result.status === 'rejected'
     ) as PromiseRejectedResult[];
 
     return {
-        findings,
-        pdExecutions,
-        committeeQueue,
-        messages,
-        integrationHealth,
-        messagesWarning,
+        data: {
+            findings: findingsResult.status === 'fulfilled' ? findingsResult.value : [],
+            pdExecutions:
+                pdExecutionsResult.status === 'fulfilled'
+                    ? pdExecutionsResult.value
+                    : [],
+            committeeQueue:
+                committeeQueueResult.status === 'fulfilled'
+                    ? committeeQueueResult.value
+                    : [],
+            messages: messagesResult.status === 'fulfilled' ? messagesResult.value : [],
+            integrationHealth:
+                integrationHealthResult.status === 'fulfilled'
+                    ? integrationHealthResult.value
+                    : undefined,
+        },
         error:
-            errors.length > 0
-                ? errors
-                    .map(e =>
-                        e.reason instanceof Error
-                            ? e.reason.message
-                            : String(e.reason)
-                    )
-                    .join(' | ')
-                : undefined,
+            errorSources.length > 0
+                ? errorSources.map(result => formatReason(result.reason)).join(' | ')
+                : null,
     };
 };
 
 export const ServerDataProvider: React.FC<{ children: React.ReactNode }> = ({
     children,
 }) => {
-    const [state, setState] = React.useState({
-        findings: [] as Finding[],
-        pdExecutions: [] as PdExecution[],
-        committeeQueue: [] as CommitteeQueueItem[],
-        messages: [] as MessageEvent[],
-        integrationHealth: undefined as IntegrationHealthResponse | undefined,
-        loading: true,
-        error: undefined as string | undefined,
-        messagesWarning: undefined as string | undefined,
-    });
+    const [data, setData] = React.useState<ServerDataPayload>(EMPTY_SERVER_DATA);
+    const [loading, setLoading] = React.useState(true);
+    const [error, setError] = React.useState<string | null>(null);
 
     const refresh = React.useCallback(async () => {
-        const data = await loadFromApi(apiClient);
-        setState({ ...data, loading: false });
+        setLoading(true);
+        setError(null);
+
+        try {
+            const response = await loadFromApi(apiClient);
+            setData(response.data);
+            setError(response.error);
+        } catch (err) {
+            setError(formatReason(err));
+        } finally {
+            setLoading(false);
+        }
     }, []);
 
     React.useEffect(() => {
-        refresh();
+        void refresh();
     }, [refresh]);
 
+    const value = React.useMemo(
+        () => ({ ...data, loading, error, refresh }),
+        [data, loading, error, refresh]
+    );
+
     return (
-        <ServerDataContext.Provider value={{ ...state, refresh }}>
-            {children}
-        </ServerDataContext.Provider>
+        <ServerDataContext.Provider value={value}>{children}</ServerDataContext.Provider>
     );
 };
 
