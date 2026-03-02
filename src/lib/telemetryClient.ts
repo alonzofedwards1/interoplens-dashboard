@@ -111,3 +111,8 @@ export async function fetchMessageEvents(
 
     throw new Error('Unexpected messages response format');
 }
+
+/**
+ * Backward-compatible alias for legacy callers.
+ */
+export const fetchMessageMonitor = fetchMessageEvents;

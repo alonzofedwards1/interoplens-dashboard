@@ -4,9 +4,6 @@ import Filters, { FiltersState } from "../../components/Filters";
 import {
     FaChevronDown,
     FaChevronUp,
-    FaSort,
-    FaSortUp,
-    FaSortDown,
 } from "react-icons/fa";
 
 import { Finding } from "../../types/findings";
@@ -83,8 +80,8 @@ const ViewAllFindingsPage: React.FC = () => {
     const { preferences } = useUserPreferences();
 
     const [expandedId, setExpandedId] = useState<string | null>(null);
-    const [sortKey, setSortKey] = useState<SortKey>("lastSeenAt");
-    const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+    const [sortKey] = useState<SortKey>("lastSeenAt");
+    const [sortDirection] = useState<SortDirection>("desc");
     const [page, setPage] = useState(1);
     const pageSize = 10;
 

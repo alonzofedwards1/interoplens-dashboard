@@ -37,14 +37,6 @@ const EMPTY_SERVER_DATA: ServerDataPayload = {
 const ServerDataContext =
     React.createContext<ServerDataContextType | undefined>(undefined);
 
-const EMPTY_SERVER_DATA: ServerDataPayload = {
-    findings: [],
-    pdExecutions: [],
-    committeeQueue: [],
-    messages: [],
-    integrationHealth: undefined,
-};
-
 const ServerDataContext =
     React.createContext<ServerDataContextType | undefined>(undefined);
 

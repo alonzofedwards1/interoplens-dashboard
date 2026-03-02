@@ -101,13 +101,6 @@ const toIsoIfValid = (value?: string) => {
     return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
 };
 
-const getDaysToExpirationClassName = (days: number | null) => {
-    if (days === null) return 'text-gray-700';
-    if (days < 0) return 'text-red-600';
-    if (days <= 30) return 'text-yellow-600';
-    return 'text-gray-700';
-};
-
 const TelemetryPage: React.FC = () => {
     const navigate = useNavigate();
     const [messageEvents, setMessageEvents] = useState<MessageEvent[]>([]);
