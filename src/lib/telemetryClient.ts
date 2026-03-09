@@ -36,10 +36,6 @@ export interface MessageEventsResponse {
     total: number;
 }
 
-const getAuthToken = () => {
-    return localStorage.getItem('authToken') ?? localStorage.getItem('token') ?? '';
-};
-
 const appendDefined = (params: URLSearchParams, key: string, value: unknown) => {
     if (value == null || value === '') {
         return;
@@ -75,12 +71,8 @@ export async function fetchMessageEvents(
     const query = buildMessageEventsQuery(params);
     const url = `/api/messages${query ? `?${query}` : ''}`;
 
-    const token = getAuthToken();
     const res = await fetch(url, {
         credentials: 'include',
-        headers: {
-            Authorization: `Bearer ${token}`,
-        },
     });
 
     if (!res.ok) {
