@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaArrowLeft, FaCheckCircle, FaClock, FaTimesCircle } from 'react-icons/fa';
+import { FaCheckCircle, FaClock, FaTimesCircle } from 'react-icons/fa';
 
 import Pagination from '../../components/Pagination';
 import { TransactionLink } from '../../components/TransactionLink';
@@ -16,7 +16,7 @@ import {
     MessageSortBy,
     buildMessageEventsQuery,
 } from '../../lib/telemetryClient';
-import type { MessageEvent } from '../../types/messages';
+import type { MessageMonitorRow } from '../../types/messages';
 import CertInspectorModal from '../integration-issues/modals/CertInspectorModal';
 
 interface MessageMonitorFilters {
@@ -24,7 +24,7 @@ interface MessageMonitorFilters {
     source: 'all' | 'transport' | 'telemetry';
     organization: string;
     transactionType: string;
-    status: 'all' | MessageEvent['status'];
+    status: 'all' | 'Success' | 'Error' | 'Warning';
     environment: 'all' | 'PROD' | 'TEST';
     transportTimestamp: DateRangeFilterValue;
     durationMs: RangeFilterValue<number>;
@@ -50,7 +50,7 @@ const SORTABLE_COLUMNS: readonly MessageSortBy[] = [
     'channelId',
 ] as const;
 
-const formatStatus = (status?: MessageEvent['status']) => {
+const formatStatus = (status?: string | null) => {
     switch (status) {
         case 'Success':
             return {
@@ -80,7 +80,7 @@ const formatCertificateStatus = (status: 'Valid' | 'Expired' | 'Expiring Soon') 
     return 'bg-yellow-100 text-yellow-800';
 };
 
-const formatEnvironment = (environment?: string) => {
+const formatEnvironment = (environment?: string | null) => {
     if (!environment) return '-';
     const normalized = environment.toUpperCase();
     if (normalized === 'PROD' || normalized === 'TEST') return normalized;
@@ -103,7 +103,7 @@ const toIsoIfValid = (value?: string) => {
 
 const TelemetryPage: React.FC = () => {
     const navigate = useNavigate();
-    const [messageEvents, setMessageEvents] = useState<MessageEvent[]>([]);
+    const [messageEvents, setMessageEvents] = useState<MessageMonitorRow[]>([]);
     const [totalCount, setTotalCount] = useState(0);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -196,8 +196,17 @@ const TelemetryPage: React.FC = () => {
         }
 
         const sorted = [...messageEvents].sort((a, b) => {
-            const left = a[sortBy as keyof MessageEvent];
-            const right = b[sortBy as keyof MessageEvent];
+            const sortValue = (row: MessageMonitorRow, key: MessageSortBy) => {
+                if (key === 'timestamp') return row.transport_timestamp;
+                if (key === 'eventType') return row.channel;
+                if (key === 'status') return row.response_status;
+                if (key === 'durationMs') return row.days_until_expiration;
+                if (key === 'environment') return row.scheme;
+                return row.endpoint_id;
+            };
+
+            const left = sortValue(a, sortBy);
+            const right = sortValue(b, sortBy);
 
             if (left == null && right == null) return 0;
             if (left == null) return 1;
@@ -221,22 +230,22 @@ const TelemetryPage: React.FC = () => {
 
     const organizationOptions = useMemo(() => {
         const values = new Set<string>();
-        fallbackSortedEvents.forEach(event => event.channelId && values.add(event.channelId));
+        fallbackSortedEvents.forEach(event => event.endpoint_id && values.add(event.endpoint_id));
         return Array.from(values).sort((a, b) => a.localeCompare(b));
     }, [fallbackSortedEvents]);
 
     const transactionTypeOptions = useMemo(() => {
         const values = new Set<string>();
-        fallbackSortedEvents.forEach(event => event.eventType && values.add(event.eventType));
+        fallbackSortedEvents.forEach(event => event.channel && values.add(event.channel));
         return Array.from(values).sort((a, b) => a.localeCompare(b));
     }, [fallbackSortedEvents]);
 
     const metrics = useMemo(() => {
         const total = fallbackSortedEvents.length;
-        const successes = fallbackSortedEvents.filter(e => e.status === 'Success').length;
-        const errors = fallbackSortedEvents.filter(e => e.status === 'Error').length;
+        const successes = fallbackSortedEvents.filter(e => e.response_status === 'Success').length;
+        const errors = fallbackSortedEvents.filter(e => e.response_status === 'Error').length;
         const durations = fallbackSortedEvents
-            .map(event => event.durationMs)
+            .map(event => event.days_until_expiration)
             .filter((duration): duration is number => typeof duration === 'number');
 
         return {
@@ -293,9 +302,9 @@ const TelemetryPage: React.FC = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <SummaryCard label="Events" value={metrics.total} />
-                <SummaryCard label="Expired certs" value={metrics.expired} />
-                <SummaryCard label="Expiring soon" value={metrics.expiringSoon} />
-                <SummaryCard label="Valid certs" value={metrics.valid} />
+                <SummaryCard label="Errors" value={metrics.errors} />
+                <SummaryCard label="Success Rate" value={`${metrics.successRate}%`} />
+                <SummaryCard label="Avg Duration" value={metrics.averageDuration} />
             </div>
 
             <div className="rounded-lg bg-white p-4 shadow">
@@ -438,11 +447,11 @@ const TelemetryPage: React.FC = () => {
                         )}
                         {!loading &&
                             fallbackSortedEvents.map(event => {
-                                const status = formatStatus(event.status);
+                                const status = formatStatus(event.response_status);
                                 return (
-                                    <tr key={event.id} className="border-t text-sm">
-                                        <td className="p-3 whitespace-nowrap">{formatTimestamp(event.timestamp)}</td>
-                                        <td className="p-3">{event.eventType}</td>
+                                    <tr key={`${event.transaction_id}-${event.transport_timestamp}-${event.cert_id ?? ''}`} className="border-t text-sm">
+                                        <td className="p-3 whitespace-nowrap">{formatTimestamp(event.transport_timestamp)}</td>
+                                        <td className="p-3">{event.channel}</td>
                                         <td className="p-3">
                                             <span className={`inline-flex items-center rounded px-2 py-1 text-xs ${status.className}`}>
                                                 {status.icon}
@@ -450,20 +459,20 @@ const TelemetryPage: React.FC = () => {
                                             </span>
                                         </td>
                                         <td className="p-3 font-mono break-all">
-                                            {event.requestId ? <TransactionLink id={event.requestId} /> : '-'}
+                                            {event.transaction_id ? <TransactionLink id={event.transaction_id} /> : '-'}
                                         </td>
-                                        <td className="p-3 font-mono break-all">{event.channelId ?? '-'}</td>
-                                        <td className="p-3 font-mono break-all">{event.interactionId ?? '-'}</td>
-                                        <td className="p-3">{event.durationMs ?? '-'}</td>
-                                        <td className="p-3">{formatEnvironment(event.environment)}</td>
+                                        <td className="p-3 font-mono break-all">{event.endpoint_id ?? '-'}</td>
+                                        <td className="p-3 font-mono break-all">{event.cert_id ?? '-'}</td>
+                                        <td className="p-3">{event.days_until_expiration ?? '-'}</td>
+                                        <td className="p-3">{formatEnvironment(event.scheme)}</td>
                                         <td className="p-3">
-                                            {event.certificate ? (
+                                            {event.certificate_status ? (
                                                 <button
                                                     type="button"
-                                                    onClick={() => setSelectedTransactionId(event.transactionId ?? null)}
-                                                    className={`inline-flex items-center rounded px-2 py-1 text-xs ${formatCertificateStatus(event.certificate.status)}`}
+                                                    onClick={() => setSelectedTransactionId(event.transaction_id ?? null)}
+                                                    className={`inline-flex items-center rounded px-2 py-1 text-xs ${formatCertificateStatus(event.certificate_status)}`}
                                                 >
-                                                    {event.certificate.status}
+                                                    {event.certificate_status}
                                                 </button>
                                             ) : (
                                                 '-'
@@ -477,8 +486,6 @@ const TelemetryPage: React.FC = () => {
                                 <td colSpan={9} className="p-4 text-center text-gray-500">
                                     No message events available.
                                 </td>
-                                <td className="p-3">{event.cert_age_years ?? '—'}</td>
-                                <td className="p-3">{event.detected_via ?? '—'}</td>
                             </tr>
                         )}
                     </tbody>
