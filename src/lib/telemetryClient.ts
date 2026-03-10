@@ -1,4 +1,4 @@
-import type { MessageEvent } from '../types/messages';
+import type { MessageMonitorResponse, MessageMonitorRow } from '../types/messages';
 import { SortOrder } from '../components/table/types';
 
 export type MessageSortBy =
@@ -23,7 +23,7 @@ export type MessageFilterParams = {
     daysUntilExpirationMax?: number;
 };
 
-export interface MessageQueryParams {
+export interface MessageQueryParams extends MessageFilterParams {
     filters?: MessageFilterParams;
     sortBy?: MessageSortBy;
     sortOrder?: SortOrder;
@@ -31,14 +31,10 @@ export interface MessageQueryParams {
     offset?: number;
 }
 
-export interface MessageEventsResponse {
-    items: MessageEvent[];
+export interface MessageEventsResponse extends MessageMonitorResponse {
+    items: MessageMonitorRow[];
     total: number;
 }
-
-const getAuthToken = () => {
-    return localStorage.getItem('authToken') ?? localStorage.getItem('token') ?? '';
-};
 
 const appendDefined = (params: URLSearchParams, key: string, value: unknown) => {
     if (value == null || value === '') {
@@ -47,20 +43,27 @@ const appendDefined = (params: URLSearchParams, key: string, value: unknown) => 
     params.set(key, String(value));
 };
 
+const pickFilter = <K extends keyof MessageFilterParams>(
+    params: MessageQueryParams,
+    key: K
+): MessageFilterParams[K] | undefined => {
+    return params.filters?.[key] ?? params[key];
+};
+
 export function buildMessageEventsQuery(params: MessageQueryParams = {}): string {
     const query = new URLSearchParams();
 
-    appendDefined(query, 'startTime', params.filters?.startTime);
-    appendDefined(query, 'endTime', params.filters?.endTime);
-    appendDefined(query, 'organization', params.filters?.organization);
-    appendDefined(query, 'transactionType', params.filters?.transactionType);
-    appendDefined(query, 'status', params.filters?.status);
-    appendDefined(query, 'environment', params.filters?.environment);
-    appendDefined(query, 'search', params.filters?.search);
-    appendDefined(query, 'source', params.filters?.source);
-    appendDefined(query, 'responseStatus', params.filters?.responseStatus);
-    appendDefined(query, 'daysUntilExpirationMin', params.filters?.daysUntilExpirationMin);
-    appendDefined(query, 'daysUntilExpirationMax', params.filters?.daysUntilExpirationMax);
+    appendDefined(query, 'startTime', pickFilter(params, 'startTime'));
+    appendDefined(query, 'endTime', pickFilter(params, 'endTime'));
+    appendDefined(query, 'organization', pickFilter(params, 'organization'));
+    appendDefined(query, 'transactionType', pickFilter(params, 'transactionType'));
+    appendDefined(query, 'status', pickFilter(params, 'status'));
+    appendDefined(query, 'environment', pickFilter(params, 'environment'));
+    appendDefined(query, 'search', pickFilter(params, 'search'));
+    appendDefined(query, 'source', pickFilter(params, 'source'));
+    appendDefined(query, 'responseStatus', pickFilter(params, 'responseStatus'));
+    appendDefined(query, 'daysUntilExpirationMin', pickFilter(params, 'daysUntilExpirationMin'));
+    appendDefined(query, 'daysUntilExpirationMax', pickFilter(params, 'daysUntilExpirationMax'));
     appendDefined(query, 'sortBy', params.sortBy);
     appendDefined(query, 'sortOrder', params.sortOrder);
     appendDefined(query, 'limit', params.limit);
@@ -75,12 +78,8 @@ export async function fetchMessageEvents(
     const query = buildMessageEventsQuery(params);
     const url = `/api/messages${query ? `?${query}` : ''}`;
 
-    const token = getAuthToken();
     const res = await fetch(url, {
         credentials: 'include',
-        headers: {
-            Authorization: `Bearer ${token}`,
-        },
     });
 
     if (!res.ok) {
@@ -91,8 +90,29 @@ export async function fetchMessageEvents(
 
     if (Array.isArray(data)) {
         return {
-            items: data as MessageEvent[],
+            items: data as MessageMonitorRow[],
             total: data.length,
+            data: data as MessageMonitorRow[],
+            pagination: {
+                total: data.length,
+                limit: params.limit ?? data.length,
+                offset: params.offset ?? 0,
+            },
+        };
+    }
+
+    if (
+        typeof data === 'object' &&
+        data !== null &&
+        'data' in data &&
+        Array.isArray((data as { data: unknown }).data)
+    ) {
+        const typed = data as MessageMonitorResponse;
+        return {
+            items: typed.data,
+            total: typed.pagination.total,
+            data: typed.data,
+            pagination: typed.pagination,
         };
     }
 
@@ -102,10 +122,16 @@ export async function fetchMessageEvents(
         'items' in data &&
         Array.isArray((data as { items: unknown }).items)
     ) {
-        const typed = data as { items: MessageEvent[]; total?: number };
+        const typed = data as { items: MessageMonitorRow[]; total?: number };
         return {
             items: typed.items,
             total: typeof typed.total === 'number' ? typed.total : typed.items.length,
+            data: typed.items,
+            pagination: {
+                total: typeof typed.total === 'number' ? typed.total : typed.items.length,
+                limit: params.limit ?? typed.items.length,
+                offset: params.offset ?? 0,
+            },
         };
     }
 

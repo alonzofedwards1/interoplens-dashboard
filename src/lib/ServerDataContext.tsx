@@ -11,7 +11,7 @@ interface ServerDataContextType {
     findings: Finding[];
     pdExecutions: PdExecution[];
     committeeQueue: CommitteeQueueItem[];
-    messages: MessageEvent[];
+    messages: MessageMonitorRow[];
     integrationHealth?: IntegrationHealthResponse;
     loading: boolean;
     error: string | null;
@@ -22,7 +22,7 @@ interface ServerDataPayload {
     findings: Finding[];
     pdExecutions: PdExecution[];
     committeeQueue: CommitteeQueueItem[];
-    messages: MessageEvent[];
+    messages: MessageMonitorRow[];
     integrationHealth?: IntegrationHealthResponse;
 }
 
@@ -37,24 +37,11 @@ const EMPTY_SERVER_DATA: ServerDataPayload = {
 const ServerDataContext =
     React.createContext<ServerDataContextType | undefined>(undefined);
 
-const ServerDataContext =
-    React.createContext<ServerDataContextType | undefined>(undefined);
-
 const MESSAGE_EVENTS_LIMIT = 100;
 
 const loadMessageRows = async (): Promise<MessageMonitorRow[]> => {
-    return fetchMessageEvents({ limit: MESSAGE_EVENTS_LIMIT, offset: 0 });
-};
-
-const formatReason = (reason: unknown): string =>
-    reason instanceof Error ? reason.message : String(reason);
-
-/**
- * SAFE MESSAGE FETCH
- * Backend allows max limit = 100
- */
-const fetchMessages = async (): Promise<MessageMonitorRow[]> => {
-    return fetchMessageEvents({ limit: 100, offset: 0 });
+    const response = await fetchMessageEvents({ limit: MESSAGE_EVENTS_LIMIT, offset: 0 });
+    return response.items;
 };
 
 const formatReason = (reason: unknown): string =>
