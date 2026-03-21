@@ -1,32 +1,23 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import Filters, { FiltersState } from "../../components/Filters";
-import {
-    FaChevronDown,
-    FaChevronUp,
-} from "react-icons/fa";
+import { FaChevronDown, FaChevronUp } from "react-icons/fa";
 
 import { Finding } from "../../types/findings";
 import { useServerData } from "../../lib/ServerDataContext";
 import { TransactionLink } from "../../components/TransactionLink";
-import BackButton from '../../components/navigation/BackButton';
+import BackButton from "../../components/navigation/BackButton";
 import Pagination from "../../components/Pagination";
 import { buildCertificateFindingCopy } from "../../lib/certificates";
 import { useUserPreferences } from "../../lib/useUserPreferences";
 import { formatTimestamp } from "../../lib/dateTime";
 
-/* ============================
-   Local Types
-============================ */
 
 interface OrganizationOption {
     id: string;
     name: string;
 }
 
-/* ============================
-   Helpers
-============================ */
 
 const getSeverityBadge = (severity?: Finding["severity"]) => {
     switch (severity) {
@@ -51,8 +42,19 @@ const getSeverityBadge = (severity?: Finding["severity"]) => {
     }
 };
 
-const safeUpper = (value?: string | null) => (value ? value.toUpperCase() : "—");
+const safeUpper = (value?: string | null) =>
+    value ? value.toUpperCase() : "—";
 
+
+const getOrganizationName = (org: Finding["organization"]) => {
+    if (!org) return null;
+    return typeof org === "string" ? org : org.name;
+};
+
+const getOrganizationId = (org: Finding["organization"]) => {
+    if (!org) return null;
+    return typeof org === "string" ? org : org.id;
+};
 
 /* ============================
    Sorting Types
@@ -70,10 +72,6 @@ type SortKey =
 
 type SortDirection = "asc" | "desc";
 
-/* ============================
-   Component
-============================ */
-
 const ViewAllFindingsPage: React.FC = () => {
     const [searchParams] = useSearchParams();
     const { findings: rawFindings, pdExecutions } = useServerData();
@@ -90,6 +88,7 @@ const ViewAllFindingsPage: React.FC = () => {
         severityParam === "warning" || severityParam === "critical"
             ? severityParam
             : "";
+
     const [filters, setFilters] = useState<FiltersState>({
         organization: "",
         status: "",
@@ -100,19 +99,16 @@ const ViewAllFindingsPage: React.FC = () => {
         [rawFindings]
     );
 
-    /* ============================
-       DERIVE ORGANIZATIONS
-    ============================ */
 
     const organizations: OrganizationOption[] = useMemo(() => {
         const map = new Map<string, OrganizationOption>();
 
         findings.forEach((f) => {
-            if (f.organization?.id && f.organization?.name) {
-                map.set(f.organization.id, {
-                    id: f.organization.id,
-                    name: f.organization.name,
-                });
+            const id = getOrganizationId(f.organization);
+            const name = getOrganizationName(f.organization);
+
+            if (id && name) {
+                map.set(id, { id, name });
             }
         });
 
@@ -121,15 +117,11 @@ const ViewAllFindingsPage: React.FC = () => {
         );
     }, [findings]);
 
-    /* ============================
-       FILTER
-    ============================ */
-
     const filteredFindings = useMemo(() => {
         return findings.filter((f) => {
             if (
                 filters.organization &&
-                f.organization?.id !== filters.organization
+                getOrganizationId(f.organization) !== filters.organization
             ) {
                 return false;
             }
@@ -146,15 +138,11 @@ const ViewAllFindingsPage: React.FC = () => {
         });
     }, [findings, filters, severityFilter]);
 
-    /* ============================
-       SORT
-    ============================ */
-
     const sortedFindings = useMemo(() => {
         const getSortValue = (finding: Finding) => {
             switch (sortKey) {
                 case "organization":
-                    return finding.organization?.name ?? "";
+                    return getOrganizationName(finding.organization) ?? "";
                 case "firstSeenAt":
                     return new Date(finding.firstSeenAt ?? 0).getTime();
                 case "lastSeenAt":
@@ -179,7 +167,9 @@ const ViewAllFindingsPage: React.FC = () => {
             const bVal = getSortValue(b);
 
             if (typeof aVal === "number" && typeof bVal === "number") {
-                return sortDirection === "asc" ? aVal - bVal : bVal - aVal;
+                return sortDirection === "asc"
+                    ? aVal - bVal
+                    : bVal - aVal;
             }
 
             return sortDirection === "asc"
@@ -191,9 +181,7 @@ const ViewAllFindingsPage: React.FC = () => {
     const totalPages = Math.max(1, Math.ceil(sortedFindings.length / pageSize));
 
     useEffect(() => {
-        if (page > totalPages) {
-            setPage(totalPages);
-        }
+        if (page > totalPages) setPage(totalPages);
     }, [page, totalPages]);
 
     const pagedFindings = useMemo(() => {
@@ -202,9 +190,10 @@ const ViewAllFindingsPage: React.FC = () => {
     }, [page, sortedFindings]);
 
     const executionById = useMemo(
-        () => new Map(pdExecutions.map((exec) => [exec.requestId, exec])),
+        () => new Map(pdExecutions.map((e) => [e.requestId, e])),
         [pdExecutions]
     );
+
 
     return (
         <div className="p-6 space-y-4">
@@ -262,36 +251,49 @@ const ViewAllFindingsPage: React.FC = () => {
                                     <td className="p-3">
                                         {getSeverityBadge(finding.severity)}
                                     </td>
+
                                     <td className="p-3">
                                         {safeUpper(finding.executionType)}
                                     </td>
+
                                     <td className="p-3">
-                                        {finding.organization?.name ?? "—"}
+                                        {getOrganizationName(
+                                            finding.organization
+                                        ) ?? "—"}
                                     </td>
+
                                     <td className="p-3">
                                         {safeUpper(finding.category)}
                                     </td>
+
                                     <td className="p-3 text-gray-700">
-                                        {certCopy?.summary ?? finding.summary}
+                                        {certCopy?.summary ??
+                                            finding.summary}
                                     </td>
+
                                     <td className="p-3">
                                         {finding.executionId ? (
                                             <TransactionLink
-                                                id={finding.executionId}
+                                                id={
+                                                    finding.executionId
+                                                }
                                             />
                                         ) : (
                                             "—"
                                         )}
                                     </td>
+
                                     <td className="p-3">
                                         {safeUpper(finding.status)}
                                     </td>
+
                                     <td className="p-3">
                                         {formatTimestamp(
                                             finding.lastSeenAt,
                                             preferences.timezone
                                         )}
                                     </td>
+
                                     <td className="p-3 text-right">
                                         <button
                                             onClick={() =>
@@ -318,35 +320,23 @@ const ViewAllFindingsPage: React.FC = () => {
                                             className="p-4 text-sm text-gray-700"
                                         >
                                             {certCopy ? (
-                                                <div className="space-y-2 text-gray-700">
+                                                <div className="space-y-2">
                                                     <p>
-                                                        <span className="font-semibold">
+                                                        <b>
                                                             Why this matters:
-                                                        </span>{" "}
+                                                        </b>{" "}
                                                         {certCopy.why}
                                                     </p>
                                                     <p>
-                                                        <span className="font-semibold">
+                                                        <b>
                                                             Recommended action:
-                                                        </span>{" "}
+                                                        </b>{" "}
                                                         {certCopy.action}
                                                     </p>
-                                                    {certCopy.thumbprint && (
-                                                        <p className="text-xs text-gray-600">
-                                                            Affected certificate:{" "}
-                                                            <span className="font-mono">
-                                                                {certCopy.thumbprint}
-                                                            </span>
-                                                        </p>
-                                                    )}
-                                                    {finding.technicalDetail && (
-                                                        <p className="text-xs text-gray-500">
-                                                            {finding.technicalDetail}
-                                                        </p>
-                                                    )}
                                                 </div>
                                             ) : (
-                                                finding.technicalDetail ?? "—"
+                                                finding.technicalDetail ??
+                                                "—"
                                             )}
                                         </td>
                                     </tr>
@@ -357,6 +347,7 @@ const ViewAllFindingsPage: React.FC = () => {
                     </tbody>
                 </table>
             </div>
+
             <Pagination
                 page={page}
                 totalPages={totalPages}

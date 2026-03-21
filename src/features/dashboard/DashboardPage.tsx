@@ -14,21 +14,30 @@ import OperationalInsights from "./components/OperationalInsights";
 import useDashboardMetrics from "./hooks/useDashboardMetrics";
 import { Finding } from "../../types/findings";
 import { useUserPreferences } from "../../lib/useUserPreferences";
+import { UserRole } from "../../types/auth";
 
 /* ============================
-   Types
+   Helpers (Org Normalization)
 ============================ */
 
-import { UserRole } from "../../types/auth";
+const getOrganizationName = (org: Finding["organization"]) => {
+    if (!org) return null;
+    return typeof org === "string" ? org : org.name;
+};
+
+const getOrganizationId = (org: Finding["organization"]) => {
+    if (!org) return null;
+    return typeof org === "string" ? org : org.id;
+};
+
+/* ============================
+   Component
+============================ */
 
 interface DashboardProps {
     role: UserRole | null;
     onLogout: () => void;
 }
-
-/* ============================
-   Component
-============================ */
 
 const Dashboard: React.FC<DashboardProps> = ({ role, onLogout }) => {
     const navigate = useNavigate();
@@ -43,34 +52,32 @@ const Dashboard: React.FC<DashboardProps> = ({ role, onLogout }) => {
         refresh,
     } = useServerData();
 
-    /* ============================
-       Dashboard Filters (Minimal)
-    ============================ */
-
     const [filters, setFilters] = useState<FiltersState>({
         organization: "",
         status: "",
     });
+
     const [dateRange, setDateRange] = useState(
         preferences.dashboard.defaultDateRange
     );
+
     const [timeGrouping, setTimeGrouping] = useState(
         preferences.dashboard.timeGrouping
     );
 
-    /**
-     * Dashboard does NOT need org filtering yet,
-     * but Filters requires organizations — so we derive them safely.
-     */
+    /* ============================
+       FIXED ORGANIZATION DROPDOWN
+    ============================ */
+
     const organizations = useMemo(() => {
         const map = new Map<string, { id: string; name: string }>();
 
         (findings as Finding[]).forEach((f) => {
-            if (f.organization?.id && f.organization?.name) {
-                map.set(f.organization.id, {
-                    id: f.organization.id,
-                    name: f.organization.name,
-                });
+            const id = getOrganizationId(f.organization);
+            const name = getOrganizationName(f.organization);
+
+            if (id && name) {
+                map.set(id, { id, name });
             }
         });
 
@@ -78,6 +85,31 @@ const Dashboard: React.FC<DashboardProps> = ({ role, onLogout }) => {
             a.name.localeCompare(b.name)
         );
     }, [findings]);
+
+    /* ============================
+       🔥 FILTER LOGIC (NEW)
+    ============================ */
+
+    const filteredFindings = useMemo(() => {
+        return (findings as Finding[]).filter((f) => {
+            if (
+                filters.organization &&
+                getOrganizationId(f.organization) !== filters.organization
+            ) {
+                return false;
+            }
+
+            if (filters.status && f.status !== filters.status) {
+                return false;
+            }
+
+            return true;
+        });
+    }, [findings, filters]);
+
+    /* ============================
+       Metrics (unchanged)
+    ============================ */
 
     const [complianceStandard, setComplianceStandard] =
         useState<"TEFCA" | "IHE" | "HL7">("TEFCA");
@@ -92,8 +124,10 @@ const Dashboard: React.FC<DashboardProps> = ({ role, onLogout }) => {
 
     useEffect(() => {
         if (!preferences.dashboard.persistFilters) return;
+
         const stored = localStorage.getItem("dashboard.filters");
         if (!stored) return;
+
         try {
             const parsed = JSON.parse(stored) as FiltersState;
             setFilters(parsed);
@@ -107,15 +141,16 @@ const Dashboard: React.FC<DashboardProps> = ({ role, onLogout }) => {
         localStorage.setItem("dashboard.filters", JSON.stringify(filters));
     }, [filters, preferences.dashboard.persistFilters]);
 
-    /**
-     * ✅ SINGLE SOURCE OF TRUTH
-     */
     const { alertCards, insightCards } = useDashboardMetrics(
         findings,
         pdExecutions,
         messages,
         complianceStandard
     );
+
+    /* ============================
+       Loading
+    ============================ */
 
     if (loading) {
         return (
@@ -125,6 +160,10 @@ const Dashboard: React.FC<DashboardProps> = ({ role, onLogout }) => {
         );
     }
 
+    /* ============================
+       UI
+    ============================ */
+
     return (
         <div className="flex min-h-screen bg-gray-100">
             <Sidebar />
@@ -133,9 +172,6 @@ const Dashboard: React.FC<DashboardProps> = ({ role, onLogout }) => {
                 <Topbar role={role} onLogout={onLogout} />
 
                 <main className="p-4 space-y-6">
-                    {/* ============================
-                        Alerts / Errors
-                    ============================ */}
                     {error && (
                         <div className="rounded-md border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-800">
                             {error}. Showing cached fixtures.
@@ -149,53 +185,43 @@ const Dashboard: React.FC<DashboardProps> = ({ role, onLogout }) => {
                         </div>
                     )}
 
-
-                    {/* ============================
-                        Alert Summary Cards
-                    ============================ */}
                     <AlertSummaryCards
                         cards={alertCards}
                         onNavigate={(route) => navigate(route)}
                     />
 
-                    {/* ============================
-                        Operational Insights
-                    ============================ */}
                     <OperationalInsights
                         cards={insightCards}
                         complianceStandard={complianceStandard}
                         onComplianceStandardChange={setComplianceStandard}
                     />
 
-                    {/* ============================
-                        Charts
-                    ============================ */}
                     <div className="text-xs text-gray-500">
-                        Showing {dateRange === "24h"
+                        Showing{" "}
+                        {dateRange === "24h"
                             ? "the last 24 hours"
                             : dateRange === "7d"
                                 ? "the last 7 days"
                                 : "the last 30 days"}{" "}
-                        grouped {timeGrouping === "hourly" ? "hourly" : "daily"}.
+                        grouped{" "}
+                        {timeGrouping === "hourly" ? "hourly" : "daily"}.
                     </div>
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* 🔥 OPTIONAL: You can switch these to filteredFindings later */}
                         <BarChart findings={findings} />
                         <PieChart findings={findings} />
                     </div>
 
-                    {/* ============================
-                        Filters (NOW VALID)
-                    ============================ */}
+                    {/* FILTERS */}
                     <Filters
                         value={filters}
                         onChange={setFilters}
                         organizations={organizations}
                     />
 
-                    {/* ============================
-                        Findings Table
-                    ============================ */}
-                    <FindingsTable findings={findings} />
+                    {/* 🔥 FIXED: pass filtered data */}
+                    <FindingsTable findings={filteredFindings} />
                 </main>
             </div>
         </div>

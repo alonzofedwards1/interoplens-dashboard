@@ -1,11 +1,9 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import {Link} from 'react-router-dom';
 
-import type { IntegrationHealthResponse } from '../../../api/integrationHealth';
+import type {IntegrationHealthResponse} from '../../../api/integrationHealth';
 
-/* ============================
-   Types
-============================ */
+
 
 type Props = {
     data?: IntegrationHealthResponse['certificateHealth'];
@@ -14,9 +12,6 @@ type Props = {
     impactedLink: string;
 };
 
-/* ============================
-   Component
-============================ */
 
 const ExecutiveSummary: React.FC<Props> = ({
                                                data,
@@ -40,7 +35,7 @@ const ExecutiveSummary: React.FC<Props> = ({
         );
     }
 
-    const { expired, expiringSoon, valid } = data;
+    const {expired, expiringSoon, valid} = data;
     const hasCriticalIssues = expired > 0;
 
     return (

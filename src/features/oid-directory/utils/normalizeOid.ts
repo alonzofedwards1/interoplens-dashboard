@@ -24,8 +24,7 @@ const VALID_CONFIDENCE: readonly OidConfidence[] = [
 const normalizeString = (value: unknown, fallback: string) =>
     typeof value === "string" && value.trim().length > 0 ? value : fallback;
 
-// Backend payloads can be partial or carry legacy status strings; normalize to canonical states.
-const normalizeStatus = (status: unknown): OidStatus => {
+const normalizeOidStatus = (status: unknown): OidStatus => {
     const candidate = typeof status === "string" ? status.toUpperCase() : "";
     return (VALID_STATUSES as readonly string[]).includes(candidate)
         ? (candidate as OidStatus)
@@ -41,7 +40,9 @@ const normalizeConfidence = (confidence: unknown): OidConfidence => {
 
 const normalizeUsage = (usage: unknown): OidUsage | undefined => {
     if (!usage || typeof usage !== "object") return undefined;
-    const typed = usage as OidUsage;
+
+    const typed = usage as Partial<OidUsage>;
+
     return {
         pd: typed.pd,
         qd: typed.qd,
@@ -59,11 +60,12 @@ export const normalizeOid = (source: Partial<Oid>, fallbackOid: string): Oid => 
     oid: normalizeString(source.oid, fallbackOid),
     displayName: normalizeString(source.displayName, "Unnamed OID"),
     ownerOrg: normalizeString(source.ownerOrg, "Unassigned"),
-    status: normalizeStatus(source.status),
+    status: normalizeOidStatus(source.status), // 🔥 FIXED
     confidence: normalizeConfidence(source.confidence),
     firstSeen: normalizeString(source.firstSeen, "—"),
     lastSeen: normalizeString(source.lastSeen, "—"),
 });
+
 
 export const normalizeOidDetail = (
     source: Partial<OidDetail>,

@@ -10,10 +10,6 @@ import { buildCertificateFindingCopy } from '../lib/certificates';
 import { useUserPreferences } from '../lib/useUserPreferences';
 import { formatTimestamp } from '../lib/dateTime';
 
-/* ============================
-   Helpers
-============================ */
-
 const buildRecentFindings = (findings: Finding[]) =>
     findings
         .slice()
@@ -62,6 +58,11 @@ const getStatusLabel = (status?: Finding['status']) => {
     );
 };
 
+const getOrganizationName = (org: Finding['organization']) => {
+    if (!org) return null;
+    return typeof org === 'string' ? org : org.name;
+};
+
 type FindingsSortKey = 'detectedAt' | 'severity' | 'organization';
 
 type FindingsPreferences = {
@@ -76,10 +77,6 @@ const defaultFindingsPreferences: FindingsPreferences = {
     sortDirection: 'desc',
 };
 
-/* ============================
-   Component
-============================ */
-
 interface FindingsTableProps {
     findings: Finding[];
 }
@@ -93,14 +90,12 @@ const FindingsTable: React.FC<FindingsTableProps> = ({ findings }) => {
         'findings.dashboard.table',
         defaultFindingsPreferences
     );
+
     const [page, setPage] = useState(1);
     const pageSize = 5;
 
     const { query, sortKey, sortDirection } = preferences;
 
-    /* ============================
-       FILTER
-    ============================ */
 
     const filteredFindings = useMemo(() => {
         const recent = buildRecentFindings(findings);
@@ -110,27 +105,25 @@ const FindingsTable: React.FC<FindingsTableProps> = ({ findings }) => {
         const q = query.toLowerCase();
 
         return recent.filter(f =>
-            f.organization?.name?.toLowerCase().includes(q) ||
+            (getOrganizationName(f.organization)?.toLowerCase().includes(q) ?? false) ||
             f.type?.toLowerCase().includes(q) ||
             f.summary?.toLowerCase().includes(q)
         );
     }, [findings, query]);
-
-    /* ============================
-       SORT
-    ============================ */
 
     const sortedFindings = useMemo(() => {
         return [...filteredFindings].sort((a, b) => {
             if (sortKey === 'detectedAt') {
                 const aDate = new Date(a.detectedAt ?? 0).getTime();
                 const bDate = new Date(b.detectedAt ?? 0).getTime();
-                return sortDirection === 'asc' ? aDate - bDate : bDate - aDate;
+                return sortDirection === 'asc'
+                    ? aDate - bDate
+                    : bDate - aDate;
             }
 
             if (sortKey === 'organization') {
-                const aOrg = a.organization?.name ?? '';
-                const bOrg = b.organization?.name ?? '';
+                const aOrg = getOrganizationName(a.organization) ?? '';
+                const bOrg = getOrganizationName(b.organization) ?? '';
                 return sortDirection === 'asc'
                     ? aOrg.localeCompare(bOrg)
                     : bOrg.localeCompare(aOrg);
@@ -164,9 +157,6 @@ const FindingsTable: React.FC<FindingsTableProps> = ({ findings }) => {
         );
     }, [pdExecutions]);
 
-    /* ============================
-       RENDER
-    ============================ */
 
     return (
         <div className="bg-white rounded-2xl shadow p-4 mt-4 space-y-3">
@@ -209,9 +199,11 @@ const FindingsTable: React.FC<FindingsTableProps> = ({ findings }) => {
                 {pagedFindings.map(f => (
                     <tr key={f.id} className="border-b last:border-b-0">
                         <td className="py-2">{getSeverityLabel(f.severity)}</td>
+
                         <td className="py-2 font-medium">
-                            {f.organization?.name ?? '—'}
+                            {getOrganizationName(f.organization) ?? '—'}
                         </td>
+
                         <td className="py-2 text-gray-700">
                             {buildCertificateFindingCopy(
                                 f,
@@ -220,6 +212,7 @@ const FindingsTable: React.FC<FindingsTableProps> = ({ findings }) => {
                                     : undefined
                             )?.summary ?? f.summary ?? '—'}
                         </td>
+
                         <td className="py-2">
                             {f.executionId ? (
                                 <TransactionLink id={f.executionId} />
@@ -227,12 +220,14 @@ const FindingsTable: React.FC<FindingsTableProps> = ({ findings }) => {
                                 '—'
                             )}
                         </td>
+
                         <td className="py-2 text-gray-600">
                             {formatTimestamp(
                                 f.detectedAt,
                                 userPreferences.timezone
                             )}
                         </td>
+
                         <td className="py-2">{getStatusLabel(f.status)}</td>
                     </tr>
                 ))}
@@ -246,6 +241,7 @@ const FindingsTable: React.FC<FindingsTableProps> = ({ findings }) => {
                 )}
                 </tbody>
             </table>
+
             <Pagination
                 page={page}
                 totalPages={totalPages}

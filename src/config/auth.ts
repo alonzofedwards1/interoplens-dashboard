@@ -1,5 +1,5 @@
-export type AuthMode = 'none';
+export type AuthMode = 'session';
 
-export const AUTH_MODE: AuthMode = 'none';
+export const AUTH_MODE: AuthMode = 'session';
 
-export const isAuthEnabled = false;
+export const isAuthEnabled = true;

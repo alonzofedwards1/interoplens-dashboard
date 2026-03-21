@@ -76,7 +76,7 @@ export async function fetchMessageEvents(
     params: MessageQueryParams = {}
 ): Promise<MessageEventsResponse> {
     const query = buildMessageEventsQuery(params);
-    const url = `/api/messages${query ? `?${query}` : ''}`;
+    const url = `/api/message-monitor${query ? `?${query}` : ''}`;
 
     const res = await fetch(url, {
         credentials: 'include',
