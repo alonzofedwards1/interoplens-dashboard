@@ -4,9 +4,11 @@ import {
     PdExecutionCounts,
     PdExecutionHealthSummary,
     PdExecutionsResponse,
+    RawPdExecution,
 } from '../types/pdExecutions';
 import { requestJson } from '../lib/api/request';
 import { API_BASE } from '../lib/apiBase';
+import { normalizePdExecutions } from '../lib/normalizers/pdExecutions';
 
 type FetchParams = Record<string, string | number | boolean | undefined>;
 
@@ -26,10 +28,11 @@ const buildQueryString = (params?: FetchParams) => {
 export const fetchPdExecutions = async (
     params?: FetchParams
 ): Promise<PdExecutionsResponse> => {
-    return requestJson<PdExecutionsResponse>(
+    const data = await requestJson<RawPdExecution[]>(
         `${API_BASE}/api/pd-executions${buildQueryString(params)}`,
         { method: 'GET' }
     );
+    return normalizePdExecutions(Array.isArray(data) ? data : []);
 };
 
 export const fetchPdExecutionCounts = async (): Promise<PdExecutionCounts> => {

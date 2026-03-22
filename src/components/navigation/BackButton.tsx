@@ -31,6 +31,11 @@ const BackButton: React.FC<BackButtonProps> = ({
             return;
         }
 
+        if (window.history.length > 1) {
+            navigate(-1);
+            return;
+        }
+
         navigate(defaultRoute);
     }, [defaultRoute, location.pathname, location.state, navigate]);
 

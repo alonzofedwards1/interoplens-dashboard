@@ -1,3 +1,26 @@
+export type RawPdExecution = {
+    requestId?: string;
+    transactionType?: 'PD' | 'DQ' | 'DR';
+    direction?: 'inbound' | 'outbound';
+    startedAt?: string;
+    completedAt?: string;
+    durationMs?: number;
+    executionTimeMs?: number;
+    outcome?: 'success' | 'failure' | 'partial' | string;
+    rootCause?: string;
+    failureStage?: string;
+    httpStatus?: number;
+    retryCount?: number;
+    certStatus?: 'VALID' | 'EXPIRING_SOON' | 'EXPIRED' | string;
+    certThumbprint?: string;
+    sourceEnvironment?: string;
+    environment?: string;
+    qhinName?: string;
+    sourceOrganizationName?: string;
+    channelId?: string;
+    sourceOid?: string;
+};
+
 export type PdExecution = {
     requestId: string;
     transactionType: 'PD' | 'DQ' | 'DR';

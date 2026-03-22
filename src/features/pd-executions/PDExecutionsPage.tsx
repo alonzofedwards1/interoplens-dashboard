@@ -24,6 +24,8 @@ import {
 import {Download} from 'lucide-react';
 import {useUserPreferences} from '../../lib/useUserPreferences';
 import {formatTimestamp} from '../../lib/dateTime';
+import {apiClient} from '../../lib/apiClient';
+import {PdExecution, PdExecutionCounts} from '../../types/pdExecutions';
 
 /* ============================
    Helpers
@@ -94,7 +96,7 @@ const triggerDownload = (payload: BlobPart, filename: string, mimeType: string) 
 
 const PDExecutions: React.FC = () => {
     const [searchParams, setSearchParams] = useSearchParams();
-    const {pdExecutions, loading, findings} = useServerData();
+    const {loading, findings, error: serverDataError} = useServerData();
     const {preferences: userPreferences} = useUserPreferences();
     const [preferences, setPreferences] = useUserPreference(
         'pd.executions.table',
@@ -106,8 +108,12 @@ const PDExecutions: React.FC = () => {
     const [customEnd, setCustomEnd] = useState('');
     const [page, setPage] = useState(1);
     const pageSize = 10;
-    const missingTelemetryApiLogged = useRef(false);
-    const missingChartDataLogged = useRef(false);
+    const [pdExecutions, setPdExecutions] = useState<PdExecution[]>([]);
+    const [executionsTotal, setExecutionsTotal] = useState(0);
+    const [executionsLoading, setExecutionsLoading] = useState(false);
+    const [executionsError, setExecutionsError] = useState<string | null>(null);
+    const [executionCounts, setExecutionCounts] = useState<PdExecutionCounts | null>(null);
+    const telemetryErrorLogged = useRef(false);
 
     const {outcomeFilter, search, sortDirection, sortKey, certStatusFilter} =
         preferences;
@@ -141,7 +147,7 @@ const PDExecutions: React.FC = () => {
             ...prev,
             certStatusFilter: nextFilter,
         }));
-    }, [certStatusParam]);
+    }, [certStatusParam, setPreferences]);
 
     const timeRangeBounds = useMemo(() => {
         const now = new Date();
@@ -175,86 +181,7 @@ const PDExecutions: React.FC = () => {
         return {startTime, endTime};
     }, [customEnd, customStart, timeRange]);
 
-    const filteredExecutions = useMemo(() => {
-        return pdExecutions.filter(exec => {
-            const outcome = (exec.outcome ?? '').toLowerCase();
-            const matchesOutcome = outcomeFilter === 'all' || outcome === outcomeFilter;
-
-            // 🔥 Normalize here
-            const certificateStatus =
-                getExecutionCertificateDetails(exec).status?.toUpperCase();
-
-            const matchesCertStatus = (() => {
-                if (certStatusFilter === 'all') return true;
-                if (certStatusFilter === 'valid') return certificateStatus === 'VALID';
-                if (certStatusFilter === 'expiring') {
-                    return certificateStatus === 'EXPIRING SOON';
-                }
-                if (certStatusFilter === 'expired') return certificateStatus === 'EXPIRED';
-                return (
-                    certStatusFilter === 'impacted' &&
-                    (certificateStatus === 'EXPIRED' ||
-                        certificateStatus === 'EXPIRING SOON')
-                );
-            })();
-
-            const completedAtMs = exec.completedAt
-                ? new Date(exec.completedAt).getTime()
-                : NaN;
-
-            const matchesStart =
-                timeRangeBounds.startTime === undefined ||
-                (!Number.isNaN(completedAtMs) &&
-                    completedAtMs >= timeRangeBounds.startTime);
-
-            const matchesEnd =
-                timeRangeBounds.endTime === undefined ||
-                (!Number.isNaN(completedAtMs) &&
-                    completedAtMs <= timeRangeBounds.endTime);
-
-            if (!search.trim()) {
-                return (
-                    matchesOutcome &&
-                    matchesCertStatus &&
-                    matchesStart &&
-                    matchesEnd
-                );
-            }
-
-            const query = search.toLowerCase();
-            const matchesText =
-                (exec.requestId ?? '').toLowerCase().includes(query) ||
-                (exec.qhinName ?? '').toLowerCase().includes(query);
-
-            return (
-                matchesOutcome &&
-                matchesCertStatus &&
-                matchesText &&
-                matchesStart &&
-                matchesEnd
-            );
-        });
-    }, [certStatusFilter, outcomeFilter, pdExecutions, search, timeRangeBounds]);
-
-    const sortedExecutions = useMemo(() => {
-        return [...filteredExecutions].sort((a, b) => {
-            if (sortKey === 'completedAt') {
-                const aTs = new Date(a.completedAt ?? 0).getTime();
-                const bTs = new Date(b.completedAt ?? 0).getTime();
-                return sortDirection === 'asc' ? aTs - bTs : bTs - aTs;
-            }
-
-            const aValue = a[sortKey];
-            const bValue = b[sortKey];
-
-            if (aValue === undefined || bValue === undefined) return 0;
-            if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
-            if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
-            return 0;
-        });
-    }, [filteredExecutions, sortDirection, sortKey]);
-
-    const totalPages = Math.max(1, Math.ceil(sortedExecutions.length / pageSize));
+    const totalPages = Math.max(1, Math.ceil(executionsTotal / pageSize));
 
     const inFlightRef = useRef<Set<string>>(new Set());
 
@@ -264,10 +191,100 @@ const PDExecutions: React.FC = () => {
         }
     }, [page, totalPages]);
 
-    const pagedExecutions = useMemo(() => {
-        const start = (page - 1) * pageSize;
-        return sortedExecutions.slice(start, start + pageSize);
-    }, [page, sortedExecutions]);
+    useEffect(() => {
+        setPage(1);
+    }, [
+        certStatusFilter,
+        customEnd,
+        customStart,
+        outcomeFilter,
+        search,
+        sortDirection,
+        sortKey,
+        timeRange,
+    ]);
+
+    const certStatusParamValue = useMemo(() => {
+        if (certStatusFilter === 'all') return undefined;
+        if (certStatusFilter === 'impacted') return 'EXPIRED,EXPIRING SOON';
+        if (certStatusFilter === 'valid') return 'VALID';
+        if (certStatusFilter === 'expiring') return 'EXPIRING SOON';
+        return 'EXPIRED';
+    }, [certStatusFilter]);
+
+    useEffect(() => {
+        let isMounted = true;
+        const controller = new AbortController();
+
+        const loadExecutions = async () => {
+            setExecutionsLoading(true);
+            setExecutionsError(null);
+
+            const offset = (page - 1) * pageSize;
+            try {
+                const [rows, counts] = await Promise.all([
+                    apiClient.getPdExecutions({
+                        limit: pageSize,
+                        offset,
+                        sortKey,
+                        sortDirection,
+                        outcome: outcomeFilter === 'all' ? undefined : outcomeFilter,
+                        search: search.trim() || undefined,
+                        certStatus: certStatusParamValue,
+                        startTime: timeRangeBounds.startTime,
+                        endTime: timeRangeBounds.endTime,
+                    }),
+                    apiClient.getPdExecutionsCount({
+                        outcome: outcomeFilter === 'all' ? undefined : outcomeFilter,
+                        search: search.trim() || undefined,
+                        certStatus: certStatusParamValue,
+                        startTime: timeRangeBounds.startTime,
+                        endTime: timeRangeBounds.endTime,
+                    }),
+                ]);
+
+                if (!isMounted || controller.signal.aborted) return;
+
+                setPdExecutions(rows);
+                setExecutionCounts(counts);
+                const filteredTotal = Number(counts.total);
+                setExecutionsTotal(Number.isFinite(filteredTotal) ? filteredTotal : rows.length);
+            } catch (error) {
+                if (!isMounted || controller.signal.aborted) return;
+                setPdExecutions([]);
+                setExecutionCounts(null);
+                setExecutionsTotal(0);
+                setExecutionsError(
+                    error instanceof Error
+                        ? error.message
+                        : 'Unable to load PD executions'
+                );
+            } finally {
+                if (isMounted && !controller.signal.aborted) {
+                    setExecutionsLoading(false);
+                }
+            }
+        };
+
+        void loadExecutions();
+
+        return () => {
+            isMounted = false;
+            controller.abort();
+        };
+    }, [
+        certStatusParamValue,
+        outcomeFilter,
+        page,
+        pageSize,
+        search,
+        sortDirection,
+        sortKey,
+        timeRangeBounds.endTime,
+        timeRangeBounds.startTime,
+    ]);
+
+    const pagedExecutions = pdExecutions;
 
     useEffect(() => {
         let isMounted = true;
@@ -286,10 +303,6 @@ const PDExecutions: React.FC = () => {
                         return [id ?? '', null] as const;
                     }
 
-                    if (telemetryCounts[id] !== undefined) {
-                        return [id, telemetryCounts[id]] as const;
-                    }
-
                     if (inFlightRef.current.has(id)) {
                         return [id, telemetryCounts[id] ?? null] as const;
                     }
@@ -300,12 +313,9 @@ const PDExecutions: React.FC = () => {
                         const data = await fetchPdExecutionTelemetry(id);
                         return [id, Array.isArray(data) ? data.length : 0] as const;
                     } catch (err) {
-                        if (!missingTelemetryApiLogged.current) {
-                            console.error(
-                                '[Phase0][PDExecutionGrouping] Missing telemetry linkage API',
-                                err
-                            );
-                            missingTelemetryApiLogged.current = true;
+                        if (!telemetryErrorLogged.current) {
+                            console.error('Unable to load telemetry counts.', err);
+                            telemetryErrorLogged.current = true;
                         }
                         return [id, null] as const;
                     } finally {
@@ -331,7 +341,7 @@ const PDExecutions: React.FC = () => {
         return () => {
             isMounted = false;
         };
-    }, [pagedExecutions]);
+    }, [pagedExecutions, telemetryCounts]);
 
     const findingsByRequestId = useMemo(() => {
         return (findings as Finding[]).reduce<Record<string, number>>(
@@ -345,10 +355,8 @@ const PDExecutions: React.FC = () => {
     }, [findings]);
 
     const summaryStats = useMemo(() => {
-        const totalExecutions = pdExecutions.length;
-        const failures = pdExecutions.filter(
-            e => (e.outcome ?? '').toLowerCase() === 'failure'
-        ).length;
+        const totalExecutions = executionsTotal;
+        const failures = executionCounts?.failure ?? 0;
         const failureRate = totalExecutions
             ? ((failures / totalExecutions) * 100).toFixed(1)
             : '0.0';
@@ -368,10 +376,10 @@ const PDExecutions: React.FC = () => {
         )[0];
 
         const peakHour = peak ? `${peak[0]}:00–${peak[0]}:59` : '—';
-        const avgPerDay = Math.round(totalExecutions || 0);
+        const avgPerDay = Math.round(totalExecutions);
 
         return {totalExecutions, failures, failureRate, peakHour, avgPerDay};
-    }, [pdExecutions]);
+    }, [executionCounts, executionsTotal, pdExecutions]);
 
     const executionVolumeData = useMemo(() => {
         if (!pdExecutions.length) return [];
@@ -390,17 +398,8 @@ const PDExecutions: React.FC = () => {
             .sort((a, b) => a.date.localeCompare(b.date));
     }, [pdExecutions]);
 
-    useEffect(() => {
-        if (pdExecutions.length === 0 && !missingChartDataLogged.current) {
-            console.warn(
-                '[Phase0][PDExecutionCharts] No execution data available for chart rendering'
-            );
-            missingChartDataLogged.current = true;
-        }
-    }, [pdExecutions.length]);
-
     const exportRows = useMemo(() => {
-        return sortedExecutions.map(exec => {
+        return pdExecutions.map(exec => {
             const certificateDetails = getExecutionCertificateDetails(exec);
             return {
                 completedAt: formatTimestamp(
@@ -420,9 +419,9 @@ const PDExecutions: React.FC = () => {
                 httpStatus: certificateDetails.httpStatus ?? '',
             };
         });
-    }, [sortedExecutions, userPreferences.timezone]);
+    }, [pdExecutions, userPreferences.timezone]);
 
-    if (loading) {
+    if (loading && !pdExecutions.length) {
         return (
             <div className="flex min-h-screen items-center justify-center text-gray-700">
                 Loading Patient Discovery executions...
@@ -621,6 +620,12 @@ const PDExecutions: React.FC = () => {
                     </p>
                 </div>
             </div>
+
+            {(serverDataError || executionsError) && (
+                <div className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                    {serverDataError ?? executionsError}
+                </div>
+            )}
 
             {/* Summary Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -831,6 +836,13 @@ const PDExecutions: React.FC = () => {
                     </tr>
                     </thead>
                     <tbody>
+                    {executionsLoading && (
+                        <tr>
+                            <td colSpan={9} className="p-4 text-center text-gray-500">
+                                Loading executions…
+                            </td>
+                        </tr>
+                    )}
                     {pagedExecutions.map(exec => {
                         const outcome = formatOutcome(exec.outcome);
                         const findingsCount = findingsByRequestId[exec.requestId] ?? 0;
@@ -930,7 +942,7 @@ const PDExecutions: React.FC = () => {
                             </tr>
                         );
                     })}
-                    {!sortedExecutions.length && (
+                    {!pagedExecutions.length && !executionsLoading && (
                         <tr>
                             <td colSpan={9} className="p-4 text-center text-gray-500">
                                 No executions match the current filters.

@@ -8,6 +8,7 @@ import React, {
 } from "react";
 
 import * as authApi from "../lib/api/auth";
+import { isAuthEnabled } from "../config/auth";
 
 export type AuthUser = authApi.User;
 
@@ -29,6 +30,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     const [loggingIn, setLoggingIn] = useState(false);
 
     const refreshUser = useCallback(async () => {
+        if (!isAuthEnabled) {
+            setUser({ userId: 0 });
+            return;
+        }
         try {
             const sessionUser = await authApi.me();
             setUser(sessionUser);
@@ -40,6 +45,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
     const login = useCallback(
         async (username: string, password: string) => {
+            if (!isAuthEnabled) {
+                setUser({ userId: 0 });
+                return;
+            }
             if (loggingIn) return; // 🔥 prevent duplicate login calls
             setLoggingIn(true);
 
@@ -64,6 +73,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     );
 
     const logout = useCallback(async () => {
+        if (!isAuthEnabled) {
+            setUser(null);
+            return;
+        }
         try {
             await authApi.logout();
         } finally {

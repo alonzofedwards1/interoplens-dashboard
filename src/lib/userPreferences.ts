@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 type PreferenceStore = Record<string, Record<string, unknown>>;
 
 const STORAGE_KEY = 'userPreferences';
+let parseErrorLogged = false;
 
 const readStore = (): PreferenceStore => {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -12,9 +13,16 @@ const readStore = (): PreferenceStore => {
     if (!raw) return {};
 
     try {
-        return JSON.parse(raw) as PreferenceStore;
-    } catch (error) {
-        console.error('Failed to parse user preferences', error);
+        const parsed = JSON.parse(raw) as unknown;
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+            return {};
+        }
+        return parsed as PreferenceStore;
+    } catch {
+        if (!parseErrorLogged) {
+            console.error('Failed to parse user preferences.');
+            parseErrorLogged = true;
+        }
         return {};
     }
 };

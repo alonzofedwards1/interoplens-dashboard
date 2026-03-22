@@ -16,7 +16,6 @@ export interface IntegrationHealthResponse {
 
 function mapCertificateHealth(raw: any): CertificateHealth {
     if (!raw) {
-        console.warn('certificateHealth missing from API response');
         return {
             expired: 0,
             expiringSoon: 0,
@@ -33,8 +32,6 @@ function mapCertificateHealth(raw: any): CertificateHealth {
         valid: raw.valid ?? 0,
     };
 
-    console.log('Mapped Certificate Health:', mapped);
-
     return mapped;
 }
 
@@ -43,24 +40,9 @@ export async function fetchIntegrationHealth(): Promise<IntegrationHealthRespons
         `${API_BASE}/api/health/integrations`
     );
 
-
-    console.log('Integration Health API RAW:', res);
-
     const certificateHealth = mapCertificateHealth(
         res?.certificateHealth
     );
-
-
-    const isAllZero =
-        certificateHealth.expired === 0 &&
-        certificateHealth.expiringSoon === 0 &&
-        certificateHealth.valid === 0;
-
-    if (isAllZero) {
-        console.warn(
-            'Certificate health returned all zeros — backend may not be using certificates table'
-        );
-    }
 
     return {
         totalExecutions: res?.totalExecutions ?? 0,

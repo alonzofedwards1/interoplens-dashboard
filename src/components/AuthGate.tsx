@@ -2,11 +2,16 @@ import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 
 import { useAuth } from '../context/AuthContext';
+import { isAuthEnabled } from '../config/auth';
 
 const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const { user, loading } = useAuth();
     const location = useLocation();
     const publicRoutes = ['/login', '/forgot-password'];
+
+    if (!isAuthEnabled) {
+        return <>{children}</>;
+    }
 
     if (loading) {
         return (

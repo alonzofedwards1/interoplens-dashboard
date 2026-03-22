@@ -1,5 +1,7 @@
-export type AuthMode = 'session';
+export type AuthMode = 'none' | 'session';
 
-export const AUTH_MODE: AuthMode = 'session';
+const authModeValue = process.env.REACT_APP_AUTH_MODE;
+export const AUTH_MODE: AuthMode =
+    authModeValue === 'none' ? 'none' : 'session';
 
-export const isAuthEnabled = true;
+export const isAuthEnabled = AUTH_MODE !== 'none';
