@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import React, {useEffect, useMemo, useRef, useState} from 'react';
+import {useSearchParams} from 'react-router-dom';
 import {
     Bar,
     BarChart,
@@ -10,20 +10,20 @@ import {
     YAxis,
 } from 'recharts';
 
-import { useUserPreference } from '../../lib/userPreferences';
-import { useServerData } from '../../lib/ServerDataContext';
-import { TransactionLink } from '../../components/TransactionLink';
+import {useUserPreference} from '../../lib/userPreferences';
+import {useServerData} from '../../lib/ServerDataContext';
+import {TransactionLink} from '../../components/TransactionLink';
 import BackButton from '../../components/navigation/BackButton';
 import Pagination from '../../components/Pagination';
-import { Finding } from '../../types/findings';
-import { fetchPdExecutionTelemetry } from '../../lib/api/pdExecutions';
+import {Finding} from '../../types/findings';
+import {fetchPdExecutionTelemetry} from '../../lib/api/pdExecutions';
 import {
     getCertificateStatusBadge,
     getExecutionCertificateDetails,
 } from '../../lib/certificates';
-import { Download } from 'lucide-react';
-import { useUserPreferences } from '../../lib/useUserPreferences';
-import { formatTimestamp } from '../../lib/dateTime';
+import {Download} from 'lucide-react';
+import {useUserPreferences} from '../../lib/useUserPreferences';
+import {formatTimestamp} from '../../lib/dateTime';
 
 /* ============================
    Helpers
@@ -32,13 +32,13 @@ import { formatTimestamp } from '../../lib/dateTime';
 const formatOutcome = (outcome?: string) => {
     switch ((outcome ?? '').toLowerCase()) {
         case 'success':
-            return { label: 'Success', color: 'bg-green-100 text-green-800' };
+            return {label: 'Success', color: 'bg-green-100 text-green-800'};
         case 'failure':
-            return { label: 'Failure', color: 'bg-red-100 text-red-800' };
+            return {label: 'Failure', color: 'bg-red-100 text-red-800'};
         case 'partial':
-            return { label: 'Partial', color: 'bg-yellow-100 text-yellow-800' };
+            return {label: 'Partial', color: 'bg-yellow-100 text-yellow-800'};
         default:
-            return { label: 'Unknown', color: 'bg-gray-100 text-gray-700' };
+            return {label: 'Unknown', color: 'bg-gray-100 text-gray-700'};
     }
 };
 
@@ -81,7 +81,7 @@ const buildCsvRow = (values: Array<string | number | undefined | null>) =>
         .join(',');
 
 const triggerDownload = (payload: BlobPart, filename: string, mimeType: string) => {
-    const blob = new Blob([payload], { type: mimeType });
+    const blob = new Blob([payload], {type: mimeType});
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = url;
@@ -94,8 +94,8 @@ const triggerDownload = (payload: BlobPart, filename: string, mimeType: string) 
 
 const PDExecutions: React.FC = () => {
     const [searchParams, setSearchParams] = useSearchParams();
-    const { pdExecutions, loading, findings } = useServerData();
-    const { preferences: userPreferences } = useUserPreferences();
+    const {pdExecutions, loading, findings} = useServerData();
+    const {preferences: userPreferences} = useUserPreferences();
     const [preferences, setPreferences] = useUserPreference(
         'pd.executions.table',
         defaultExecutionPreferences
@@ -109,23 +109,25 @@ const PDExecutions: React.FC = () => {
     const missingTelemetryApiLogged = useRef(false);
     const missingChartDataLogged = useRef(false);
 
-    const { outcomeFilter, search, sortDirection, sortKey, certStatusFilter } =
+    const {outcomeFilter, search, sortDirection, sortKey, certStatusFilter} =
         preferences;
 
     const certStatusParam = searchParams.get('certStatus');
 
     useEffect(() => {
         if (!certStatusParam) return;
+
         const normalized = certStatusParam
             .split(',')
             .map(value => value.trim().toUpperCase())
             .filter(Boolean);
 
-        const hasExpired = normalized.includes('Expired');
-        const hasExpiring = normalized.includes('Expiring Soon');
-        const hasValid = normalized.includes('Valid');
+        const hasExpired = normalized.includes('EXPIRED');
+        const hasExpiring = normalized.includes('EXPIRING SOON');
+        const hasValid = normalized.includes('VALID');
 
         let nextFilter: ExecutionPreferences['certStatusFilter'] = 'all';
+
         if (hasExpired && hasExpiring) {
             nextFilter = 'impacted';
         } else if (hasExpired) {
@@ -135,13 +137,11 @@ const PDExecutions: React.FC = () => {
         } else if (hasValid) {
             nextFilter = 'valid';
         }
-
-        setPreferences(prev =>
-            prev.certStatusFilter === nextFilter
-                ? prev
-                : { ...prev, certStatusFilter: nextFilter }
-        );
-    }, [certStatusParam, setPreferences]);
+        setPreferences(prev => ({
+            ...prev,
+            certStatusFilter: nextFilter,
+        }));
+    }, [certStatusParam]);
 
     const timeRangeBounds = useMemo(() => {
         const now = new Date();
@@ -172,41 +172,53 @@ const PDExecutions: React.FC = () => {
             endTime = now.getTime();
         }
 
-        return { startTime, endTime };
+        return {startTime, endTime};
     }, [customEnd, customStart, timeRange]);
 
     const filteredExecutions = useMemo(() => {
         return pdExecutions.filter(exec => {
             const outcome = (exec.outcome ?? '').toLowerCase();
             const matchesOutcome = outcomeFilter === 'all' || outcome === outcomeFilter;
-            const certificateStatus = getExecutionCertificateDetails(exec).status;
+
+            // 🔥 Normalize here
+            const certificateStatus =
+                getExecutionCertificateDetails(exec).status?.toUpperCase();
 
             const matchesCertStatus = (() => {
                 if (certStatusFilter === 'all') return true;
-                if (certStatusFilter === 'valid') return certificateStatus === 'Valid';
+                if (certStatusFilter === 'valid') return certificateStatus === 'VALID';
                 if (certStatusFilter === 'expiring') {
-                    return certificateStatus === 'Expiring Soon';
+                    return certificateStatus === 'EXPIRING SOON';
                 }
-                if (certStatusFilter === 'expired') return certificateStatus === 'Expired';
+                if (certStatusFilter === 'expired') return certificateStatus === 'EXPIRED';
                 return (
                     certStatusFilter === 'impacted' &&
-                    (certificateStatus === 'Expired' ||
-                        certificateStatus === 'Expiring Soon')
+                    (certificateStatus === 'EXPIRED' ||
+                        certificateStatus === 'EXPIRING SOON')
                 );
             })();
 
             const completedAtMs = exec.completedAt
                 ? new Date(exec.completedAt).getTime()
                 : NaN;
+
             const matchesStart =
                 timeRangeBounds.startTime === undefined ||
-                (!Number.isNaN(completedAtMs) && completedAtMs >= timeRangeBounds.startTime);
+                (!Number.isNaN(completedAtMs) &&
+                    completedAtMs >= timeRangeBounds.startTime);
+
             const matchesEnd =
                 timeRangeBounds.endTime === undefined ||
-                (!Number.isNaN(completedAtMs) && completedAtMs <= timeRangeBounds.endTime);
+                (!Number.isNaN(completedAtMs) &&
+                    completedAtMs <= timeRangeBounds.endTime);
 
             if (!search.trim()) {
-                return matchesOutcome && matchesCertStatus && matchesStart && matchesEnd;
+                return (
+                    matchesOutcome &&
+                    matchesCertStatus &&
+                    matchesStart &&
+                    matchesEnd
+                );
             }
 
             const query = search.toLowerCase();
@@ -214,7 +226,13 @@ const PDExecutions: React.FC = () => {
                 (exec.requestId ?? '').toLowerCase().includes(query) ||
                 (exec.qhinName ?? '').toLowerCase().includes(query);
 
-            return matchesOutcome && matchesCertStatus && matchesText && matchesStart && matchesEnd;
+            return (
+                matchesOutcome &&
+                matchesCertStatus &&
+                matchesText &&
+                matchesStart &&
+                matchesEnd
+            );
         });
     }, [certStatusFilter, outcomeFilter, pdExecutions, search, timeRangeBounds]);
 
@@ -238,6 +256,8 @@ const PDExecutions: React.FC = () => {
 
     const totalPages = Math.max(1, Math.ceil(sortedExecutions.length / pageSize));
 
+    const inFlightRef = useRef<Set<string>>(new Set());
+
     useEffect(() => {
         if (page > totalPages) {
             setPage(totalPages);
@@ -253,20 +273,32 @@ const PDExecutions: React.FC = () => {
         let isMounted = true;
 
         const loadTelemetryCounts = async () => {
-            if (!pdExecutions.length) {
+            if (!pagedExecutions.length) {
                 setTelemetryCounts({});
                 return;
             }
 
             const results = await Promise.all(
-                pdExecutions.map(async exec => {
-                    if (!exec.requestId) {
-                        return [exec.requestId ?? '', null] as const;
+                pagedExecutions.map(async exec => {
+                    const id = exec.requestId;
+
+                    if (!id) {
+                        return [id ?? '', null] as const;
                     }
 
+                    if (telemetryCounts[id] !== undefined) {
+                        return [id, telemetryCounts[id]] as const;
+                    }
+
+                    if (inFlightRef.current.has(id)) {
+                        return [id, telemetryCounts[id] ?? null] as const;
+                    }
+
+                    inFlightRef.current.add(id);
+
                     try {
-                        const data = await fetchPdExecutionTelemetry(exec.requestId);
-                        return [exec.requestId, Array.isArray(data) ? data.length : 0] as const;
+                        const data = await fetchPdExecutionTelemetry(id);
+                        return [id, Array.isArray(data) ? data.length : 0] as const;
                     } catch (err) {
                         if (!missingTelemetryApiLogged.current) {
                             console.error(
@@ -275,20 +307,22 @@ const PDExecutions: React.FC = () => {
                             );
                             missingTelemetryApiLogged.current = true;
                         }
-                        return [exec.requestId, null] as const;
+                        return [id, null] as const;
+                    } finally {
+                        // ✅ Always clear in-flight
+                        inFlightRef.current.delete(id);
                     }
                 })
             );
 
             if (isMounted) {
-                setTelemetryCounts(
-                    results.reduce<Record<string, number | null>>((acc, [id, count]) => {
-                        if (id) {
-                            acc[id] = count;
-                        }
+                setTelemetryCounts(prev => ({
+                    ...prev,
+                    ...results.reduce<Record<string, number | null>>((acc, [id, count]) => {
+                        if (id) acc[id] = count;
                         return acc;
                     }, {})
-                );
+                }));
             }
         };
 
@@ -297,7 +331,7 @@ const PDExecutions: React.FC = () => {
         return () => {
             isMounted = false;
         };
-    }, [pdExecutions]);
+    }, [pagedExecutions]);
 
     const findingsByRequestId = useMemo(() => {
         return (findings as Finding[]).reduce<Record<string, number>>(
@@ -336,7 +370,7 @@ const PDExecutions: React.FC = () => {
         const peakHour = peak ? `${peak[0]}:00–${peak[0]}:59` : '—';
         const avgPerDay = Math.round(totalExecutions || 0);
 
-        return { totalExecutions, failures, failureRate, peakHour, avgPerDay };
+        return {totalExecutions, failures, failureRate, peakHour, avgPerDay};
     }, [pdExecutions]);
 
     const executionVolumeData = useMemo(() => {
@@ -352,7 +386,7 @@ const PDExecutions: React.FC = () => {
         }, {});
 
         return Object.entries(buckets)
-            .map(([date, count]) => ({ date, count }))
+            .map(([date, count]) => ({date, count}))
             .sort((a, b) => a.date.localeCompare(b.date));
     }, [pdExecutions]);
 
@@ -414,22 +448,25 @@ const PDExecutions: React.FC = () => {
     const updateCertStatusFilter = (
         nextValue: ExecutionPreferences['certStatusFilter']
     ) => {
-        setPreferences(prev => ({ ...prev, certStatusFilter: nextValue }));
+        setPreferences(prev => ({...prev, certStatusFilter: nextValue}));
 
         const params = new URLSearchParams(searchParams);
+
         if (nextValue === 'all') {
             params.delete('certStatus');
         } else if (nextValue === 'impacted') {
-            params.set('certStatus', 'EXPIRED,EXPIRING_SOON');
+            params.set('certStatus', 'EXPIRED,EXPIRING SOON');
         } else if (nextValue === 'valid') {
-            params.set('certStatus', 'Valid');
+            params.set('certStatus', 'VALID');
         } else if (nextValue === 'expiring') {
-            params.set('certStatus', 'Expiring Soon');
+            params.set('certStatus', 'EXPIRING SOON');
         } else if (nextValue === 'expired') {
-            params.set('certStatus', 'Expired');
+            params.set('certStatus', 'EXPIRED');
         }
+
         setSearchParams(params);
     };
+
 
     const handleExportCsv = () => {
         const headers = [
@@ -591,8 +628,8 @@ const PDExecutions: React.FC = () => {
                     label="Total PD Executions"
                     value={summaryStats.totalExecutions}
                 />
-                <SummaryCard label="Avg / Day" value={summaryStats.avgPerDay} />
-                <SummaryCard label="Peak Hour" value={summaryStats.peakHour} />
+                <SummaryCard label="Avg / Day" value={summaryStats.avgPerDay}/>
+                <SummaryCard label="Peak Hour" value={summaryStats.peakHour}/>
                 <SummaryCard
                     label="Failure Rate"
                     value={`${summaryStats.failureRate}%`}
@@ -605,11 +642,11 @@ const PDExecutions: React.FC = () => {
                     <div className="h-64">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={executionVolumeData}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="date" />
-                                <YAxis allowDecimals={false} />
-                                <Tooltip />
-                                <Bar dataKey="count" fill="#3B82F6" />
+                                <CartesianGrid strokeDasharray="3 3"/>
+                                <XAxis dataKey="date"/>
+                                <YAxis allowDecimals={false}/>
+                                <Tooltip/>
+                                <Bar dataKey="count" fill="#3B82F6"/>
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
@@ -621,7 +658,7 @@ const PDExecutions: React.FC = () => {
             </div>
 
             {/* Execution Table */}
-                <div className="bg-white rounded-lg shadow overflow-x-auto">
+            <div className="bg-white rounded-lg shadow overflow-x-auto">
                 <div className="flex flex-wrap gap-3 items-center justify-between p-3 border-b text-sm">
                     <div className="flex flex-wrap gap-2 items-center">
                         <label htmlFor="pd-time-range" className="text-gray-700">
@@ -752,10 +789,11 @@ const PDExecutions: React.FC = () => {
 
                     <div className="relative group">
                         <button className="flex items-center gap-2 border rounded px-3 py-2 text-sm hover:bg-gray-50">
-                            <Download size={14} />
+                            <Download size={14}/>
                             Export
                         </button>
-                        <div className="absolute right-0 mt-1 hidden group-hover:block bg-white border rounded shadow z-10 w-44">
+                        <div
+                            className="absolute right-0 mt-1 hidden group-hover:block bg-white border rounded shadow z-10 w-44">
                             <button
                                 onClick={handleExportCsv}
                                 className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
@@ -821,17 +859,19 @@ const PDExecutions: React.FC = () => {
                                             </span>
                                             <div>
                                                 {exec.requestId ? (
-                                                    <TransactionLink id={exec.requestId} />
+                                                    <TransactionLink id={exec.requestId}/>
                                                 ) : (
                                                     <span className="text-gray-500">—</span>
                                                 )}
                                             </div>
                                         </div>
                                         <div className="flex flex-wrap items-center gap-2">
-                                            <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">
+                                            <span
+                                                className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">
                                                 {findingsCount} Findings
                                             </span>
-                                            <span className="inline-flex items-center gap-1 rounded bg-blue-100 px-2 py-0.5 text-xs text-blue-700">
+                                            <span
+                                                className="inline-flex items-center gap-1 rounded bg-blue-100 px-2 py-0.5 text-xs text-blue-700">
                                                 🔗 Traceable
                                             </span>
                                         </div>
@@ -885,7 +925,7 @@ const PDExecutions: React.FC = () => {
                                     </span>
                                 </td>
                                 <td className="p-3">
-                                    {exec.durationMs ? `${exec.durationMs} ms` : '—'}
+                                    {exec.durationMs !== undefined ? `${exec.durationMs} ms` : '—'}
                                 </td>
                             </tr>
                         );
